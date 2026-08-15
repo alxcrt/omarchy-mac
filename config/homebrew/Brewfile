@@ -70,7 +70,7 @@ cask "libreoffice"
 cask "kdenlive"
 cask "moonlight"
 cask "steam"
-# cask "docker-desktop"        # needs admin password — install interactively
+cask "docker-desktop"          # installed (needs admin password on install)
 cask "font-jetbrains-mono-nerd-font"
 cask "font-ia-writer-duo"
 
