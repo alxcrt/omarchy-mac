@@ -1,10 +1,27 @@
+function notify(title, message) {
+  chrome.notifications.create('', {
+    type: 'basic',
+    iconUrl: 'icon.png',
+    title: title,
+    message: String(message).slice(0, 200),
+  }, () => { void chrome.runtime.lastError; });
+}
+
 function sendUrl(url) {
   if (!url || !/^https?:/i.test(url)) return;
 
-  // The native messaging host runs yt-dlp and owns all the desktop
-  // notifications, so we just hand off the URL and ignore the reply.
-  chrome.runtime.sendNativeMessage('com.omarchy.ytdlp', { url }, () => {
-    void chrome.runtime.lastError;
+  // Notify from Chrome itself. The native host's osascript notifications are
+  // attributed to Script Editor, which needs its own notification permission
+  // AND a Focus allow-list entry — so they silently vanish. Chrome is already
+  // allowed to notify, so these actually show up.
+  notify('Downloading…', url);
+
+  chrome.runtime.sendNativeMessage('com.omarchy.ytdlp', { url }, (reply) => {
+    if (chrome.runtime.lastError) {
+      notify('Download failed', chrome.runtime.lastError.message || url);
+      return;
+    }
+    if (reply && reply.ok === false) notify('Download failed', reply.error || url);
   });
 }
 
