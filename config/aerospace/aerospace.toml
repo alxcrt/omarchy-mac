@@ -1,7 +1,7 @@
 # ~/.config/aerospace/aerospace.toml
-# Omarchy's Hyprland window management, ported to macOS via AeroSpace.
-# Mod key is Alt (⌥) as the stand-in for Omarchy's SUPER — using ⌘ would
-# clobber macOS shortcuts (⌘W, ⌘1-9, ⌘Q). Ask to swap to ⌘ if you prefer.
+# Omarchy's window management ported to macOS via AeroSpace.
+# Mod is Alt (⌥) standing in for Omarchy's SUPER — ⌘ would clobber macOS
+# shortcuts (⌘W/⌘Q/⌘1-9). Key names follow the Omarchy Manual's hotkey list.
 # Docs: https://nikitabobko.github.io/AeroSpace/guide
 config-version = 2
 
@@ -15,11 +15,8 @@ enable-normalization-opposite-orientation-for-nested-containers = true
 
 accordion-padding = 30
 default-root-container-layout = 'tiles'
-default-root-container-orientation = 'auto'   # wide monitor -> horizontal, tall -> vertical
+default-root-container-orientation = 'auto'
 automatically-unhide-macos-hidden-apps = false
-
-# Keep workspaces 1-9 alive even when empty (required in config-version 2).
-persistent-workspaces = ["1", "2", "3", "4", "5", "6", "7", "8", "9"]
 
 [gaps]
 inner.horizontal = 8
@@ -30,33 +27,25 @@ outer.top        = 8
 outer.right      = 8
 
 [mode.main.binding]
-# --- App launchers (Omarchy: SUPER + key) ---
-alt-enter = 'exec-and-forget open -na Ghostty'                                   # terminal
-alt-b = 'exec-and-forget open -a "Google Chrome"'                               # browser
-alt-o = 'exec-and-forget open -a Obsidian'                                       # Obsidian
-alt-n = 'exec-and-forget open -na Ghostty --args -e nvim'                        # Neovim
-alt-t = 'exec-and-forget open -na Ghostty --args -e btop'                        # system monitor
-alt-d = 'exec-and-forget open -na Ghostty --args -e lazydocker'                  # Lazydocker
+# ── Windows (Omarchy: Super+W / T / J / L / F) ──
+alt-w = 'close'                                    # close window
+alt-shift-w = 'close-all-windows-but-current'      # closest to "close all"
+alt-t = 'layout floating tiling'                   # toggle tiling/floating
+alt-j = 'layout tiles horizontal vertical'         # toggle window position
+alt-l = 'layout tiles accordion'                   # toggle layout style
+alt-f = 'fullscreen'                               # go full screen
 
-# --- Windows (Omarchy tiling.conf) ---
-alt-w = 'close'                                    # SUPER+W close window
-alt-j = 'layout tiles horizontal vertical'         # SUPER+J toggle split
-alt-shift-v = 'layout floating tiling'             # SUPER+SHIFT+V toggle float
-alt-f = 'fullscreen'                               # fullscreen (Omarchy uses F11)
-
-# --- Focus (Omarchy uses arrows) ---
+# ── Focus / swap (Super+Arrow, Super+Shift+Arrow) ──
 alt-left  = 'focus left'
 alt-right = 'focus right'
 alt-up    = 'focus up'
 alt-down  = 'focus down'
-
-# --- Swap / move window (SUPER+SHIFT+arrows) ---
 alt-shift-left  = 'move left'
 alt-shift-right = 'move right'
 alt-shift-up    = 'move up'
 alt-shift-down  = 'move down'
 
-# --- Workspaces 1-9 (SUPER+1..9) ---
+# ── Workspaces (Super+1-9, Super+Tab, Super+Ctrl+Tab) ──
 alt-1 = 'workspace 1'
 alt-2 = 'workspace 2'
 alt-3 = 'workspace 3'
@@ -66,30 +55,63 @@ alt-6 = 'workspace 6'
 alt-7 = 'workspace 7'
 alt-8 = 'workspace 8'
 alt-9 = 'workspace 9'
+alt-tab = 'workspace next'
+alt-shift-tab = 'workspace prev'
+alt-ctrl-tab = 'workspace-back-and-forth'          # former workspace
 
-# --- Move focused window to workspace (SUPER+SHIFT+1..9) ---
-alt-shift-1 = 'move-node-to-workspace 1'
-alt-shift-2 = 'move-node-to-workspace 2'
-alt-shift-3 = 'move-node-to-workspace 3'
-alt-shift-4 = 'move-node-to-workspace 4'
-alt-shift-5 = 'move-node-to-workspace 5'
-alt-shift-6 = 'move-node-to-workspace 6'
-alt-shift-7 = 'move-node-to-workspace 7'
-alt-shift-8 = 'move-node-to-workspace 8'
-alt-shift-9 = 'move-node-to-workspace 9'
+# ── Move window to workspace (Super+Shift+1-9) ──
+alt-shift-1 = 'move-node-to-workspace 1 --focus-follows-window'
+alt-shift-2 = 'move-node-to-workspace 2 --focus-follows-window'
+alt-shift-3 = 'move-node-to-workspace 3 --focus-follows-window'
+alt-shift-4 = 'move-node-to-workspace 4 --focus-follows-window'
+alt-shift-5 = 'move-node-to-workspace 5 --focus-follows-window'
+alt-shift-6 = 'move-node-to-workspace 6 --focus-follows-window'
+alt-shift-7 = 'move-node-to-workspace 7 --focus-follows-window'
+alt-shift-8 = 'move-node-to-workspace 8 --focus-follows-window'
+alt-shift-9 = 'move-node-to-workspace 9 --focus-follows-window'
 
-# --- Workspace navigation (SUPER+TAB / SUPER+SHIFT+TAB) ---
-alt-tab = 'workspace-back-and-forth'
-alt-shift-tab = 'move-workspace-to-monitor --wrap-around next'
-# Monitors are navigated via the pinned workspace keys: ⌥+1-5 = external,
-# ⌥+6-9 = laptop (see [workspace-to-monitor-force-assignment] below).
+# ── Move window to workspace WITHOUT following (Super+Shift+Alt+1-9) ──
+alt-shift-ctrl-1 = 'move-node-to-workspace 1'
+alt-shift-ctrl-2 = 'move-node-to-workspace 2'
+alt-shift-ctrl-3 = 'move-node-to-workspace 3'
+alt-shift-ctrl-4 = 'move-node-to-workspace 4'
+alt-shift-ctrl-5 = 'move-node-to-workspace 5'
+alt-shift-ctrl-6 = 'move-node-to-workspace 6'
+alt-shift-ctrl-7 = 'move-node-to-workspace 7'
+alt-shift-ctrl-8 = 'move-node-to-workspace 8'
+alt-shift-ctrl-9 = 'move-node-to-workspace 9'
 
-# --- Resize (Omarchy SUPER+-/=) + resize mode ---
+# ── Resize (Super+Minus/Equal, Super+Alt = smaller steps) ──
 alt-minus = 'resize smart -50'
 alt-equal = 'resize smart +50'
+alt-ctrl-minus = 'resize smart -10'
+alt-ctrl-equal = 'resize smart +10'
 alt-r = 'mode resize'
 
-# --- Reload config ---
+# ── Launching apps (Omarchy: Super+Return, Super+Shift+<key>) ──
+alt-enter = 'exec-and-forget open -na Ghostty'                                  # terminal
+alt-shift-enter = 'exec-and-forget open -a "Google Chrome"'                     # browser
+alt-ctrl-enter = 'exec-and-forget open -na Ghostty --args -e herdr'             # agent manager
+alt-shift-n = 'exec-and-forget open -na Ghostty --args -e nvim'                 # editor
+alt-shift-o = 'exec-and-forget open -a Obsidian'                                # Obsidian
+alt-shift-d = 'exec-and-forget open -na Ghostty --args -e lazydocker'           # Docker
+alt-shift-m = 'exec-and-forget open -na Ghostty --args -e cliamp'               # music
+alt-shift-a = 'exec-and-forget open -a ChatGPT'                                 # AI
+alt-shift-slash = 'exec-and-forget open -a "1Password"'                         # passwords
+alt-shift-f = 'exec-and-forget open -a Finder'                                  # file manager
+
+# ── System (Omarchy: Super+Ctrl+<key> panels) ──
+alt-ctrl-t = 'exec-and-forget open -na Ghostty --args -e btop'                   # activity
+alt-ctrl-q = 'exec-and-forget open -a Calculator'                                # calculator
+alt-ctrl-s = 'exec-and-forget open -a LocalSend'                                 # share
+alt-ctrl-a = 'exec-and-forget open x-apple.systempreferences:com.apple.Sound-Settings.extension'
+alt-ctrl-b = 'exec-and-forget open x-apple.systempreferences:com.apple.BluetoothSettings'
+alt-ctrl-w = 'exec-and-forget open x-apple.systempreferences:com.apple.wifi-settings-extension'
+alt-ctrl-d = 'exec-and-forget open x-apple.systempreferences:com.apple.Displays-Settings.extension'
+alt-ctrl-p = 'exec-and-forget open x-apple.systempreferences:com.apple.Battery-Settings.extension'
+alt-ctrl-l = 'exec-and-forget pmset displaysleepnow'                             # lock screen
+
+# ── Reload ──
 alt-shift-c = 'reload-config'
 
 [mode.resize.binding]
@@ -103,7 +125,6 @@ enter = 'mode main'
 esc = 'mode main'
 
 # --- Auto-float utility/dialog windows (like Omarchy's Hyprland windowrules) ---
-# Tiling these feels wrong; float them so they pop over the tiles instead.
 [[on-window-detected]]
 if.app-id = 'com.apple.systempreferences'
 run = 'layout floating'
