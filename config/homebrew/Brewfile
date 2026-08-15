@@ -45,12 +45,10 @@ brew "xh"
 
 # --- GUI casks ---
 cask "ghostty"                 # terminal
-cask "alacritty"               # secondary terminal
 cask "google-chrome"           # primary browser (Phase 7 webapp target)
 cask "iina"                    # media player (macOS-native mpv)
-cask "stolendata-mpv"          # mpv proper
 cask "localsend"
-cask "qbittorrent"
+cask "transmission"            # replaced qbittorrent (Gatekeeper-deprecated, disabled 2026-09-01)
 cask "aerospace"               # i3-style tiling WM (no SIP disable needed)
 cask "raycast"                 # launcher
 cask "cursor"

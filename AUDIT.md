@@ -85,13 +85,16 @@ the rest are open, ranked by severity.
 16. `compress` with no argument creates a stray `.tar.gz`, and overwrites an
     existing archive without asking.
 
-## Deprecated casks — break 2026-09-01
+## Deprecated casks — resolved
 
-`alacritty`, `qbittorrent` and `stolendata-mpv` are all deprecated for failing
-the macOS Gatekeeper check and will be **disabled on 2026-09-01**. Replacements:
-`alacritty` is redundant (Ghostty is the terminal), `stolendata-mpv` is redundant
-(IINA is the default player and now owns every media type), and `qbittorrent`
-needs a real alternative — Transmission is the usual choice.
+`alacritty`, `qbittorrent` and `stolendata-mpv` all failed the macOS Gatekeeper
+check and were due to be **disabled on 2026-09-01**. All three removed:
+alacritty and stolendata-mpv were redundant (Ghostty is the terminal; IINA owns
+every media type), and qbittorrent was replaced with **Transmission**.
+
+qbittorrent was uninstalled *without* `--zap`, so its session data
+(`~/Library/Application Support/qBittorrent/BT_backup`, 7 .torrent files)
+survives — re-add those in Transmission if you still want them seeding.
 
 ## Known upstream/platform behaviour (not our bug)
 
