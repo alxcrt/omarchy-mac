@@ -337,7 +337,7 @@ if command -v aerospace >/dev/null 2>&1; then
   aerospace workspace 8 >/dev/null 2>&1; sleep 1
   _b=$(aerospace list-workspaces --focused 2>/dev/null)
   _before=$(aerospace list-windows --all --format '%{window-id}' 2>/dev/null | sort)
-  osascript -e 'tell application "Ghostty" to activate' -e 'tell application "System Events" to keystroke "n" using command down' 2>/dev/null
+  ghostty-run >/dev/null 2>&1   # exactly what the ⌥Enter bind runs
   sleep 3
   _after=$(aerospace list-windows --all --format '%{window-id}' 2>/dev/null | sort)
   _new=$(comm -13 <(echo "$_before") <(echo "$_after") | head -1)
