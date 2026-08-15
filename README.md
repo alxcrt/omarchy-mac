@@ -48,6 +48,9 @@ mup      # mise tools + AI CLIs only (fast)
 macup    # everything: brew, casks, Mac App Store, mise, cleanup
 ```
 
+See **[KEYBINDINGS.md](KEYBINDINGS.md)** for every keybinding (generated from the
+live configs with `mac keys`).
+
 ## Flows (the point of this repo)
 
 Omarchy's *behaviours*, ported — not its looks. One entry point:

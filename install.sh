@@ -27,7 +27,7 @@ link config/aerospace/aerospace.toml .config/aerospace/aerospace.toml
 link config/zsh/functions.zsh  .config/zsh/functions.zsh
 link config/btop/btop.conf     .config/btop/btop.conf
 link config/karabiner/karabiner.json .config/karabiner/karabiner.json
-for s in macup mise-install mac ghostty-run transcode webdl weburl; do
+for s in macup mise-install mac mac-keys mac-hook ghostty-run transcode webdl weburl browser-url chrome-extensions chromium-native-host agent-usage-claude agent-usage-codex; do
   link "local/bin/$s" ".local/bin/$s"
   chmod +x "$HOME/.local/bin/$s"
 done

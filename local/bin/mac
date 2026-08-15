@@ -14,6 +14,7 @@ case "$cmd" in
   url)         exec weburl "$@" ;;
   transcode)   exec transcode "$@" ;;
 
+  keys)        exec mac-keys "$@" ;;
   term)        exec ghostty-run "$@" ;;
   install)     exec mise-install "$@" ;;
 
@@ -64,6 +65,7 @@ mac — Omarchy-style flows on macOS
   mac mise                update mise tools + AI CLIs only (fast)
   mac install <pkg>       create a self-updating mise-backed wrapper
   mac usage [claude|codex]  AI agent token usage + rate limits
+  mac keys                every keybinding, read from the live configs
 
   mac dl [url]            download video on the current Chrome page -> ~/Movies
   mac url                 copy the current Chrome tab URL
