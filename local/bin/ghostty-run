@@ -1,32 +1,61 @@
 #!/bin/bash
-# ghostty-run <command...>
-# Open a new WINDOW in the already-running Ghostty and run <command> in it.
+# ghostty-run [command...]
+# Open a new WINDOW in the already-running Ghostty ON THE CURRENTLY FOCUSED
+# AeroSpace workspace, and optionally run <command...> in it.
 #
-# Why not `open -na Ghostty --args -e cmd`? The -n flag starts a whole new
-# Ghostty *application instance*, which gets its own Dock icon. Doing that
-# per launch litters the Dock with duplicates. Ghostty's `+new-window` action
-# is not supported on macOS, so we drive the existing instance via AppleScript.
-set -e
+# Why not `open -na Ghostty --args -e cmd`? -n starts a whole new Ghostty
+# *application instance*, which gets its own Dock icon. Ghostty's `+new-window`
+# action is still unsupported on macOS (verified on Ghostty 1.3.1), so we drive
+# the existing instance via AppleScript ⌘N.
+#
+# Why the workspace dance? `tell application "Ghostty" to activate` raises
+# Ghostty's existing key window, which may live on another workspace/monitor.
+# AeroSpace follows that focus change, and macOS births the new window on that
+# display -- so the new window races the focus change and frequently lands on
+# the OLD workspace. Fix: remember the focused workspace up front, then move the
+# newly created window back to it and focus it.
+set -uo pipefail
 
-cmd="$*"
-[[ -z $cmd ]] && { echo "Usage: ghostty-run <command...>"; exit 1; }
+BID=com.mitchellh.ghostty
 
-# Escape backslashes and double quotes for the AppleScript string literal.
-esc=${cmd//\\/\\\\}
-esc=${esc//\"/\\\"}
+ghostty_ids() {
+  aerospace list-windows --all --format '%{window-id}|%{app-bundle-id}' 2>/dev/null |
+    awk -F'|' -v b="$BID" '$2 == b { print $1 }' | sort
+}
 
-# NB: pgrep is unreliable for Ghostty on macOS (process name doesn't match the
-# bundle path), so ask LaunchServices via AppleScript instead.
+ws=$(aerospace list-workspaces --focused 2>/dev/null)
+before=$(ghostty_ids)
+
 if [[ "$(osascript -e 'application "Ghostty" is running' 2>/dev/null)" == "true" ]]; then
-  # Running: open a new window in the existing instance, then type the command.
   osascript \
     -e 'tell application "Ghostty" to activate' \
-    -e 'delay 0.15' \
-    -e 'tell application "System Events" to keystroke "n" using command down' \
-    -e 'delay 0.35' \
+    -e 'tell application "System Events" to keystroke "n" using command down' >/dev/null
+else
+  open -a Ghostty
+fi
+
+# Wait for AeroSpace to see the new window (max ~3s).
+new=""
+for _ in $(seq 1 60); do
+  new=$(comm -13 <(printf '%s\n' "$before") <(ghostty_ids) | head -1)
+  [[ -n $new ]] && break
+  /bin/sleep 0.05
+done
+
+if [[ -n $new && -n $ws ]]; then
+  # --focus-follows-window fixes the workspace when the window landed wrong;
+  # `focus --window-id` fixes focus when the move was a no-op.
+  aerospace move-node-to-workspace "$ws" --window-id "$new" --focus-follows-window 2>/dev/null
+  aerospace focus --window-id "$new" 2>/dev/null
+fi
+
+# Optional: type a command into the fresh window.
+if (($# > 0)); then
+  cmd="$*"
+  esc=${cmd//\\/\\\\}
+  esc=${esc//\"/\\\"}
+  /bin/sleep 0.25
+  osascript \
     -e "tell application \"System Events\" to keystroke \"$esc\"" \
     -e 'tell application "System Events" to key code 36' >/dev/null
-else
-  # Not running: a plain launch is fine — this is the first instance.
-  open -a Ghostty --args -e "$@"
 fi

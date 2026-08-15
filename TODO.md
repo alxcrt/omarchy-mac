@@ -42,6 +42,14 @@ Note: upstream moved Hyprland config from `bindings.conf` to Lua
 10. **`SUPER+ALT+RETURN` → `ghostty-run tmux`**, and `SUPER+SHIFT+B` as a
     second browser bind.
 
+## Known latent defect
+
+`alt-shift-enter` (Chrome) has the same race `ghostty-run` was fixed for:
+`make new window` runs *before* `activate`, so the window can be created while
+Chrome's key window is still on another display. The fix is the same pattern —
+record the focused workspace, diff window ids for the bundle id, move the new
+window back — so `ghostty-run` is worth generalising to take a bundle id.
+
 ## Smaller notes
 
 - `alt-ctrl-l` runs `pmset displaysleepnow`, which only *locks* if "require

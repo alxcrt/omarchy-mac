@@ -100,7 +100,7 @@ alt-r = 'mode resize'
 # ── Launching apps (Omarchy: Super+Return, Super+Shift+<key>) ──
 # New WINDOW in the existing Ghostty (not `open -na`, which spawns a whole new
 # app instance and litters the Dock with duplicate icons).
-alt-enter = '''exec-and-forget osascript -e 'tell application "Ghostty" to activate' -e 'tell application "System Events" to keystroke "n" using command down' '''
+alt-enter = 'exec-and-forget ghostty-run'
 alt-shift-enter = '''exec-and-forget osascript -e 'tell application "Google Chrome" to make new window' -e 'tell application "Google Chrome" to activate' '''
 alt-shift-ctrl-b = '''exec-and-forget osascript -e 'tell application "Google Chrome" to make new window with properties {mode:"incognito"}' -e 'tell application "Google Chrome" to activate' '''
 alt-ctrl-enter = 'exec-and-forget ghostty-run herdr'             # agent manager
