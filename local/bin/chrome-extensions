@@ -1,48 +1,98 @@
 #!/bin/bash
-# chrome-extensions — install/inspect Omarchy's browser extensions on macOS.
+# chrome-extensions — manage Omarchy's browser extensions on macOS.
 #
-# Omarchy launches Chromium with --load-extension; on macOS the supported route
-# is loading them unpacked once (they then persist across restarts).
+# Omarchy loads these with Chromium's --load-extension (config/chromium-flags.conf).
+# macOS Chrome offers two routes and no third: a one-time "Load unpacked" that
+# persists, or --load-extension supplied on every launch. Extensions cannot be
+# injected into an existing profile — Chrome HMAC-validates Secure Preferences
+# and reverts anything written behind its back.
 #
-#   chrome-extensions          list the extensions and their status
-#   chrome-extensions install  open chrome://extensions and reveal the folder
+#   chrome-extensions           list what's staged
+#   chrome-extensions verify    check whether Chrome has actually loaded them
+#   chrome-extensions install   open the Load-unpacked UI + reveal the folders
+#   chrome-extensions relaunch  quit Chrome and reopen it with --load-extension
 set -e
 
 EXT_DIR="$HOME/.config/omarchy-mac/extensions"
 NMH="$HOME/Library/Application Support/Google/Chrome/NativeMessagingHosts"
+CHROME="/Applications/Google Chrome.app/Contents/MacOS/Google Chrome"
+CHROME_DIR="$HOME/Library/Application Support/Google/Chrome"
+
+ext_paths() {
+  local out=""
+  for d in "$EXT_DIR"/*/; do [ -d "$d" ] && out="${out:+$out,}${d%/}"; done
+  printf '%s' "$out"
+}
 
 case "${1:-list}" in
   list)
-    echo "Extensions in $EXT_DIR:"
+    echo "Staged in $EXT_DIR:"
     for d in "$EXT_DIR"/*/; do
       [ -d "$d" ] || continue
-      name=$(python3 -c "import json,sys;print(json.load(open('$d/manifest.json'))['name'])" 2>/dev/null || echo "?")
-      key=$(python3 -c "
-import json
-m=json.load(open('$d/manifest.json'))
-c=m.get('commands',{})
-print(', '.join(v.get('suggested_key',{}).get('default','') for v in c.values()) or '-')" 2>/dev/null)
-      printf "  %-16s %-16s shortcut: %s\n" "$(basename "$d")" "$name" "$key"
+      python3 - "$d" <<'PY'
+import json,sys,os
+d=sys.argv[1]
+m=json.load(open(os.path.join(d,"manifest.json")))
+cmds=m.get("commands",{})
+keys=", ".join(v.get("suggested_key",{}).get("default","") for v in cmds.values()) or "-"
+print(f"  {os.path.basename(d.rstrip('/')):<16}{m['name']:<18}shortcut: {keys}")
+PY
     done
     echo
     echo "Native messaging hosts:"
-    for f in "$NMH"/com.omarchy.*.json; do
-      [ -f "$f" ] && echo "  ✓ $(basename "$f")"
-    done
+    for f in "$NMH"/com.omarchy.*.json; do [ -f "$f" ] && echo "  ✓ $(basename "$f")"; done
+    ;;
+
+  verify)
+    # Look through every Chrome profile for our extension IDs.
+    python3 - "$CHROME_DIR" <<'PY'
+import json,os,sys
+root=sys.argv[1]
+want={"dedjgknigfeelejglamclffonmophnfl":"Download Video",
+      "bgpiichlckmfanooecilcjemknkcpngb":"Copy URL"}
+found={}
+for prof in os.listdir(root):
+    p=os.path.join(root,prof,"Preferences")
+    if not os.path.exists(p): continue
+    try: d=json.load(open(p))
+    except Exception: continue
+    for eid,v in (d.get("extensions",{}).get("settings",{}) or {}).items():
+        name=((v.get("manifest") or {}).get("name")) or ""
+        if eid in want or "Download Video" in name or "Copy URL" in name or "WhatsApp Slim" in name:
+            found.setdefault(prof,[]).append(f"{name or eid}")
+if found:
+    for prof,names in found.items():
+        print(f"  LOADED in {prof}: {', '.join(names)}")
+else:
+    print("  NOT LOADED in any profile.")
+    print("  Chrome writes Preferences on exit — if you just loaded them,")
+    print("  quit Chrome once and re-run `chrome-extensions verify`.")
+PY
     ;;
 
   install)
-    echo "Loading unpacked extensions into Chrome:"
-    echo "  1. chrome://extensions is opening now"
-    echo "  2. Turn on 'Developer mode' (top right)"
-    echo "  3. Click 'Load unpacked' and pick each folder in the Finder window:"
-    for d in "$EXT_DIR"/*/; do echo "       $(basename "$d")"; done
+    echo "One-time load (persists across restarts):"
+    echo "  1. chrome://extensions opens now — enable 'Developer mode' (top right)"
+    echo "  2. Click 'Load unpacked' once per folder in the Finder window:"
+    for d in "$EXT_DIR"/*/; do echo "       $(basename "${d%/}")"; done
+    echo "  3. Confirm with: chrome-extensions verify"
     echo
-    echo "Shortcuts (Alt+Shift+D / Alt+Shift+L) are set per-extension at"
-    echo "chrome://extensions/shortcuts if they don't bind automatically."
+    echo "If a shortcut doesn't bind, set it at chrome://extensions/shortcuts"
     open -a "Google Chrome" "chrome://extensions/" 2>/dev/null || true
     open "$EXT_DIR" 2>/dev/null || true
     ;;
 
-  *) echo "Usage: chrome-extensions [list|install]"; exit 1 ;;
+  relaunch)
+    # Omarchy's approach: pass --load-extension at launch. Chrome must restart,
+    # and the flag has to be supplied every time (this command does that).
+    echo "Quitting Chrome (tabs are restored on reopen)…"
+    osascript -e 'tell application "Google Chrome" to quit' 2>/dev/null || true
+    sleep 3
+    echo "Relaunching with --load-extension…"
+    "$CHROME" --load-extension="$(ext_paths)" --restore-last-session >/dev/null 2>&1 &
+    sleep 5
+    echo "Done. Verify with: chrome-extensions verify"
+    ;;
+
+  *) echo "Usage: chrome-extensions [list|verify|install|relaunch]"; exit 1 ;;
 esac
