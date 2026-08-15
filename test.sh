@@ -312,12 +312,19 @@ w=$(aerospace list-workspaces --all 2>/dev/null | wc -l | tr -d ' '); [ "$w" -ge
 aerospace list-windows --all >/dev/null 2>&1 && ok "can enumerate windows (Accessibility granted)" || bad "windows" "Accessibility likely denied"
 C=~/.config/aerospace/aerospace.toml
 grep -q 'config-version = 2' "$C" && ok "config-version 2" || bad "config-version" "not 2"
-for b in "alt-enter" "alt-w" "alt-t" "alt-j" "alt-f" "alt-1 " "alt-shift-1" "alt-shift-ctrl-1" "alt-tab" "alt-shift-l" "alt-shift-ctrl-d"; do
+for b in "ctrl-alt-cmd-enter" "ctrl-alt-cmd-w" "ctrl-alt-cmd-t" "ctrl-alt-cmd-j" "ctrl-alt-cmd-f" "ctrl-alt-cmd-1 " "ctrl-alt-shift-cmd-1" "alt-shift-ctrl-1" "ctrl-alt-cmd-tab"; do
   grep -q "^$b" "$C" && ok "bind $b present" || bad "bind $b" "missing"
 done
 n=$(grep -cE '^alt-|^ctrl-' "$C"); [ "$n" -ge 60 ] && ok "$n binds defined" || bad "binds" "only $n"
 f=$(grep -c 'on-window-detected' "$C"); [ "$f" -ge 5 ] && ok "$f auto-float rules" || bad "float rules" "only $f"
 grep -q 'open -na Ghostty' "$C" && bad "aerospace" "still spawns duplicate Ghostty instances" || ok "no 'open -na' instance-spawning binds"
+# Plain Option must stay free: Ghostty binds opt+hjkl for split navigation, and
+# AeroSpace grabs keys globally, so any bare alt-<letter> bind would break them.
+for g in h j k l; do
+  grep -qE "^alt-$g " "$C" && bad "conflict" "aerospace grabs opt+$g — breaks Ghostty splits" \
+    || ok "opt+$g free for Ghostty splits"
+done
+grep -qE '^ctrl-alt-cmd-' "$C" && ok "binds use SUPER (ctrl-alt-cmd) not bare alt" || bad "binds" "not migrated to SUPER"
 fi
 
 # ── 15. karabiner ──────────────────────────────────────────────────────────

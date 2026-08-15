@@ -1,7 +1,9 @@
 # ~/.config/aerospace/aerospace.toml
 # Omarchy's window management ported to macOS via AeroSpace.
-# Mod is Alt (⌥) standing in for Omarchy's SUPER — ⌘ would clobber macOS
-# shortcuts (⌘W/⌘Q/⌘1-9). Key names follow the Omarchy Manual's hotkey list.
+# SUPER = Caps Lock, mapped by Karabiner to ctrl+opt+cmd (see karabiner.json).
+# Shift stays free, so Super+Shift+key works. Plain ⌥ is left alone for Ghostty
+# splits and macOS special characters. Super+Ctrl+key binds (system panels)
+# remain on plain ⌥⌃ — they do not need Caps Lock.
 # Docs: https://nikitabobko.github.io/AeroSpace/guide
 config-version = 2
 
@@ -28,47 +30,47 @@ outer.right      = 8
 
 [mode.main.binding]
 # ── Windows (Omarchy: Super+W / T / J / L / F) ──
-alt-w = 'close'                                    # close window
-alt-shift-w = 'close-all-windows-but-current'      # closest to "close all"
-alt-t = 'layout floating tiling'                   # toggle tiling/floating
-alt-j = 'layout tiles horizontal vertical'         # toggle window position
-alt-l = 'layout tiles accordion'                   # toggle layout style
-alt-f = 'fullscreen'                               # go full screen
+ctrl-alt-cmd-w = 'close'                                    # close window
+ctrl-alt-shift-cmd-w = 'close-all-windows-but-current'      # closest to "close all"
+ctrl-alt-cmd-t = 'layout floating tiling'                   # toggle tiling/floating
+ctrl-alt-cmd-j = 'layout tiles horizontal vertical'         # toggle window position
+ctrl-alt-cmd-l = 'layout tiles accordion'                   # toggle layout style
+ctrl-alt-cmd-f = 'fullscreen'                               # go full screen
 
 # ── Focus / swap (Super+Arrow, Super+Shift+Arrow) ──
-alt-left  = 'focus left'
-alt-right = 'focus right'
-alt-up    = 'focus up'
-alt-down  = 'focus down'
-alt-shift-left  = 'move left'
-alt-shift-right = 'move right'
-alt-shift-up    = 'move up'
-alt-shift-down  = 'move down'
+ctrl-alt-cmd-left  = 'focus left'
+ctrl-alt-cmd-right = 'focus right'
+ctrl-alt-cmd-up    = 'focus up'
+ctrl-alt-cmd-down  = 'focus down'
+ctrl-alt-shift-cmd-left  = 'move left'
+ctrl-alt-shift-cmd-right = 'move right'
+ctrl-alt-shift-cmd-up    = 'move up'
+ctrl-alt-shift-cmd-down  = 'move down'
 
 # ── Workspaces (Super+1-9, Super+Tab, Super+Ctrl+Tab) ──
-alt-1 = 'workspace 1'
-alt-2 = 'workspace 2'
-alt-3 = 'workspace 3'
-alt-4 = 'workspace 4'
-alt-5 = 'workspace 5'
-alt-6 = 'workspace 6'
-alt-7 = 'workspace 7'
-alt-8 = 'workspace 8'
-alt-9 = 'workspace 9'
-alt-tab = 'workspace next'
-alt-shift-tab = 'workspace prev'
+ctrl-alt-cmd-1 = 'workspace 1'
+ctrl-alt-cmd-2 = 'workspace 2'
+ctrl-alt-cmd-3 = 'workspace 3'
+ctrl-alt-cmd-4 = 'workspace 4'
+ctrl-alt-cmd-5 = 'workspace 5'
+ctrl-alt-cmd-6 = 'workspace 6'
+ctrl-alt-cmd-7 = 'workspace 7'
+ctrl-alt-cmd-8 = 'workspace 8'
+ctrl-alt-cmd-9 = 'workspace 9'
+ctrl-alt-cmd-tab = 'workspace next'
+ctrl-alt-shift-cmd-tab = 'workspace prev'
 alt-ctrl-tab = 'workspace-back-and-forth'          # former workspace
 
 # ── Move window to workspace (Super+Shift+1-9) ──
-alt-shift-1 = 'move-node-to-workspace 1 --focus-follows-window'
-alt-shift-2 = 'move-node-to-workspace 2 --focus-follows-window'
-alt-shift-3 = 'move-node-to-workspace 3 --focus-follows-window'
-alt-shift-4 = 'move-node-to-workspace 4 --focus-follows-window'
-alt-shift-5 = 'move-node-to-workspace 5 --focus-follows-window'
-alt-shift-6 = 'move-node-to-workspace 6 --focus-follows-window'
-alt-shift-7 = 'move-node-to-workspace 7 --focus-follows-window'
-alt-shift-8 = 'move-node-to-workspace 8 --focus-follows-window'
-alt-shift-9 = 'move-node-to-workspace 9 --focus-follows-window'
+ctrl-alt-shift-cmd-1 = 'move-node-to-workspace 1 --focus-follows-window'
+ctrl-alt-shift-cmd-2 = 'move-node-to-workspace 2 --focus-follows-window'
+ctrl-alt-shift-cmd-3 = 'move-node-to-workspace 3 --focus-follows-window'
+ctrl-alt-shift-cmd-4 = 'move-node-to-workspace 4 --focus-follows-window'
+ctrl-alt-shift-cmd-5 = 'move-node-to-workspace 5 --focus-follows-window'
+ctrl-alt-shift-cmd-6 = 'move-node-to-workspace 6 --focus-follows-window'
+ctrl-alt-shift-cmd-7 = 'move-node-to-workspace 7 --focus-follows-window'
+ctrl-alt-shift-cmd-8 = 'move-node-to-workspace 8 --focus-follows-window'
+ctrl-alt-shift-cmd-9 = 'move-node-to-workspace 9 --focus-follows-window'
 
 # ── Move window to workspace WITHOUT following (Super+Shift+Alt+1-9) ──
 alt-shift-ctrl-1 = 'move-node-to-workspace 1'
@@ -82,26 +84,26 @@ alt-shift-ctrl-8 = 'move-node-to-workspace 8'
 alt-shift-ctrl-9 = 'move-node-to-workspace 9'
 
 # ── Resize (Super+Minus/Equal, Super+Alt = smaller steps) ──
-alt-minus = 'resize smart -50'
-alt-equal = 'resize smart +50'
+ctrl-alt-cmd-minus = 'resize smart -50'
+ctrl-alt-cmd-equal = 'resize smart +50'
 alt-ctrl-minus = 'resize smart -10'
 alt-ctrl-equal = 'resize smart +10'
-alt-r = 'mode resize'
+ctrl-alt-cmd-r = 'mode resize'
 
 # ── Launching apps (Omarchy: Super+Return, Super+Shift+<key>) ──
 # New WINDOW in the existing Ghostty (not `open -na`, which spawns a whole new
 # app instance and litters the Dock with duplicate icons).
-alt-enter = '''exec-and-forget osascript -e 'tell application "Ghostty" to activate' -e 'tell application "System Events" to keystroke "n" using command down' '''
-alt-shift-enter = '''exec-and-forget osascript -e 'tell application "Google Chrome" to make new window' -e 'tell application "Google Chrome" to activate' '''
+ctrl-alt-cmd-enter = '''exec-and-forget osascript -e 'tell application "Ghostty" to activate' -e 'tell application "System Events" to keystroke "n" using command down' '''
+ctrl-alt-shift-cmd-enter = '''exec-and-forget osascript -e 'tell application "Google Chrome" to make new window' -e 'tell application "Google Chrome" to activate' '''
 alt-shift-ctrl-b = '''exec-and-forget osascript -e 'tell application "Google Chrome" to make new window with properties {mode:"incognito"}' -e 'tell application "Google Chrome" to activate' '''
 alt-ctrl-enter = 'exec-and-forget ghostty-run herdr'             # agent manager
-alt-shift-n = 'exec-and-forget ghostty-run nvim'                 # editor
-alt-shift-o = 'exec-and-forget open -a Obsidian'                                # Obsidian
-alt-d = 'exec-and-forget ghostty-run lazydocker'                  # Docker (moved off ⌥⇧D so Chrome's Download Video extension gets it)
-alt-shift-m = 'exec-and-forget ghostty-run cliamp'               # music
-alt-shift-a = 'exec-and-forget open -a ChatGPT'                                 # AI
-alt-shift-slash = 'exec-and-forget open -a "1Password"'                         # passwords
-alt-shift-f = 'exec-and-forget open -a Finder'                                  # file manager
+ctrl-alt-shift-cmd-n = 'exec-and-forget ghostty-run nvim'                 # editor
+ctrl-alt-shift-cmd-o = 'exec-and-forget open -a Obsidian'                                # Obsidian
+ctrl-alt-cmd-d = 'exec-and-forget ghostty-run lazydocker'                  # Docker (moved off ⌥⇧D so Chrome's Download Video extension gets it)
+ctrl-alt-shift-cmd-m = 'exec-and-forget ghostty-run cliamp'               # music
+ctrl-alt-shift-cmd-a = 'exec-and-forget open -a ChatGPT'                                 # AI
+ctrl-alt-shift-cmd-slash = 'exec-and-forget open -a "1Password"'                         # passwords
+ctrl-alt-shift-cmd-f = 'exec-and-forget open -a Finder'                                  # file manager
 
 # ── System (Omarchy: Super+Ctrl+<key> panels) ──
 alt-ctrl-t = 'exec-and-forget ghostty-run btop'                   # activity
@@ -121,7 +123,7 @@ alt-ctrl-l = 'exec-and-forget pmset displaysleepnow'                            
 # Use the CLI equivalents outside the browser: `webdl` / `weburl` (or mac dl/url).
 
 # ── Reload ──
-alt-shift-c = 'reload-config'
+ctrl-alt-shift-cmd-c = 'reload-config'
 
 [mode.resize.binding]
 left  = 'resize width -50'

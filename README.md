@@ -83,26 +83,28 @@ Shell flows in `config/zsh/functions.zsh` (zsh ports of Omarchy's bash fns):
 
 [AeroSpace](https://github.com/nikitabobko/AeroSpace) is an i3-style tiling WM that
 does **not** require disabling SIP. `config/aerospace/aerospace.toml` ports Omarchy's
-Hyprland binds. **Mod is Alt (⌥)** as the stand-in for Omarchy's SUPER — ⌘ would
-clobber macOS shortcuts.
+Hyprland binds. **SUPER = Caps Lock**, mapped by Karabiner to `⌃⌥⌘`. Shift is deliberately
+left out of that combo so `Super+Shift+key` still works. Plain `⌥` stays free
+for Ghostty's `opt+hjkl` splits and macOS special characters (∂ ƒ † ¬).
 
 First run needs **Accessibility permission**: System Settings → Privacy & Security →
 Accessibility → enable **AeroSpace**. It starts at login thereafter.
 
-| Omarchy (SUPER) | Here (Alt ⌥) | Action |
+| Omarchy | Here | Action |
 |---|---|---|
-| `SUPER+Enter` | `⌥+Enter` | terminal (Ghostty) |
-| `SUPER+B` / `O` / `N` / `T` / `D` | `⌥+B/O/N/T/D` | browser / Obsidian / nvim / btop / lazydocker |
-| `SUPER+W` | `⌥+W` | close window |
-| `SUPER+arrows` | `⌥+arrows` | move focus |
-| `SUPER+Shift+arrows` | `⌥+Shift+arrows` | move window |
-| `SUPER+1..9` | `⌥+1..9` | switch workspace |
-| `SUPER+Shift+1..9` | `⌥+Shift+1..9` | send window to workspace |
-| `SUPER+J` | `⌥+J` | toggle split orientation |
-| `SUPER+Shift+V` | `⌥+Shift+V` | toggle floating |
-| — | `⌥+F` | fullscreen |
-| `SUPER+-` / `=` | `⌥+-` / `=` | resize (or `⌥+R` for resize mode) |
-| — | `⌥+Shift+C` | reload config |
+| `SUPER+Enter` | `Caps+Enter` | terminal (Ghostty) |
+| `SUPER+Shift+<key>` | `Caps+Shift+<key>` | browser / Obsidian / nvim / music / AI |
+| `SUPER+W` | `Caps+W` | close window |
+| `SUPER+arrows` | `Caps+arrows` | move focus |
+| `SUPER+Shift+arrows` | `Caps+Shift+arrows` | move window |
+| `SUPER+1..9` | `Caps+1..9` | switch workspace |
+| `SUPER+Shift+1..9` | `Caps+Shift+1..9` | send window to workspace |
+| `SUPER+J` | `Caps+J` | toggle split orientation |
+| `SUPER+T` | `Caps+T` | toggle floating/tiling |
+| `SUPER+F` | `Caps+F` | fullscreen |
+| `SUPER+-` / `=` | `Caps+-` / `=` | resize (`Caps+R` for resize mode) |
+| — | `Caps+Shift+C` | reload config |
+| system panels | `⌥⌃+A/B/W/D/P/T/Q/S/L` | audio, bluetooth, wifi, display, battery, btop, calc, share, lock |
 
 ## Touch ID in the terminal (Omarchy's fingerprint auth)
 
@@ -124,13 +126,15 @@ Omarchy's binds are all `SUPER+…`. On macOS ⌘ is unusable for that (it owns
 ⌘W/⌘Q/⌘1-9), so `config/karabiner/karabiner.json` makes **Caps Lock** the Super
 key instead:
 
-- **Hold Caps Lock** → acts as ⌥, so every AeroSpace bind below becomes
-  `Caps+key` — i.e. `Caps+Enter`, `Caps+1..9`, `Caps+W`, exactly like Omarchy.
+- **Hold Caps Lock** → sends `⌃⌥⌘`, the SUPER used by every AeroSpace bind:
+  `Caps+Enter`, `Caps+1..9`, `Caps+W`, exactly like Omarchy.
 - **Tap Caps Lock alone** → Escape (vim-friendly).
-- **Right ⌘** → a second Super key, for when Caps is awkward.
+- **Right ⌘** → a second Super key.
 
-This is why the AeroSpace binds stayed on ⌥: nothing had to be rewritten, and
-both ⌥ and Caps Lock work as Super.
+Shift is intentionally *not* part of SUPER, so `Caps+Shift+1..9` remains
+distinct. And because SUPER is not plain `⌥`, Ghostty keeps `opt+hjkl` for
+split navigation and `⌥+letter` still types ∂ ƒ † ¬ — the conflicts the
+earlier ⌥-based scheme caused.
 
 Karabiner needs **Input Monitoring** + its driver extension approved on first
 run (System Settings → Privacy & Security).
