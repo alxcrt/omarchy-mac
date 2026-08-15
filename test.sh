@@ -233,11 +233,18 @@ r=subprocess.run([h,"chrome-extension://bgpiichlckmfanooecilcjemknkcpngb/"],
 sys.exit(0 if r.returncode==0 and not r.stdout else 1)
 PY
 chrome-extensions list >/dev/null 2>&1 && ok "chrome-extensions list runs" || bad "chrome-extensions list" "nonzero"
-if chrome-extensions verify 2>/dev/null | grep -q LOADED; then
+# NB: grep -q LOADED also matches "NOT LOADED" — match the positive line only.
+if chrome-extensions verify 2>/dev/null | grep -q 'LOADED in '; then
   ok "extensions LOADED in Chrome"
 else
-  skip "extensions not loaded in Chrome" "run: chrome-extensions install"
+  skip "extensions not loaded (per on-disk Preferences)" "load them, then quit Chrome once so it flushes Preferences"
 fi
+# AeroSpace must not shadow the extensions' own shortcuts.
+A=~/.config/aerospace/aerospace.toml
+grep -qE "^alt-shift-d\s*=" "$A" && bad "keybind conflict" "aerospace binds ⌥⇧D — Chrome's Download Video never sees it" \
+  || ok "⌥⇧D free for the Download Video extension"
+grep -qE "^alt-shift-l\s*=" "$A" && bad "keybind conflict" "aerospace binds ⌥⇧L — Chrome's Copy URL never sees it" \
+  || ok "⌥⇧L free for the Copy URL extension"
 fi
 
 # ── 11. mac CLI ────────────────────────────────────────────────────────────

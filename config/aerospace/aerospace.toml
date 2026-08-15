@@ -97,7 +97,7 @@ alt-shift-ctrl-b = '''exec-and-forget osascript -e 'tell application "Google Chr
 alt-ctrl-enter = 'exec-and-forget ghostty-run herdr'             # agent manager
 alt-shift-n = 'exec-and-forget ghostty-run nvim'                 # editor
 alt-shift-o = 'exec-and-forget open -a Obsidian'                                # Obsidian
-alt-shift-d = 'exec-and-forget ghostty-run lazydocker'           # Docker
+alt-d = 'exec-and-forget ghostty-run lazydocker'                  # Docker (moved off ⌥⇧D so Chrome's Download Video extension gets it)
 alt-shift-m = 'exec-and-forget ghostty-run cliamp'               # music
 alt-shift-a = 'exec-and-forget open -a ChatGPT'                                 # AI
 alt-shift-slash = 'exec-and-forget open -a "1Password"'                         # passwords
@@ -114,10 +114,11 @@ alt-ctrl-d = 'exec-and-forget open x-apple.systempreferences:com.apple.Displays-
 alt-ctrl-p = 'exec-and-forget open x-apple.systempreferences:com.apple.Battery-Settings.extension'
 alt-ctrl-l = 'exec-and-forget pmset displaysleepnow'                             # lock screen
 
-# ── Web flows (Omarchy: Alt+Shift+L copy URL, Alt+Shift+D download video) ──
-# Download uses ctrl too, because alt-shift-d is already Docker (Super+Shift+D).
-alt-shift-l = 'exec-and-forget weburl'
-alt-shift-ctrl-d = 'exec-and-forget webdl'
+# ── Web flows ──
+# Alt+Shift+D (download) and Alt+Shift+L (copy URL) are owned by the Chrome
+# extensions themselves, exactly as upstream. AeroSpace must NOT bind them:
+# it grabs keys globally and the extension would never see the keypress.
+# Use the CLI equivalents outside the browser: `webdl` / `weburl` (or mac dl/url).
 
 # ── Reload ──
 alt-shift-c = 'reload-config'
