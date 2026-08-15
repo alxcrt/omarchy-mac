@@ -23,6 +23,7 @@ link config/homebrew/Brewfile  .config/homebrew/Brewfile
 link config/zsh/aliases.zsh    .config/zsh/aliases.zsh
 link config/starship.toml      .config/starship.toml
 link config/tmux/tmux.conf     .config/tmux/tmux.conf
+link config/aerospace/aerospace.toml .config/aerospace/aerospace.toml
 link local/bin/macup           .local/bin/macup
 link local/bin/mise-install    .local/bin/mise-install
 chmod +x "$HOME/.local/bin/macup" "$HOME/.local/bin/mise-install"

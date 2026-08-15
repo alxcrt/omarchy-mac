@@ -24,6 +24,7 @@ config/homebrew/Brewfile     → ~/.config/homebrew/Brewfile    # the system + G
 config/zsh/aliases.zsh       → ~/.config/zsh/aliases.zsh      # ported Omarchy aliases (macOS-adjusted)
 config/starship.toml         → ~/.config/starship.toml        # Omarchy's prompt
 config/tmux/tmux.conf        → ~/.config/tmux/tmux.conf
+config/aerospace/aerospace.toml → ~/.config/aerospace/aerospace.toml  # tiling WM binds
 local/bin/macup              → ~/.local/bin/macup             # update-everything command
 local/bin/mise-install       → ~/.local/bin/mise-install      # self-updating mise wrapper generator
 zsh/zshrc                    → ~/.zshrc                       # oh-my-zsh + starship + mise
@@ -46,6 +47,31 @@ it would overwrite to `*.bak`), ensures Homebrew + mise, then reconciles both la
 mup      # mise tools + AI CLIs only (fast)
 macup    # everything: brew, casks, Mac App Store, mise, cleanup
 ```
+
+## Window management (AeroSpace)
+
+[AeroSpace](https://github.com/nikitabobko/AeroSpace) is an i3-style tiling WM that
+does **not** require disabling SIP. `config/aerospace/aerospace.toml` ports Omarchy's
+Hyprland binds. **Mod is Alt (⌥)** as the stand-in for Omarchy's SUPER — ⌘ would
+clobber macOS shortcuts.
+
+First run needs **Accessibility permission**: System Settings → Privacy & Security →
+Accessibility → enable **AeroSpace**. It starts at login thereafter.
+
+| Omarchy (SUPER) | Here (Alt ⌥) | Action |
+|---|---|---|
+| `SUPER+Enter` | `⌥+Enter` | terminal (Ghostty) |
+| `SUPER+B` / `O` / `N` / `T` / `D` | `⌥+B/O/N/T/D` | browser / Obsidian / nvim / btop / lazydocker |
+| `SUPER+W` | `⌥+W` | close window |
+| `SUPER+arrows` | `⌥+arrows` | move focus |
+| `SUPER+Shift+arrows` | `⌥+Shift+arrows` | move window |
+| `SUPER+1..9` | `⌥+1..9` | switch workspace |
+| `SUPER+Shift+1..9` | `⌥+Shift+1..9` | send window to workspace |
+| `SUPER+J` | `⌥+J` | toggle split orientation |
+| `SUPER+Shift+V` | `⌥+Shift+V` | toggle floating |
+| — | `⌥+F` | fullscreen |
+| `SUPER+-` / `=` | `⌥+-` / `=` | resize (or `⌥+R` for resize mode) |
+| — | `⌥+Shift+C` | reload config |
 
 ## Notes
 
