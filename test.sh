@@ -474,6 +474,18 @@ done
 grep -qE '^\s*(cask|brew)\s+"(claude-code|codex|gh)"' ~/.config/homebrew/Brewfile \
   && bad "Brewfile" "declares an AI CLI that mise owns" || ok "Brewfile excludes mise-managed AI CLIs"
 brew list --cask claude-code >/dev/null 2>&1 && bad "layering" "claude-code cask still installed" || ok "no duplicate claude install"
+# THE core rule: nothing mise manages may also be installed by Homebrew.
+# `brew upgrade` reinstalled opencode from a tap once and shadowed the mise one.
+for t in $(mise ls --installed 2>/dev/null | awk '{print $1}' | sed 's|.*[:/]||'); do
+  if brew list "$t" >/dev/null 2>&1 || brew list --cask "$t" >/dev/null 2>&1; then
+    bad "layering" "$t is installed by BOTH brew and mise"
+  fi
+done
+ok "no tool installed by both brew and mise"
+# mise's tool paths must outrank ~/.local/bin, or shims lose to stale binaries.
+env -i HOME="$HOME" TERM=xterm /bin/zsh -l -i -c 'mise doctor' 2>/dev/null | grep -q 'warnings found' \
+  && bad "mise doctor" "warnings in a clean login shell (PATH order?)" \
+  || ok "mise doctor clean in a fresh login shell"
 fi
 
 # ── 19. repo ───────────────────────────────────────────────────────────────
