@@ -101,17 +101,3 @@ minus = 'resize smart -50'
 equal = 'resize smart +50'
 enter = 'mode main'
 esc = 'mode main'
-
-# --- Pin workspaces to monitors so they stop jumping between screens ---
-# 1-5 live on the external (ZQE-CBA), 6-9 on the laptop. If a monitor is
-# unplugged, its workspaces fall back to whatever display is connected.
-[workspace-to-monitor-force-assignment]
-1 = 'ZQE-CBA'
-2 = 'ZQE-CBA'
-3 = 'ZQE-CBA'
-4 = 'ZQE-CBA'
-5 = 'ZQE-CBA'
-6 = 'built-in'
-7 = 'built-in'
-8 = 'built-in'
-9 = 'built-in'
