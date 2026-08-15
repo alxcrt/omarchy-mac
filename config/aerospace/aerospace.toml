@@ -10,7 +10,13 @@ config-version = 2
 
 start-at-login = true
 
-on-focus-changed = ['move-mouse window-lazy-center']
+# on-focus-changed is deliberately EMPTY. Hyprland warps the cursor to the
+# focused window, but on macOS `move-mouse window-lazy-center` physically warps
+# the pointer, and macOS then re-derives the focused monitor/workspace from where
+# the cursor landed. The result: spawning a terminal moved focus to a different
+# workspace than the new window. Reproduced and fixed by removing it.
+on-focus-changed = []
+# Warping on an explicit monitor switch is safe — verified over repeated runs.
 on-focused-monitor-changed = ['move-mouse monitor-lazy-center']
 
 enable-normalization-flatten-containers = true

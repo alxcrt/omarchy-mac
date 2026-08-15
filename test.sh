@@ -327,6 +327,28 @@ for g in j l; do
 done
 grep -qE "^alt-j |^alt-l " "$C" && ok "SUPER+J / SUPER+L bound (Omarchy parity)" \
   || bad "binds" "SUPER+J/L missing"
+# Regression: `move-mouse window-lazy-center` on every focus change physically
+# warps the pointer, and macOS then re-derives the focused workspace from where
+# the cursor landed — spawning a terminal jumped focus to another workspace.
+grep -qE "^on-focus-changed = \[\]" "$C" && ok "on-focus-changed empty (no cursor-warp focus jumps)" \
+  || bad "on-focus-changed" "cursor warping will move focus to the wrong workspace"
+# End-to-end: a new terminal must land on, and keep focus on, the current workspace.
+if command -v aerospace >/dev/null 2>&1; then
+  aerospace workspace 8 >/dev/null 2>&1; sleep 1
+  _b=$(aerospace list-workspaces --focused 2>/dev/null)
+  _before=$(aerospace list-windows --all --format '%{window-id}' 2>/dev/null | sort)
+  osascript -e 'tell application "Ghostty" to activate' -e 'tell application "System Events" to keystroke "n" using command down' 2>/dev/null
+  sleep 3
+  _after=$(aerospace list-windows --all --format '%{window-id}' 2>/dev/null | sort)
+  _new=$(comm -13 <(echo "$_before") <(echo "$_after") | head -1)
+  _a=$(aerospace list-workspaces --focused 2>/dev/null)
+  _ws=$(aerospace list-windows --all --format '%{window-id}|%{workspace}' 2>/dev/null | grep "^$_new|" | cut -d'|' -f2)
+  [ -n "$_new" ] && [ "$_a" = "$_b" ] && [ "$_ws" = "$_b" ] \
+    && ok "new terminal lands on the focused workspace (ws$_b)" \
+    || bad "terminal placement" "focus $_b->$_a, window on ws${_ws:-none}"
+  [ -n "$_new" ] && aerospace close --window-id "$_new" >/dev/null 2>&1
+  aerospace workspace 1 >/dev/null 2>&1
+fi
 grep -qE '^alt-enter' "$C" && ok "binds use ⌥ as SUPER" || bad "binds" "alt binds missing"
 fi
 
