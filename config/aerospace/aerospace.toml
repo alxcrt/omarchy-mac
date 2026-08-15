@@ -89,7 +89,9 @@ alt-ctrl-equal = 'resize smart +10'
 alt-r = 'mode resize'
 
 # ── Launching apps (Omarchy: Super+Return, Super+Shift+<key>) ──
-alt-enter = 'exec-and-forget open -na Ghostty'                                  # terminal
+# New WINDOW in the existing Ghostty (not `open -na`, which spawns a whole new
+# app instance and litters the Dock with duplicate icons).
+alt-enter = '''exec-and-forget osascript -e 'tell application "Ghostty" to activate' -e 'tell application "System Events" to keystroke "n" using command down' '''
 alt-shift-enter = 'exec-and-forget open -a "Google Chrome"'                     # browser
 alt-ctrl-enter = 'exec-and-forget open -na Ghostty --args -e herdr'             # agent manager
 alt-shift-n = 'exec-and-forget open -na Ghostty --args -e nvim'                 # editor
