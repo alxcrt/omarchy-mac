@@ -60,6 +60,7 @@ mac dl [url]            # yt-dlp the video on the current Chrome tab -> ~/Movies
 mac url                 # copy current Chrome tab URL
 mac transcode f.mov mp4 1080p     # also gif / jpg / png
 mac wm status|reload    # window manager state
+mac usage               # AI token usage + rate limits (from Omarchy)
 mac doctor              # mise + brew + aerospace health
 mac edit aliases|functions|wm|mise|brew|tmux
 ```

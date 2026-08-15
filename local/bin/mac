@@ -17,6 +17,19 @@ case "$cmd" in
   term)        exec ghostty-run "$@" ;;
   install)     exec mise-install "$@" ;;
 
+  usage)
+    # Omarchy's agent usage records, rendered readable instead of raw JSON.
+    for agent in ${1:-claude codex}; do
+      command -v "agent-usage-$agent" >/dev/null 2>&1 || continue
+      "agent-usage-$agent" --limits-only 2>/dev/null | jq -r --arg a "$agent" '
+        "\n[1m\($a | ascii_upcase)[0m  \(.tierLabel // "" )",
+        "  today:   \(.todayPrompts) prompts, \(.todaySessions) sessions, \(.todayTotalTokens) tokens",
+        "  total:   \(.totalPrompts) prompts over \(.activeDays) active days",
+        (.limits[]? | "  limit:   \(.label) \(.percent)% (resets \(.resetsAt))"),
+        (.modelUsage | to_entries[]? |
+          "  model:   \(.key)  in \(.value.inputTokens) / out \(.value.outputTokens)")'
+    done ;;
+
   wm)
     case "${1:-status}" in
       reload)  exec aerospace reload-config ;;
@@ -50,6 +63,7 @@ mac — Omarchy-style flows on macOS
   mac update              update everything (brew, casks, mas, mise, cleanup)
   mac mise                update mise tools + AI CLIs only (fast)
   mac install <pkg>       create a self-updating mise-backed wrapper
+  mac usage [claude|codex]  AI agent token usage + rate limits
 
   mac dl [url]            download video on the current Chrome page -> ~/Movies
   mac url                 copy the current Chrome tab URL
