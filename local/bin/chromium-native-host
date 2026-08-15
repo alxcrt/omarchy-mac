@@ -48,10 +48,19 @@ def send_message(obj):
 
 
 def notify(title, text):
-    subprocess.run(
-        ["osascript", "-e", f'display notification {json.dumps(text)} with title {json.dumps(title)}'],
+    # Pass the strings as argv instead of interpolating them into AppleScript
+    # source, so quotes/backslashes in a URL can't break the script. Surface
+    # failures on stderr rather than swallowing them.
+    r = subprocess.run(
+        ["osascript",
+         "-e", "on run argv",
+         "-e", "display notification (item 2 of argv) with title (item 1 of argv)",
+         "-e", "end run",
+         title, text],
         capture_output=True,
     )
+    if r.returncode != 0:
+        sys.stderr.write("notify failed: %s\n" % r.stderr.decode(errors="replace"))
 
 
 # Extension IDs are stable because each manifest.json pins a "key".

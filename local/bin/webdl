@@ -29,7 +29,16 @@ case "${OMARCHY_BROWSER:-Google Chrome}" in
   *)               cookie_browser=chrome ;;
 esac
 
-notify() { osascript -e "display notification \"$2\" with title \"$1\"" >/dev/null 2>&1 || true; }
+notify() {
+  local title=$1 msg=$2
+  # Pass strings as argv rather than interpolating into AppleScript source —
+  # a URL or filename containing " or \\ would otherwise break the script.
+  osascript \
+    -e 'on run argv' \
+    -e 'display notification (item 2 of argv) with title (item 1 of argv)' \
+    -e 'end run' \
+    "$title" "$msg" || echo "notify failed (rc=$?)" >&2
+}
 
 mkdir -p "$DOWNLOAD_DIR"
 
