@@ -114,30 +114,37 @@ ga() {
   cd "$wt_path"
 }
 
-# gd — remove the worktree you're standing in, and its branch
-# (Omarchy uses `gum confirm`; falls back to a plain read prompt if absent.)
+# gd — remove the worktree you are standing in, and its branch.
+# Hardened vs upstream: upstream derives root/branch from `basename $PWD` and
+# runs `worktree remove --force` + `branch -D` on that guess, so a plain
+# directory named `notes--drafts` would nuke branch `drafts` in ../notes.
+# It also used `cd`, which is aliased to zd() here — on a bad path zoxide
+# fuzzy-jumps to an unrelated directory and returns 0, so the force-remove ran
+# against a repo the user never named. Everything below is git-verified and
+# uses `builtin cd`.
 gd() {
-  local confirm
+  local wt root branch
+  wt=$(git rev-parse --show-toplevel 2>/dev/null) || { echo "not a git worktree"; return 1; }
+  if [[ $(git rev-parse --git-common-dir) == $(git rev-parse --git-dir) ]]; then
+    echo "refusing: this is the main checkout, not a linked worktree"; return 1
+  fi
+  branch=$(git symbolic-ref --quiet --short HEAD) || { echo "detached HEAD; refusing"; return 1; }
+
+  git status --short
+  echo "worktree: $wt"
+  echo "branch:   $branch"
   if command -v gum >/dev/null 2>&1; then
-    gum confirm "Remove worktree and branch?" || return 0
+    gum confirm "Remove THIS worktree and branch '$branch'? (discards the above)" || return 0
   else
-    read "confirm?Remove worktree and branch? [y/N] "
+    local confirm
+    read "confirm?Remove worktree '$wt' and branch '$branch'? [y/N] "
     [[ "$confirm" == [yY]* ]] || return 0
   fi
 
-  local cwd base branch root worktree
-
-  cwd="$(pwd)"
-  worktree="$(basename "$cwd")"
-
-  root="${worktree%%--*}"
-  branch="${worktree#*--}"
-
-  if [[ "$root" != "$worktree" ]]; then
-    cd "../$root"
-    git worktree remove "$cwd" --force || return 1
-    git branch -D "$branch"
-  fi
+  root=$(git rev-parse --path-format=absolute --git-common-dir); root=${root:h}
+  builtin cd "$root" || return 1
+  git worktree remove "$wt" --force || return 1
+  git branch -D -- "$branch"
 }
 
 # ── Transcoding (Omarchy wrappers; `transcode` is the macOS port) ──────────

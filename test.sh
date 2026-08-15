@@ -318,6 +318,16 @@ done
 n=$(grep -cE '^alt-|^ctrl-' "$C"); [ "$n" -ge 60 ] && ok "$n binds defined" || bad "binds" "only $n"
 f=$(grep -c 'on-window-detected' "$C"); [ "$f" -ge 5 ] && ok "$f auto-float rules" || bad "float rules" "only $f"
 grep -q 'open -na Ghostty' "$C" && bad "aerospace" "still spawns duplicate Ghostty instances" || ok "no 'open -na' instance-spawning binds"
+# AeroSpace runs binds with a minimal PATH — a bare script name silently does
+# nothing. Every exec-and-forget of our own scripts must be an absolute path.
+if grep -oE "exec-and-forget [a-z-]+" "$C" | grep -qvE "exec-and-forget (osascript|open|pmset)"; then
+  bad "bind PATH" "a bind calls a script by bare name; AeroSpace's PATH won't find it"
+else
+  ok "script binds use absolute paths"
+fi
+for p in $(grep -oE '/Users/[^ ]*/\.local/bin/[a-z-]+' "$C" | sort -u); do
+  [ -x "$p" ] && ok "bind target exists: $(basename "$p")" || bad "bind target" "$p missing"
+done
 # Upstream Omarchy ships NO Ghostty split binds (it uses tmux panes), so ⌥J/⌥L
 # belong to AeroSpace as SUPER+J / SUPER+L. Assert Ghostty does not re-claim them.
 for g in j l; do

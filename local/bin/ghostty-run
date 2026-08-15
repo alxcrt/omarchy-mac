@@ -16,6 +16,10 @@
 # newly created window back to it and focus it.
 set -uo pipefail
 
+# AeroSpace launches binds with a minimal PATH (no ~/.local/bin, no /opt/homebrew),
+# so `aerospace` itself must be reachable or the placement fix silently no-ops.
+export PATH="$HOME/.local/bin:/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin"
+
 BID=com.mitchellh.ghostty
 
 ghostty_ids() {
