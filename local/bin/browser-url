@@ -1,0 +1,26 @@
+#!/bin/bash
+# browser-url — print the URL of the frontmost tab of the active Chromium-family
+# browser. Shared by `weburl` and `webdl`.
+#
+# Omarchy uses Chromium on Arch; on macOS the same flow works with Chrome,
+# Chromium, Brave or Vivaldi — they all speak the same AppleScript dialect.
+# Override the choice with:  export OMARCHY_BROWSER="Brave Browser"
+set -e
+
+candidates=("Google Chrome" "Chromium" "Brave Browser" "Vivaldi")
+[[ -n $OMARCHY_BROWSER ]] && candidates=("$OMARCHY_BROWSER")
+
+# Prefer a browser that is actually running, so the "front window" is real.
+for app in "${candidates[@]}"; do
+  [[ -d "/Applications/$app.app" ]] || continue
+  running=$(osascript -e "application \"$app\" is running" 2>/dev/null || echo false)
+  [[ $running == true ]] || continue
+  url=$(osascript -e "tell application \"$app\" to return URL of active tab of front window" 2>/dev/null || true)
+  if [[ -n $url ]]; then
+    printf '%s' "$url"
+    exit 0
+  fi
+done
+
+echo "No Chromium-family browser with an open tab (tried: ${candidates[*]})" >&2
+exit 1

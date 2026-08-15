@@ -114,5 +114,6 @@ export PATH="$HOME/.local/bin:$PATH"
 source ~/.config/zsh/aliases.zsh
 source ~/.config/zsh/functions.zsh
 eval "$(zoxide init zsh)"
-alias cd='z'
+# `cd` is aliased to the zd() wrapper in aliases.zsh (matching Omarchy) —
+# do not re-alias it to plain `z` here, that would shadow the wrapper.
 eval "$(starship init zsh)"

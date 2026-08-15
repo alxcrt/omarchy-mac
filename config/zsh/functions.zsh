@@ -149,3 +149,53 @@ img2jpg-small()         { transcode "$1" jpg low; }
 img2jpg-medium()        { transcode "$1" jpg medium; }
 img2jpg-large()         { transcode "$1" jpg high; }
 img2png()               { transcode "$1" png high; }
+
+# ── Dev square layout: editor + diff watch + terminal + opencode ───────────
+# Usage: tds       (upstream fns/tmux)
+# NOTE: the diff pane runs `hunk diff --watch` — a Basecamp tool that may not
+# be installed here; the pane simply shows a "command not found" if missing.
+tds() {
+  [[ -n $1 ]] && { echo "Usage: tds"; return 1; }
+  [[ -z $TMUX ]] && { echo "You must start tmux to use tds."; return 1; }
+
+  local current_dir="${PWD}"
+  local editor_pane diff_pane terminal_pane opencode_pane
+
+  editor_pane="$TMUX_PANE"
+
+  tmux rename-window -t "$editor_pane" "$(basename "$current_dir")"
+
+  terminal_pane=$(tmux split-window -v -l 50% -t "$editor_pane" -c "$current_dir" -P -F '#{pane_id}')
+  diff_pane=$(tmux split-window -h -l 50% -t "$editor_pane" -c "$current_dir" -P -F '#{pane_id}')
+  opencode_pane=$(tmux split-window -h -l 50% -t "$terminal_pane" -c "$current_dir" -P -F '#{pane_id}')
+
+  tmux send-keys -t "$editor_pane" -l "nvim ."
+  tmux send-keys -t "$editor_pane" C-m
+  tmux send-keys -t "$diff_pane" -l "hunk diff --watch"
+  tmux send-keys -t "$diff_pane" C-m
+  tmux send-keys -t "$opencode_pane" -l "opencode"
+  tmux send-keys -t "$opencode_pane" C-m
+
+  tmux select-pane -t "$editor_pane"
+}
+
+# ── SSH port forwarding (upstream fns/ssh-port-forwarding) ─────────────────
+fip() {
+  (( $# < 2 )) && echo "Usage: fip <host> <port1> [port2] ..." && return 1
+  local host="$1"
+  shift
+  for port in "$@"; do
+    ssh -f -N -L "${port}:localhost:${port}" "$host" && echo "Forwarding localhost:$port -> $host:$port"
+  done
+}
+
+dip() {
+  (( $# == 0 )) && echo "Usage: dip <port1> [port2] ..." && return 1
+  for port in "$@"; do
+    pkill -f "ssh.*-L ${port}:localhost:${port}" && echo "Stopped forwarding port $port" || echo "No forwarding on port $port"
+  done
+}
+
+lip() {
+  pgrep -af "ssh.*-L [0-9]+:localhost:[0-9]+" || echo "No active forwards"
+}

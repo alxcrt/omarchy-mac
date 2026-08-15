@@ -1,39 +1,66 @@
 #!/bin/bash
-# webdl [url] — download the video on the current browser page to ~/Movies.
-# macOS port of Omarchy's Alt+Shift+D flow (yt-dlp + Chromium extension).
-# With no argument it grabs the URL of the frontmost Chrome tab via AppleScript.
-# ~/Movies is used rather than ~/Videos — that's the macOS equivalent folder.
-set -e
+# webdl [url] — download the video on the current browser page.
+# Port of Omarchy's bin/omarchy-chromium-ytdlp-host (the Alt+Shift+D flow).
+#
+# Omarchy drives this from a Chromium extension via native messaging; on macOS
+# we get the URL from the frontmost tab with AppleScript instead. The yt-dlp
+# invocation itself mirrors Omarchy's:
+#   --no-playlist --restrict-filenames, a --simulate pre-flight check,
+#   --paths <dir>, and '%(title)s [%(id)s].%(ext)s' naming.
+#
+# Destination follows Omarchy's OMARCHY_YTDLP_DIR override; the default is
+# ~/Movies rather than ~/Videos, because that's the macOS equivalent folder.
+set -euo pipefail
 
-dest="$HOME/Movies"
-mkdir -p "$dest"
+DOWNLOAD_DIR="${OMARCHY_YTDLP_DIR:-$HOME/Movies}"
 
-url=$1
-if [[ -z $url ]]; then
-  url=$(osascript -e 'tell application "Google Chrome" to return URL of active tab of front window' 2>/dev/null || true)
+url=${1:-}
+[[ -z $url ]] && url=$(browser-url 2>/dev/null || true)
+[[ -z $url ]] && { echo "No URL (pass one, or focus a browser tab)" >&2; exit 1; }
+[[ $url =~ ^https?:// ]] || { echo "Not an http(s) URL: $url" >&2; exit 1; }
+
+# yt-dlp's cookie backend for whichever browser is in use. Omarchy doesn't need
+# this (its extension runs inside the authenticated session); driving the
+# browser from outside, we pass cookies so logged-in/age-gated videos work.
+case "${OMARCHY_BROWSER:-Google Chrome}" in
+  Chromium)        cookie_browser=chromium ;;
+  "Brave Browser") cookie_browser=brave ;;
+  Vivaldi)         cookie_browser=vivaldi ;;
+  *)               cookie_browser=chrome ;;
+esac
+
+notify() { osascript -e "display notification \"$2\" with title \"$1\"" >/dev/null 2>&1 || true; }
+
+mkdir -p "$DOWNLOAD_DIR"
+
+# Like Omarchy: don't show anything until yt-dlp confirms there's a video here.
+if ! yt-dlp --no-playlist --simulate --quiet --no-warnings \
+      --cookies-from-browser "$cookie_browser" "$url" >/dev/null 2>&1; then
+  notify "No video found for download" "$url"
+  echo "No video found for download: $url" >&2
+  exit 0
 fi
-[[ -z $url ]] && { echo "No URL (pass one, or focus a Chrome tab)"; exit 1; }
 
-notify() {
-  osascript -e "display notification \"$1\" with title \"webdl\"" >/dev/null 2>&1 || true
-}
-
-notify "Downloading…"
 echo "→ $url"
+notify "Downloading…" "$url"
 
-# Use the browser's cookies so logged-in / age-gated videos work, and merge to
-# mp4 so the result plays everywhere (QuickTime included).
-if yt-dlp \
-    --cookies-from-browser chrome \
-    --no-playlist \
-    --restrict-filenames \
-    -f 'bv*+ba/b' \
-    --merge-output-format mp4 \
-    -o "$dest/%(title)s.%(ext)s" \
-    "$url"; then
-  notify "Saved to ~/Movies"
-  echo "Saved to $dest"
+# --print after_move only fires on a successful download+move, so a captured
+# path means success — same success signal Omarchy uses.
+filepath=$(yt-dlp \
+  --no-playlist \
+  --restrict-filenames \
+  --cookies-from-browser "$cookie_browser" \
+  --merge-output-format mp4 \
+  --paths "$DOWNLOAD_DIR" \
+  -o '%(title)s [%(id)s].%(ext)s' \
+  --print 'after_move:%(filepath)s' \
+  --no-simulate --quiet --no-warnings --progress \
+  "$url" | tail -1)
+
+if [[ -n ${filepath:-} && -f $filepath ]]; then
+  notify "Download complete" "$(basename "$filepath")"
+  echo "$filepath"
 else
-  notify "Download failed"
+  notify "Download failed" "$url"
   exit 1
 fi
