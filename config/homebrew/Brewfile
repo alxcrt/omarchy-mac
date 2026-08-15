@@ -24,6 +24,7 @@ brew "tlrc"         # tldr
 brew "yt-dlp"
 brew "imagemagick"
 brew "ffmpeg"
+brew "gifski"       # high-quality GIF encoder (Omarchy 3.8 gif transcoding)
 brew "wget"
 brew "mise"         # dev-tooling layer manager
 brew "mas"          # Mac App Store CLI — used by `macup`
@@ -61,6 +62,8 @@ cask "adobe-acrobat-reader"
 cask "ollama-app"
 cask "obsidian"
 cask "obs"
+cask "losslesscut"             # video/screen-recording trimmer (Omacut equivalent)
+cask "chatgpt"                 # ChatGPT desktop app (Omarchy 4 Install > AI)
 cask "1password"
 cask "1password-cli"
 cask "libreoffice"

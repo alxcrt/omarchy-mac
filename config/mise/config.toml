@@ -10,6 +10,7 @@ bun = "latest"
 # overrides mise's cooldown so these track today's release, not last week's.
 claude = "latest"
 codex = "latest"
+opencode = "latest"
 gh = "latest"
 
 # From your Linux config

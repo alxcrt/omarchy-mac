@@ -19,6 +19,7 @@ alias ....='cd ../../..'
 alias mup='MISE_MINIMUM_RELEASE_AGE=0 mise up'
 alias macup='$HOME/.local/bin/macup'
 alias up='macup'
+alias c='opencode'                # Omarchy default: `c` launches opencode
 alias cx='printf "\033[2J\033[3J\033[H" && claude --permission-mode bypassPermissions'
 alias cy='codex -s danger-full-access -a never'
 alias d='docker'
