@@ -312,7 +312,7 @@ w=$(aerospace list-workspaces --all 2>/dev/null | wc -l | tr -d ' '); [ "$w" -ge
 aerospace list-windows --all >/dev/null 2>&1 && ok "can enumerate windows (Accessibility granted)" || bad "windows" "Accessibility likely denied"
 C=~/.config/aerospace/aerospace.toml
 grep -q 'config-version = 2' "$C" && ok "config-version 2" || bad "config-version" "not 2"
-for b in "ctrl-alt-cmd-enter" "ctrl-alt-cmd-w" "ctrl-alt-cmd-t" "ctrl-alt-cmd-j" "ctrl-alt-cmd-f" "ctrl-alt-cmd-1 " "ctrl-alt-shift-cmd-1" "alt-shift-ctrl-1" "ctrl-alt-cmd-tab"; do
+for b in "alt-enter" "alt-w" "alt-t" "alt-f" "alt-1 " "alt-shift-1" "alt-shift-ctrl-1" "alt-tab"; do
   grep -q "^$b" "$C" && ok "bind $b present" || bad "bind $b" "missing"
 done
 n=$(grep -cE '^alt-|^ctrl-' "$C"); [ "$n" -ge 60 ] && ok "$n binds defined" || bad "binds" "only $n"
@@ -324,7 +324,7 @@ for g in h j k l; do
   grep -qE "^alt-$g " "$C" && bad "conflict" "aerospace grabs opt+$g — breaks Ghostty splits" \
     || ok "opt+$g free for Ghostty splits"
 done
-grep -qE '^ctrl-alt-cmd-' "$C" && ok "binds use SUPER (ctrl-alt-cmd) not bare alt" || bad "binds" "not migrated to SUPER"
+grep -qE '^alt-enter' "$C" && ok "binds use ⌥ as SUPER" || bad "binds" "alt binds missing"
 fi
 
 # ── 15. karabiner ──────────────────────────────────────────────────────────
@@ -332,7 +332,7 @@ if want karabiner; then
 sec "Karabiner (SUPER key)"
 K=~/.config/karabiner/karabiner.json
 python3 -c "import json;json.load(open('$K'))" 2>/dev/null && ok "karabiner.json valid JSON" || bad "karabiner.json" "invalid"
-python3 - <<PY && ok "caps_lock -> SUPER (ctrl+opt+cmd), Escape when tapped" || bad "caps rule" "not configured"
+python3 - <<PY && ok "caps_lock -> ⌥ (optional extra SUPER), Escape when tapped" || bad "caps rule" "not configured"
 import json,sys
 d=json.load(open("$K"))
 p=[x for x in d["profiles"] if x.get("selected")][0]
@@ -342,9 +342,7 @@ if not caps: sys.exit(1)
 to=caps[0]["to"][0]
 mods=set(to.get("modifiers",[])) | {to["key_code"]}
 # SUPER must be ctrl+opt+cmd and must NOT include shift, or Super+Shift collides.
-want={"left_command","left_control","left_option"}
-sys.exit(0 if mods==want
-         and not any("shift" in m for m in mods)
+sys.exit(0 if to["key_code"]=="left_option" and not to.get("modifiers")
          and caps[0]["to_if_alone"][0]["key_code"]=="escape" else 1)
 PY
 # NB: karabiner_grabber no longer exists — modern Karabiner runs
@@ -366,12 +364,12 @@ fi
 # End-to-end: synthesize SUPER+3 and confirm AeroSpace actually acts on it.
 if command -v aerospace >/dev/null 2>&1; then
   _b=$(aerospace list-workspaces --focused 2>/dev/null)
-  osascript -e 'tell application "System Events" to key code 20 using {control down, option down, command down}' 2>/dev/null
-  sleep 1
+  osascript -e 'tell application "System Events" to key code 20 using {option down}' 2>/dev/null
+  sleep 2
   _a=$(aerospace list-workspaces --focused 2>/dev/null)
-  [ "$_a" = "3" ] && ok "SUPER+3 switches workspace (binds respond end-to-end)" \
+  [ "$_a" = "3" ] && ok "⌥3 switches workspace (binds respond end-to-end)" \
                   || bad "SUPER binds" "workspace did not change ($_b -> $_a)"
-  osascript -e "tell application \"System Events\" to key code 18 using {control down, option down, command down}" 2>/dev/null
+  osascript -e "tell application \"System Events\" to key code 18 using {option down}" 2>/dev/null
   sleep 1
 fi
 fi

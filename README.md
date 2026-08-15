@@ -86,27 +86,30 @@ Shell flows in `config/zsh/functions.zsh` (zsh ports of Omarchy's bash fns):
 
 [AeroSpace](https://github.com/nikitabobko/AeroSpace) is an i3-style tiling WM that
 does **not** require disabling SIP. `config/aerospace/aerospace.toml` ports Omarchy's
-Hyprland binds. **SUPER = Caps Lock**, mapped by Karabiner to `⌃⌥⌘`. Shift is deliberately
-left out of that combo so `Super+Shift+key` still works. Plain `⌥` stays free
-for Ghostty's `opt+hjkl` splits and macOS special characters (∂ ƒ † ¬).
+Hyprland binds. **SUPER = Option (⌥)**, matching Omarchy directly. Karabiner additionally maps
+Caps Lock to ⌥ as an optional second Super (tap it alone for Escape).
+
+Because AeroSpace grabs keys globally, `⌥J` and `⌥L` (Omarchy's SUPER+J /
+SUPER+L) are deliberately **left unbound** — Ghostty uses `opt+h/j/k/l` for
+split navigation and binding them would break it.
 
 First run needs **Accessibility permission**: System Settings → Privacy & Security →
 Accessibility → enable **AeroSpace**. It starts at login thereafter.
 
 | Omarchy | Here | Action |
 |---|---|---|
-| `SUPER+Enter` | `Caps+Enter` | terminal (Ghostty) |
-| `SUPER+Shift+<key>` | `Caps+Shift+<key>` | browser / Obsidian / nvim / music / AI |
-| `SUPER+W` | `Caps+W` | close window |
-| `SUPER+arrows` | `Caps+arrows` | move focus |
-| `SUPER+Shift+arrows` | `Caps+Shift+arrows` | move window |
-| `SUPER+1..9` | `Caps+1..9` | switch workspace |
-| `SUPER+Shift+1..9` | `Caps+Shift+1..9` | send window to workspace |
-| `SUPER+J` | `Caps+J` | toggle split orientation |
-| `SUPER+T` | `Caps+T` | toggle floating/tiling |
-| `SUPER+F` | `Caps+F` | fullscreen |
-| `SUPER+-` / `=` | `Caps+-` / `=` | resize (`Caps+R` for resize mode) |
-| — | `Caps+Shift+C` | reload config |
+| `SUPER+Enter` | `⌥Enter` | terminal (Ghostty) |
+| `SUPER+Shift+<key>` | `⌥⇧<key>` | browser / Obsidian / nvim / music / AI |
+| `SUPER+W` | `⌥W` | close window |
+| `SUPER+arrows` | `⌥arrows` | move focus |
+| `SUPER+Shift+arrows` | `⌥⇧arrows` | move window |
+| `SUPER+1..9` | `⌥1..9` | switch workspace |
+| `SUPER+Shift+1..9` | `⌥⇧1..9` | send window to workspace |
+| `SUPER+J` / `SUPER+L` | — | unbound: Ghostty owns `opt+j`/`opt+l` |
+| `SUPER+T` | `⌥T` | toggle floating/tiling |
+| `SUPER+F` | `⌥F` | fullscreen |
+| `SUPER+-` / `=` | `⌥-` / `⌥=` | resize (`⌥R` for resize mode) |
+| — | `⌥⇧C` | reload config |
 | system panels | `⌥⌃+A/B/W/D/P/T/Q/S/L` | audio, bluetooth, wifi, display, battery, btop, calc, share, lock |
 
 ## Touch ID in the terminal (Omarchy's fingerprint auth)
@@ -129,15 +132,12 @@ Omarchy's binds are all `SUPER+…`. On macOS ⌘ is unusable for that (it owns
 ⌘W/⌘Q/⌘1-9), so `config/karabiner/karabiner.json` makes **Caps Lock** the Super
 key instead:
 
-- **Hold Caps Lock** → sends `⌃⌥⌘`, the SUPER used by every AeroSpace bind:
-  `Caps+Enter`, `Caps+1..9`, `Caps+W`, exactly like Omarchy.
+- **Hold Caps Lock** → acts as ⌥, an optional second Super.
 - **Tap Caps Lock alone** → Escape (vim-friendly).
-- **Right ⌘** → a second Super key.
+- **Right ⌘** → also ⌥.
 
-Shift is intentionally *not* part of SUPER, so `Caps+Shift+1..9` remains
-distinct. And because SUPER is not plain `⌥`, Ghostty keeps `opt+hjkl` for
-split navigation and `⌥+letter` still types ∂ ƒ † ¬ — the conflicts the
-earlier ⌥-based scheme caused.
+Karabiner is optional here: ⌥ is the real Super, so every binding works
+without touching Caps Lock at all.
 
 Karabiner needs **Input Monitoring** + its driver extension approved on first
 run (System Settings → Privacy & Security).
