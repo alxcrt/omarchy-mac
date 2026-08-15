@@ -1,0 +1,5 @@
+# sudo_local: local sudo config that survives macOS updates.
+# pam_reattach must come FIRST — without it Touch ID silently fails inside
+# tmux/screen (the process isn't attached to the GUI session).
+auth       optional       /opt/homebrew/lib/pam/pam_reattach.so
+auth       sufficient     pam_tid.so

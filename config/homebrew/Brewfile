@@ -27,6 +27,7 @@ brew "ffmpeg"
 brew "gifski"       # high-quality GIF encoder (Omarchy 3.8 gif transcoding)
 brew "wget"
 brew "mise"         # dev-tooling layer manager
+brew "pam-reattach"  # Touch ID for sudo inside tmux
 brew "mas"          # Mac App Store CLI — used by `macup`
 brew "coreutils"    # GNU coreutils; some scripts assume GNU flags
 brew "gnu-sed"
