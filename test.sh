@@ -69,6 +69,7 @@ fi
 if want functions; then
 sec "Shell functions defined"
 for f in tdl tds tdlm tsl zd sff compress ga gd n fip dip lip \
+         hdl hds hdlm hsl _herdr_ratio _herdr_split \
          img2jpg img2png img2jpg-small img2jpg-medium img2jpg-large \
          transcode-video-1080p transcode-video-4K transcode-video-gif; do
   ZRUN "typeset -f $f >/dev/null" && ok "$f defined" || bad "$f" "not defined"
@@ -76,6 +77,15 @@ done
 # both an alias AND a function of the same name must coexist where expected
 ZRUN 'typeset -f ga >/dev/null' && ok "ga survives oh-my-zsh alias clash" || bad "ga" "clobbered by omz"
 ZRUN 'typeset -f gd >/dev/null' && ok "gd survives oh-my-zsh alias clash" || bad "gd" "clobbered by omz"
+# grep the CODE, not comments — the fix is documented in a comment that
+# mentions the very string we're banning.
+grep -vE '^\s*#' ~/.config/zsh/functions.zsh | grep -q 'pgrep -af' \
+  && bad "lip" "uses GNU-only 'pgrep -af'" || ok "lip avoids the GNU-only pgrep -af"
+for e in SUDO_EDITOR BROWSER; do
+  [ -n "$(zsh -ic "echo \$$e" 2>/dev/null | tail -1)" ] && ok "$e exported" || bad "$e" "not set"
+done
+zsh -ic '[[ -o hash_cmds ]]' 2>/dev/null && bad "hash_cmds" "on — stale mise shims possible" || ok "hash_cmds off (mise shim correctness)"
+zsh -ic 'bindkey' 2>/dev/null | grep -q fzf && ok "fzf widgets loaded (Ctrl-R/Ctrl-T)" || bad "fzf" "widgets not loaded"
 fi
 
 # ── 4. zoxide / cd wrapper ─────────────────────────────────────────────────
@@ -151,9 +161,13 @@ for kv in "pull.rebase true" "push.autoSetupRemote true" "diff.algorithm histogr
           "rerere.autoupdate true" "column.ui auto" "branch.sort -committerdate" \
           "tag.sort -version:refname" "init.defaultBranch main" "alias.st status"; do
   k=${kv%% *}; want_v=${kv#* }
-  got=$(git config --global --get "$k" 2>/dev/null)
+  # NB: --global reads only ~/.gitconfig. Upstream's layering puts the managed
+  # values in ~/.config/git/config, so query the merged view instead.
+  got=$(git config --get "$k" 2>/dev/null)
   [ "$got" = "$want_v" ] && ok "git $k = $got" || bad "git $k" "got '$got' want '$want_v'"
 done
+[ -f ~/.config/git/config ] && ok "managed git config layer present" || bad "git layer" "~/.config/git/config missing"
+grep -qE '^\s*(email|name) =' ~/.gitconfig 2>/dev/null && ok "~/.gitconfig holds identity only" || bad "gitconfig" "identity missing"
 mkdir -p "$T/repo" && ( cd "$T/repo" && git init -q . && git commit -q --allow-empty -m init ) 2>/dev/null
 ( cd "$T/repo" && ZRUN "ga feat" >/dev/null 2>&1 )
 [ -d "$T/repo--feat" ] && ok "ga created ../repo--feat worktree" || bad "ga" "worktree not created"
@@ -337,6 +351,11 @@ for g in j l; do
 done
 grep -qE "^alt-j |^alt-l " "$C" && ok "SUPER+J / SUPER+L bound (Omarchy parity)" \
   || bad "binds" "SUPER+J/L missing"
+# Upstream parity items that were missing until recently.
+for b in "alt-0 " "alt-shift-0 " "alt-k " "alt-ctrl-period " "alt-backtick " \
+         "alt-ctrl-left " "alt-shift-ctrl-left " "alt-shift-b " "alt-shift-ctrl-enter "; do
+  grep -qE "^$b" "$C" && ok "bind ${b% } present" || bad "bind ${b% }" "missing"
+done
 # Regression: `move-mouse window-lazy-center` on every focus change physically
 # warps the pointer, and macOS then re-derives the focused workspace from where
 # the cursor landed — spawning a terminal jumped focus to another workspace.

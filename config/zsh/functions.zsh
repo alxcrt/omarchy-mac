@@ -204,5 +204,132 @@ dip() {
 }
 
 lip() {
-  pgrep -af "ssh.*-L [0-9]+:localhost:[0-9]+" || echo "No active forwards"
+  # Upstream uses `pgrep -af`, which is a GNU-ism: on macOS -a means "include
+  # process ancestors", not "print the command line", so it printed bare PIDs
+  # and could match the caller's own shell.
+  ps -axo pid,command | grep -E 'ssh .*-L [0-9]+:localhost:[0-9]+' | grep -v grep \
+    || echo "No active forwards"
+}
+
+# ── Herdr layouts (upstream fns/herdr) ─────────────────────────────────────
+# zsh note: upstream indexes arrays from 0 (`${columns[index]}`); zsh arrays are
+# 1-indexed, so every index below is +1 relative to upstream.
+
+_herdr_ratio() {
+  awk -v a="$1" -v b="$2" 'BEGIN { printf "%.4f", a / b }'
+}
+
+_herdr_split() {
+  herdr pane split "$1" --direction "$2" --ratio "$3" --cwd "$4" --no-focus |
+    jq -r '.result.pane.pane_id'
+}
+
+# hdl <ai> [<second_ai>] — editor + AI + terminal
+hdl() {
+  [[ -z $1 ]] && { echo "Usage: hdl <c|cx|codex|other_ai> [<second_ai>]"; return 1; }
+  [[ -z $HERDR_PANE_ID ]] && { echo "You must start herdr to use hdl."; return 1; }
+
+  local current_dir="${PWD}"
+  local editor_pane ai_pane ai2_pane
+  local ai="$1" ai2="${2:-}"
+
+  editor_pane="$HERDR_PANE_ID"
+  herdr tab rename "$HERDR_TAB_ID" "$(basename "$current_dir")" >/dev/null
+  _herdr_split "$editor_pane" down 0.85 "$current_dir" >/dev/null
+  ai_pane=$(_herdr_split "$editor_pane" right 0.7 "$current_dir")
+
+  if [[ -n $ai2 ]]; then
+    ai2_pane=$(_herdr_split "$ai_pane" down 0.5 "$current_dir")
+    herdr pane run "$ai2_pane" "$ai2" >/dev/null
+  fi
+
+  herdr pane run "$ai_pane" "$ai" >/dev/null
+  herdr pane run "$editor_pane" "${EDITOR:-nvim} ." >/dev/null
+}
+
+# hds — editor + diff watch + terminal + opencode
+hds() {
+  [[ -n $1 ]] && { echo "Usage: hds"; return 1; }
+  [[ -z $HERDR_PANE_ID ]] && { echo "You must start herdr to use hds."; return 1; }
+
+  local current_dir="${PWD}"
+  local editor_pane diff_pane terminal_pane opencode_pane
+
+  editor_pane="$HERDR_PANE_ID"
+  herdr tab rename "$HERDR_TAB_ID" "$(basename "$current_dir")" >/dev/null
+
+  terminal_pane=$(_herdr_split "$editor_pane" down 0.5 "$current_dir")
+  diff_pane=$(_herdr_split "$editor_pane" right 0.5 "$current_dir")
+  opencode_pane=$(_herdr_split "$terminal_pane" right 0.5 "$current_dir")
+
+  herdr pane run "$editor_pane" "nvim ." >/dev/null
+  herdr pane run "$diff_pane" "hunk diff --watch" >/dev/null
+  herdr pane run "$opencode_pane" "opencode" >/dev/null
+}
+
+# hdlm <ai> [<second_ai>] — one hdl tab per subdirectory
+hdlm() {
+  [[ -z $1 ]] && { echo "Usage: hdlm <c|cx|codex|other_ai> [<second_ai>]"; return 1; }
+  [[ -z $HERDR_PANE_ID ]] && { echo "You must start herdr to use hdlm."; return 1; }
+
+  local ai="$1" ai2="${2:-}"
+  local base_dir="$PWD"
+  local first=true
+  local dir dirpath hdl_command pane_id
+
+  herdr workspace rename "$HERDR_WORKSPACE_ID" "$(basename "$base_dir")" >/dev/null
+
+  for dir in "$base_dir"/*/; do
+    [[ -d $dir ]] || continue
+    dirpath="${dir%/}"
+
+    hdl_command="hdl ${(q)ai}"
+    [[ -n $ai2 ]] && hdl_command="$hdl_command ${(q)ai2}"
+
+    if $first; then
+      hdl_command="cd ${(q)dirpath} && $hdl_command"
+      herdr pane run "$HERDR_PANE_ID" "$hdl_command" >/dev/null
+      first=false
+    else
+      pane_id=$(herdr tab create --workspace "$HERDR_WORKSPACE_ID" --cwd "$dirpath" --no-focus |
+        jq -r '.result.root_pane.pane_id')
+      herdr pane run "$pane_id" "$hdl_command" >/dev/null
+    fi
+  done
+}
+
+# hsl <pane_count> <command> — swarm grid, same command in every pane
+hsl() {
+  [[ -z $1 || -z $2 ]] && { echo "Usage: hsl <pane_count> <command>"; return 1; }
+  [[ -z $HERDR_PANE_ID ]] && { echo "You must start herdr to use hsl."; return 1; }
+
+  local count="$1" cmd="$2"
+  local current_dir="${PWD}"
+  local -a columns panes
+  local cols=1 k col index rows j last pane
+
+  herdr tab rename "$HERDR_TAB_ID" "$(basename "$current_dir")" >/dev/null
+
+  while (( cols * cols < count )); do ((cols++)); done
+
+  columns=("$HERDR_PANE_ID")
+  for (( k = 1; k < cols; k++ )); do
+    columns+=("$(_herdr_split "${columns[-1]}" right "$(_herdr_ratio 1 $((cols - k + 1)))" "$current_dir")")
+  done
+
+  for (( index = 0; index < cols; index++ )); do
+    col="${columns[index+1]}"          # +1: zsh arrays are 1-indexed
+    rows=$(( count / cols ))
+    (( index < count % cols )) && (( rows++ ))
+    panes+=("$col")
+    last="$col"
+    for (( j = 1; j < rows; j++ )); do
+      last=$(_herdr_split "$last" down "$(_herdr_ratio 1 $((rows - j + 1)))" "$current_dir")
+      panes+=("$last")
+    done
+  done
+
+  for pane in "${panes[@]}"; do
+    herdr pane run "$pane" "$cmd" >/dev/null
+  done
 }

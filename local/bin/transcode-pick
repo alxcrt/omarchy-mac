@@ -1,0 +1,19 @@
+#!/bin/bash
+# transcode-pick — macOS port of omarchy-transcode's no-args behaviour: pick a
+# file, pick a format, transcode. Bound to SUPER+CTRL+PERIOD.
+export PATH="$HOME/.local/bin:/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin"
+
+file=$(osascript -e 'POSIX path of (choose file with prompt "Transcode which file?")' 2>/dev/null) || exit 0
+[[ -z $file ]] && exit 0
+
+choice=$(osascript -e 'choose from list {"mp4 1080p","mp4 4k","gif 1080p","jpg high","jpg medium","png high"} with prompt "Transcode to:" default items {"mp4 1080p"}' 2>/dev/null)
+[[ -z $choice || $choice == false ]] && exit 0
+
+set -- $choice
+if out=$(transcode "$file" "$1" "$2" 2>&1 | tail -1); then
+  osascript -e 'on run argv' -e 'display notification (item 1 of argv) with title "Transcode complete"' -e 'end run' "$(basename "$out")" >/dev/null 2>&1
+  echo "$out"
+else
+  osascript -e 'on run argv' -e 'display notification (item 1 of argv) with title "Transcode failed"' -e 'end run' "$out" >/dev/null 2>&1
+  exit 1
+fi

@@ -11,13 +11,23 @@
 # Output is written next to the input as <name>-<quality>.<format>.
 set -e
 
+# No args: fall back to the interactive picker, matching upstream
+# omarchy-transcode's no-argument behaviour.
+if [[ $# -eq 0 ]]; then
+  exec "$(dirname "$0")/transcode-pick"
+fi
+
 file=$1; format=$2; quality=${3:-high}
 [[ -z $file || -z $format ]] && {
   echo "Usage: transcode <file> <mp4|gif|jpg|png> [quality]"; exit 1; }
 [[ -f $file ]] || { echo "No such file: $file"; exit 1; }
 
-base="${file%.*}"
-out="${base}-${quality}.${format}"
+# Split dir/name first: "${file%.*}" strips the last dot-segment of the WHOLE
+# path, so "My.Project/clip" produced "My-720p.mp4" one level up, and "./video"
+# produced an empty base that ffmpeg read as a flag.
+dir=$(dirname "$file"); name=$(basename "$file")
+base="${name%.*}"
+out="$dir/${base}-${quality}.${format}"
 
 case "$format" in
   mp4)

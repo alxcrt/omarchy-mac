@@ -38,7 +38,10 @@ outer.right      = 8
 [mode.main.binding]
 # ── Windows (Omarchy: Super+W / T / J / L / F) ──
 alt-w = 'close'                                    # close window
-alt-shift-w = 'close-all-windows-but-current'      # closest to "close all"
+alt-shift-w = 'close-all-windows-but-current'      # close all but current
+# Upstream CTRL+ALT+DELETE closes ALL windows on the workspace; AeroSpace has no
+# such command, so close the others and then the focused one.
+alt-shift-ctrl-w = '''exec-and-forget /bin/sh -c 'aerospace close-all-windows-but-current; aerospace close' '''
 alt-t = 'layout floating tiling'                   # toggle tiling/floating
 alt-j = 'layout tiles horizontal vertical'         # toggle window position (SUPER+J)
 alt-l = 'layout tiles accordion'                   # toggle layout style (SUPER+L)
@@ -64,6 +67,7 @@ alt-6 = 'workspace 6'
 alt-7 = 'workspace 7'
 alt-8 = 'workspace 8'
 alt-9 = 'workspace 9'
+alt-0 = 'workspace 10'
 alt-tab = 'workspace next'
 alt-shift-tab = 'workspace prev'
 alt-ctrl-tab = 'workspace-back-and-forth'          # former workspace
@@ -78,6 +82,7 @@ alt-shift-6 = 'move-node-to-workspace 6 --focus-follows-window'
 alt-shift-7 = 'move-node-to-workspace 7 --focus-follows-window'
 alt-shift-8 = 'move-node-to-workspace 8 --focus-follows-window'
 alt-shift-9 = 'move-node-to-workspace 9 --focus-follows-window'
+alt-shift-0 = 'move-node-to-workspace 10 --focus-follows-window'
 
 # ── Move window to workspace WITHOUT following (Super+Shift+Alt+1-9) ──
 alt-shift-ctrl-1 = 'move-node-to-workspace 1'
@@ -89,6 +94,7 @@ alt-shift-ctrl-6 = 'move-node-to-workspace 6'
 alt-shift-ctrl-7 = 'move-node-to-workspace 7'
 alt-shift-ctrl-8 = 'move-node-to-workspace 8'
 alt-shift-ctrl-9 = 'move-node-to-workspace 9'
+alt-shift-ctrl-0 = 'move-node-to-workspace 10'
 
 # ── Resize (Super+Minus/Equal, Super+Alt = smaller steps) ──
 alt-minus = 'resize smart -50'
@@ -96,6 +102,21 @@ alt-equal = 'resize smart +50'
 alt-ctrl-minus = 'resize smart -10'
 alt-ctrl-equal = 'resize smart +10'
 alt-r = 'mode resize'
+# SUPER+CTRL+minus/equal — resize "a lot" (upstream ±300)
+alt-ctrl-shift-minus = 'resize smart -300'
+alt-ctrl-shift-equal = 'resize smart +300'
+
+# ── Monitors (upstream SUPER+SHIFT+ALT+arrows / CTRL+ALT+TAB) ──
+alt-ctrl-left  = 'focus-monitor left'
+alt-ctrl-right = 'focus-monitor right'
+alt-shift-ctrl-left  = 'move-workspace-to-monitor left'
+alt-shift-ctrl-right = 'move-workspace-to-monitor right'
+alt-shift-ctrl-up    = 'move-workspace-to-monitor up'
+alt-shift-ctrl-down  = 'move-workspace-to-monitor down'
+
+# ── Cycle windows within the workspace (upstream ALT+TAB; ⌥Tab is workspace-next here) ──
+alt-backtick = 'focus dfs-next --boundaries workspace --boundaries-action wrap-around-the-workspace'
+alt-shift-backtick = 'focus dfs-prev --boundaries workspace --boundaries-action wrap-around-the-workspace'
 
 # ── Launching apps (Omarchy: Super+Return, Super+Shift+<key>) ──
 # New WINDOW in the existing Ghostty (not `open -na`, which spawns a whole new
@@ -103,14 +124,17 @@ alt-r = 'mode resize'
 alt-enter = 'exec-and-forget /Users/alex/.local/bin/ghostty-run'
 alt-shift-enter = '''exec-and-forget osascript -e 'tell application "Google Chrome" to make new window' -e 'tell application "Google Chrome" to activate' '''
 alt-shift-ctrl-b = '''exec-and-forget osascript -e 'tell application "Google Chrome" to make new window with properties {mode:"incognito"}' -e 'tell application "Google Chrome" to activate' '''
+alt-shift-ctrl-enter = 'exec-and-forget /Users/alex/.local/bin/ghostty-run tmux'    # tmux terminal (SUPER+ALT+RETURN)
 alt-ctrl-enter = 'exec-and-forget /Users/alex/.local/bin/ghostty-run herdr'             # agent manager
 alt-shift-n = 'exec-and-forget /Users/alex/.local/bin/ghostty-run nvim'                 # editor
+alt-shift-b = '''exec-and-forget osascript -e 'tell application "Google Chrome" to make new window' -e 'tell application "Google Chrome" to activate' '''
 alt-shift-o = 'exec-and-forget open -a Obsidian'                                # Obsidian
 alt-d = 'exec-and-forget /Users/alex/.local/bin/ghostty-run lazydocker'                  # Docker (moved off ⌥⇧D so Chrome's Download Video extension gets it)
 alt-shift-m = 'exec-and-forget /Users/alex/.local/bin/ghostty-run cliamp'               # music
 alt-shift-a = 'exec-and-forget open -a ChatGPT'                                 # AI
 alt-shift-slash = 'exec-and-forget open -a "1Password"'                         # passwords
-alt-shift-f = 'exec-and-forget open -a Finder'                                  # file manager
+alt-shift-f = 'exec-and-forget open -a Finder'
+alt-shift-ctrl-f = 'exec-and-forget open .'                                     # Finder at cwd                                  # file manager
 
 # ── System (Omarchy: Super+Ctrl+<key> panels) ──
 alt-ctrl-t = 'exec-and-forget /Users/alex/.local/bin/ghostty-run btop'                   # activity
@@ -121,13 +145,19 @@ alt-ctrl-b = 'exec-and-forget open x-apple.systempreferences:com.apple.Bluetooth
 alt-ctrl-w = 'exec-and-forget open x-apple.systempreferences:com.apple.wifi-settings-extension'
 alt-ctrl-d = 'exec-and-forget open x-apple.systempreferences:com.apple.Displays-Settings.extension'
 alt-ctrl-p = 'exec-and-forget open x-apple.systempreferences:com.apple.Battery-Settings.extension'
-alt-ctrl-l = 'exec-and-forget pmset displaysleepnow'                             # lock screen
+# Actually locks (upstream omarchy-system-lock). `pmset displaysleepnow` only
+# locks if "require password immediately" is set; this always locks.
+alt-ctrl-l = '''exec-and-forget osascript -e 'tell application "System Events" to keystroke "q" using {control down, command down}' '''
 
 # ── Web flows ──
 # Alt+Shift+D (download) and Alt+Shift+L (copy URL) are owned by the Chrome
 # extensions themselves, exactly as upstream. AeroSpace must NOT bind them:
 # it grabs keys globally and the extension would never see the keypress.
 # Use the CLI equivalents outside the browser: `webdl` / `weburl` (or mac dl/url).
+
+# ── Tools this setup ships (upstream SUPER+K / SUPER+CTRL+PERIOD) ──
+alt-k = 'exec-and-forget /Users/alex/.local/bin/ghostty-run mac-keys'                      # keybindings cheat sheet
+alt-ctrl-period = 'exec-and-forget /Users/alex/.local/bin/transcode-pick'                  # transcode a chosen file
 
 # ── Reload ──
 alt-shift-c = 'reload-config'

@@ -73,8 +73,11 @@ n() { if [ "$#" -eq 0 ]; then command nvim . ; else command nvim "$@"; fi; }
 alias macup='$HOME/.local/bin/macup'
 alias up='macup'
 
-# Upstream also has `a='omarchy-agent --inline'` — no macOS counterpart, so it
-# is intentionally omitted rather than pointed at something different.
+# Upstream's `a='omarchy-agent --inline'` launches the *configured default*
+# coding agent. There's no omarchy-agent here, so `a` reads the same idea from
+# an env var — set OMARCHY_AGENT to claude|codex|opencode|grok|omp.
+export OMARCHY_AGENT="${OMARCHY_AGENT:-claude}"
+a() { command "${OMARCHY_AGENT:-claude}" "$@"; }
 
 # ── Git ────────────────────────────────────────────────────────────────────
 alias g='git'
@@ -83,8 +86,23 @@ alias gcam='git commit -a -m'
 alias gcad='git commit -a --amend'
 
 # ── Environment (from Omarchy default/bash/envs) ───────────────────────────
-export EDITOR=nvim
+# Upstream guards with ${EDITOR:-…}; keep that so a pre-set EDITOR wins.
+export EDITOR="${EDITOR:-nvim}"
+export SUDO_EDITOR="$EDITOR"
+# Upstream points BROWSER at omarchy-launch-browser so CLIs (gh, mise) can open
+# URLs detached from the terminal; `open` is the macOS equivalent.
+export BROWSER="${BROWSER:-open}"
 export BAT_THEME=ansi
 export MANPAGER="sh -c 'col -bx | bat -l man -p'"
 export MANROFFOPT="-c"
 alias decompress="tar -xzf"
+
+# ── Shell hygiene (upstream default/bash/shell + init) ─────────────────────
+# HISTSIZE is left alone — the live value (50000) already exceeds upstream's
+# 32768. These are the parts that were genuinely missing:
+setopt hist_ignore_all_dups   # upstream HISTCONTROL=ignoreboth
+setopt hist_ignore_space
+unsetopt hash_cmds            # upstream `set +h` — stops stale mise shim paths
+unsetopt hash_dirs
+# fzf's Ctrl-R / Ctrl-T / Alt-C widgets (upstream sources fzf's completion+keybindings)
+command -v fzf >/dev/null && source <(fzf --zsh) 2>/dev/null
