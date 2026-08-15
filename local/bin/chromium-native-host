@@ -1,0 +1,94 @@
+#!/usr/bin/env python3
+"""Chrome native-messaging host for the Omarchy browser extensions.
+
+Port of omarchy-chromium-ytdlp-host / omarchy-chromium-copy-url-host.
+
+Chrome speaks native messaging over stdio: a 4-byte native-endian length
+followed by that many bytes of JSON. The extensions send {"url": "..."} and
+ignore the reply, so all the real work (download / clipboard / notification)
+happens here.
+
+Chrome invokes the host with the calling extension's origin as argv[1] (e.g.
+"chrome-extension://dedjg.../"), NOT with our own flag — so the mode is derived
+from that origin rather than from a hand-passed argument.
+"""
+
+from __future__ import annotations
+
+import json
+import os
+import struct
+import subprocess
+import sys
+
+HOME = os.path.expanduser("~")
+# The browser launches us without the login shell's PATH.
+os.environ["PATH"] = f"{HOME}/.local/bin:/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin"
+
+
+def read_message():
+    raw_len = sys.stdin.buffer.read(4)
+    if len(raw_len) < 4:
+        return None
+    (length,) = struct.unpack("@I", raw_len)
+    payload = sys.stdin.buffer.read(length)
+    if not payload:
+        return None
+    try:
+        return json.loads(payload.decode("utf-8"))
+    except ValueError:
+        return None
+
+
+def send_message(obj):
+    data = json.dumps(obj).encode("utf-8")
+    sys.stdout.buffer.write(struct.pack("@I", len(data)))
+    sys.stdout.buffer.write(data)
+    sys.stdout.buffer.flush()
+
+
+def notify(title, text):
+    subprocess.run(
+        ["osascript", "-e", f'display notification {json.dumps(text)} with title {json.dumps(title)}'],
+        capture_output=True,
+    )
+
+
+# Extension IDs are stable because each manifest.json pins a "key".
+COPY_URL_EXT = "bgpiichlckmfanooecilcjemknkcpngb"
+
+
+def main():
+    argv = " ".join(sys.argv[1:])
+    # Allow an explicit mode for manual testing; otherwise infer from the origin.
+    if "copy-url" in sys.argv[1:] or COPY_URL_EXT in argv:
+        mode = "copy-url"
+    else:
+        mode = "ytdlp"
+
+    msg = read_message()
+    if not msg:
+        return
+    url = msg.get("url") or ""
+    if not url.startswith(("http://", "https://")):
+        return
+
+    if mode == "copy-url":
+        subprocess.run(["pbcopy"], input=url.encode("utf-8"))
+        notify("Copied URL", url)
+        send_message({"ok": True})
+        return
+
+    # ytdlp: hand off to webdl, which owns the yt-dlp invocation + notifications.
+    # Detach so the browser isn't left waiting on a long download.
+    subprocess.Popen(
+        ["webdl", url],
+        stdout=subprocess.DEVNULL,
+        stderr=subprocess.DEVNULL,
+        start_new_session=True,
+    )
+    send_message({"ok": True})
+
+
+if __name__ == "__main__":
+    main()

@@ -30,3 +30,6 @@ brew doctor || true
 mise doctor || true
 # Report available macOS updates — never auto-install them.
 softwareupdate --list 2>&1 | tail -5
+
+# User hooks (port of omarchy's hook system) — see ~/.config/omarchy-mac/hooks/
+command -v mac-hook >/dev/null && mac-hook post-update || true

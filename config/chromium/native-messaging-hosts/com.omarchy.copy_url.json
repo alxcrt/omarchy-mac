@@ -1,0 +1,7 @@
+{
+  "name": "com.omarchy.copy_url",
+  "description": "Omarchy Copy URL clipboard host (macOS)",
+  "path": "/Users/alex/.local/bin/chromium-native-host",
+  "type": "stdio",
+  "allowed_origins": ["chrome-extension://bgpiichlckmfanooecilcjemknkcpngb/"]
+}

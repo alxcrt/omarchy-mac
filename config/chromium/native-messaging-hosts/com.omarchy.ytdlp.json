@@ -1,0 +1,7 @@
+{
+  "name": "com.omarchy.ytdlp",
+  "description": "Omarchy yt-dlp download host (macOS)",
+  "path": "/Users/alex/.local/bin/chromium-native-host",
+  "type": "stdio",
+  "allowed_origins": ["chrome-extension://dedjgknigfeelejglamclffonmophnfl/"]
+}

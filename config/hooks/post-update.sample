@@ -1,0 +1,4 @@
+#!/bin/bash
+# Sample hook: runs after `macup` finishes. Drop executable files in
+# post-update.d/ or rename this to `post-update` to enable.
+echo "post-update hook ran at $(date)"

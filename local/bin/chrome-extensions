@@ -1,0 +1,48 @@
+#!/bin/bash
+# chrome-extensions — install/inspect Omarchy's browser extensions on macOS.
+#
+# Omarchy launches Chromium with --load-extension; on macOS the supported route
+# is loading them unpacked once (they then persist across restarts).
+#
+#   chrome-extensions          list the extensions and their status
+#   chrome-extensions install  open chrome://extensions and reveal the folder
+set -e
+
+EXT_DIR="$HOME/.config/omarchy-mac/extensions"
+NMH="$HOME/Library/Application Support/Google/Chrome/NativeMessagingHosts"
+
+case "${1:-list}" in
+  list)
+    echo "Extensions in $EXT_DIR:"
+    for d in "$EXT_DIR"/*/; do
+      [ -d "$d" ] || continue
+      name=$(python3 -c "import json,sys;print(json.load(open('$d/manifest.json'))['name'])" 2>/dev/null || echo "?")
+      key=$(python3 -c "
+import json
+m=json.load(open('$d/manifest.json'))
+c=m.get('commands',{})
+print(', '.join(v.get('suggested_key',{}).get('default','') for v in c.values()) or '-')" 2>/dev/null)
+      printf "  %-16s %-16s shortcut: %s\n" "$(basename "$d")" "$name" "$key"
+    done
+    echo
+    echo "Native messaging hosts:"
+    for f in "$NMH"/com.omarchy.*.json; do
+      [ -f "$f" ] && echo "  ✓ $(basename "$f")"
+    done
+    ;;
+
+  install)
+    echo "Loading unpacked extensions into Chrome:"
+    echo "  1. chrome://extensions is opening now"
+    echo "  2. Turn on 'Developer mode' (top right)"
+    echo "  3. Click 'Load unpacked' and pick each folder in the Finder window:"
+    for d in "$EXT_DIR"/*/; do echo "       $(basename "$d")"; done
+    echo
+    echo "Shortcuts (Alt+Shift+D / Alt+Shift+L) are set per-extension at"
+    echo "chrome://extensions/shortcuts if they don't bind automatically."
+    open -a "Google Chrome" "chrome://extensions/" 2>/dev/null || true
+    open "$EXT_DIR" 2>/dev/null || true
+    ;;
+
+  *) echo "Usage: chrome-extensions [list|install]"; exit 1 ;;
+esac

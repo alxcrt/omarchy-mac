@@ -1,0 +1,27 @@
+#!/bin/bash
+# mac-hook <name> [args...] — run user hooks, port of omarchy-hook.
+# Looks for ~/.config/omarchy-mac/hooks/<name> and every file in
+# ~/.config/omarchy-mac/hooks/<name>.d/ so you can drop in your own steps
+# without editing the shipped scripts.
+set -e
+
+if (( $# < 1 )); then
+  echo "Usage: mac-hook <name> [args...]"
+  exit 1
+fi
+
+HOOK_PATH="$HOME/.config/omarchy-mac/hooks/$1"
+HOOK_DIR="$HOOK_PATH.d"
+shift
+
+if [[ -f $HOOK_PATH ]]; then
+  bash "$HOOK_PATH" "$@" || echo "Hook failed: $HOOK_PATH"
+fi
+
+if [[ -d $HOOK_DIR ]]; then
+  for hook in "$HOOK_DIR"/*; do
+    [[ -f $hook ]] || continue
+    [[ $hook == *.sample ]] && continue
+    bash "$hook" "$@" || echo "Hook failed: $hook"
+  done
+fi
