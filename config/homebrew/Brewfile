@@ -1,0 +1,75 @@
+# ~/.config/homebrew/Brewfile
+# Declarative source of truth for Homebrew's layer (system + GUI apps).
+# Apply / reconcile with:  brew bundle --file=~/.config/homebrew/Brewfile
+# Dev tooling + AI CLIs are deliberately NOT here — those live in mise
+# (~/.config/mise/config.toml). One package manager per layer, no overlap.
+
+# --- CLI: Omarchy's pacman set, ported ---
+brew "bat"          # cat with syntax highlighting; used as MANPAGER
+brew "eza"          # ls replacement, aliased over ls
+brew "fd"
+brew "fzf"
+brew "ripgrep"
+brew "zoxide"       # aliased over cd
+brew "jq"
+brew "btop"
+brew "fastfetch"
+brew "starship"
+brew "tmux"
+brew "neovim"
+brew "lazygit"
+brew "lazydocker"
+brew "dua-cli"
+brew "tlrc"         # tldr
+brew "yt-dlp"
+brew "imagemagick"
+brew "ffmpeg"
+brew "wget"
+brew "mise"         # dev-tooling layer manager
+brew "mas"          # Mac App Store CLI — used by `macup`
+brew "coreutils"    # GNU coreutils; some scripts assume GNU flags
+brew "gnu-sed"
+brew "findutils"
+
+# --- CLI already on this machine (kept) ---
+brew "fx"
+brew "hf"
+brew "just"
+brew "llama.cpp"
+brew "mole"
+brew "openai-whisper"
+brew "whisper-cpp"
+brew "xh"
+
+# --- GUI casks ---
+cask "ghostty"                 # terminal
+cask "alacritty"               # secondary terminal
+cask "google-chrome"           # primary browser (Phase 7 webapp target)
+cask "iina"                    # media player (macOS-native mpv)
+cask "stolendata-mpv"          # mpv proper
+cask "localsend"
+cask "qbittorrent"
+cask "aerospace"               # i3-style tiling WM (no SIP disable needed)
+cask "raycast"                 # launcher
+cask "cursor"
+cask "visual-studio-code"
+cask "zed"
+cask "cmux"
+cask "betterdisplay"
+cask "cleanshot"
+cask "adobe-acrobat-reader"
+cask "ollama-app"
+cask "obsidian"
+cask "obs"
+cask "1password"
+cask "1password-cli"
+cask "libreoffice"
+cask "kdenlive"
+cask "moonlight"
+cask "steam"
+# cask "docker-desktop"        # needs admin password — install interactively
+cask "font-jetbrains-mono-nerd-font"
+cask "font-ia-writer-duo"
+
+# NOTE: claude-code, codex (casks) and gh (formula) intentionally omitted —
+# migrated to mise so a single update verb bumps them. See mise config.toml.

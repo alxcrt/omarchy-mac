@@ -1,0 +1,17 @@
+#!/bin/bash
+# Install a small mise-backed wrapper for a given tool.
+# The wrapper installs-and-upgrades the tool on first use rather than
+# declaring it up front. Port of omarchy-mise-install.
+# Usage: mise-install <package> [command-name [bin-name]]
+[[ -z $1 ]] && { echo "Usage: mise-install <package> [command-name [bin-name]]"; exit 1; }
+
+package=$1; command=${2:-$1}; bin=${3:-$command}
+mkdir -p "$HOME/.local/bin"
+rm -f "$HOME/.local/bin/$command"
+cat >"$HOME/.local/bin/$command" <<EOF
+#!/bin/bash
+export MISE_MINIMUM_RELEASE_AGE=0
+mise use -g "$package" || exit 1
+exec mise x "$package" -- "$bin" "\$@"
+EOF
+chmod +x "$HOME/.local/bin/$command"

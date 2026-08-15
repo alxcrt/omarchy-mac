@@ -1,0 +1,21 @@
+[tools]
+# Runtimes
+node = "latest"
+go = "latest"
+rust = "latest"
+bun = "latest"
+
+# AI CLIs + gh — migrated off Homebrew into mise so `mup`/`macup` bump them.
+# All floated at "latest"; MISE_MINIMUM_RELEASE_AGE=0 in the update path
+# overrides mise's cooldown so these track today's release, not last week's.
+claude = "latest"
+codex = "latest"
+gh = "latest"
+
+# From your Linux config
+"npm:@xai-official/grok" = "latest"
+"github:can1357/oh-my-pi" = "latest"
+
+# Terminal workspace manager (herdr.dev = github.com/herdrdev/herdr).
+# Ships a herdr-macos-aarch64 release binary, so it stays in the update path.
+"github:herdrdev/herdr" = "latest"

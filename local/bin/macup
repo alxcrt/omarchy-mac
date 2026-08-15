@@ -1,0 +1,32 @@
+#!/bin/bash
+# macup — one command to update everything. Port of `omarchy update`.
+set -e
+
+section() { echo -e "\n\033[0;32m$1\033[0m"; }
+
+section "Homebrew formulae"
+brew update
+brew upgrade
+
+section "Homebrew casks"
+# --greedy also catches apps that self-update, so they don't drift.
+brew upgrade --cask --greedy
+
+section "Mac App Store"
+command -v mas >/dev/null && mas upgrade || echo "mas not installed, skipping"
+
+section "mise tools"
+# Same override as the `mup` alias: mise withholds releases younger than its
+# cooldown window, which leaves the AI CLIs (claude/codex/gh) days behind.
+# Asking to update means now.
+MISE_MINIMUM_RELEASE_AGE=0 mise up
+
+section "Cleanup"
+brew cleanup -s
+brew autoremove
+
+section "Status"
+brew doctor || true
+mise doctor || true
+# Report available macOS updates — never auto-install them.
+softwareupdate --list 2>&1 | tail -5
