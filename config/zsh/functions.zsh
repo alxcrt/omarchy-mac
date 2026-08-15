@@ -134,3 +134,13 @@ gd() {
     git branch -D "$branch"
   fi
 }
+
+# ── Transcoding (Omarchy wrappers; `transcode` is the macOS port) ──────────
+transcode-video-1080p() { transcode "$1" mp4 1080p; }
+transcode-video-4K()    { transcode "$1" mp4 4k; }
+transcode-video-gif()   { transcode "$1" gif 1080p; }
+img2jpg()               { transcode "$1" jpg high; }
+img2jpg-small()         { transcode "$1" jpg low; }
+img2jpg-medium()        { transcode "$1" jpg medium; }
+img2jpg-large()         { transcode "$1" jpg high; }
+img2png()               { transcode "$1" png high; }

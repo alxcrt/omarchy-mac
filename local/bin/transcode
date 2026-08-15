@@ -1,0 +1,73 @@
+#!/bin/bash
+# transcode <file> <format> <quality> — macOS port of omarchy-transcode.
+# Uses ffmpeg / imagemagick / gifski (all already installed via Homebrew).
+#
+#   transcode clip.mov mp4 1080p
+#   transcode clip.mov mp4 4k
+#   transcode clip.mov gif 1080p
+#   transcode shot.png jpg high|medium|low
+#   transcode shot.jpg png high
+#
+# Output is written next to the input as <name>-<quality>.<format>.
+set -e
+
+file=$1; format=$2; quality=${3:-high}
+[[ -z $file || -z $format ]] && {
+  echo "Usage: transcode <file> <mp4|gif|jpg|png> [quality]"; exit 1; }
+[[ -f $file ]] || { echo "No such file: $file"; exit 1; }
+
+base="${file%.*}"
+out="${base}-${quality}.${format}"
+
+case "$format" in
+  mp4)
+    case "$quality" in
+      4k)    scale="3840:-2" ;;
+      1080p) scale="1920:-2" ;;
+      720p)  scale="1280:-2" ;;
+      *)     scale="1920:-2" ;;
+    esac
+    ffmpeg -hide_banner -loglevel error -y -i "$file" \
+      -vf "scale=${scale}:flags=lanczos" \
+      -c:v libx264 -preset slow -crf 21 -pix_fmt yuv420p \
+      -c:a aac -b:a 160k "$out"
+    ;;
+
+  gif)
+    case "$quality" in
+      1080p) width=1080 ;;
+      720p)  width=720 ;;
+      *)     width=800 ;;
+    esac
+    if command -v gifski >/dev/null 2>&1; then
+      # gifski gives noticeably better GIFs than ffmpeg's palettegen.
+      tmp=$(mktemp -d)
+      trap 'rm -rf "$tmp"' EXIT
+      ffmpeg -hide_banner -loglevel error -y -i "$file" \
+        -vf "fps=15,scale=${width}:-2:flags=lanczos" "$tmp/frame%05d.png"
+      gifski --quiet -o "$out" --fps 15 "$tmp"/frame*.png
+    else
+      ffmpeg -hide_banner -loglevel error -y -i "$file" \
+        -vf "fps=15,scale=${width}:-2:flags=lanczos,split[a][b];[a]palettegen[p];[b][p]paletteuse" \
+        "$out"
+    fi
+    ;;
+
+  jpg|jpeg)
+    case "$quality" in
+      low)    q=60 ;;
+      medium) q=80 ;;
+      high|*) q=92 ;;
+    esac
+    magick "$file" -quality "$q" -strip "$out"
+    ;;
+
+  png)
+    magick "$file" -strip "$out"
+    ;;
+
+  *)
+    echo "Unknown format: $format (want mp4|gif|jpg|png)"; exit 1 ;;
+esac
+
+echo "$out"
