@@ -63,7 +63,9 @@ for prof in os.listdir(root):
 if found:
     for prof,names in found.items():
         print(f"  LOADED in {prof}: {', '.join(names)}")
+    print("STATUS=loaded")
 else:
+    print("STATUS=not-loaded")
     print("  NOT LOADED in any profile.")
     print("  Chrome writes Preferences on exit — if you just loaded them,")
     print("  quit Chrome once and re-run `chrome-extensions verify`.")

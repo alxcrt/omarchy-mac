@@ -233,8 +233,9 @@ r=subprocess.run([h,"chrome-extension://bgpiichlckmfanooecilcjemknkcpngb/"],
 sys.exit(0 if r.returncode==0 and not r.stdout else 1)
 PY
 chrome-extensions list >/dev/null 2>&1 && ok "chrome-extensions list runs" || bad "chrome-extensions list" "nonzero"
-# NB: grep -q LOADED also matches "NOT LOADED" — match the positive line only.
-if chrome-extensions verify 2>/dev/null | grep -q 'LOADED in '; then
+# Match the machine-readable status line, NOT prose: "NOT LOADED in any
+# profile" contains the substring "LOADED in ", which false-passed twice.
+if chrome-extensions verify 2>/dev/null | grep -qx 'STATUS=loaded'; then
   ok "extensions LOADED in Chrome"
 else
   skip "extensions not loaded (per on-disk Preferences)" "load them, then quit Chrome once so it flushes Preferences"
