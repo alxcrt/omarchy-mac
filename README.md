@@ -48,6 +48,36 @@ mup      # mise tools + AI CLIs only (fast)
 macup    # everything: brew, casks, Mac App Store, mise, cleanup
 ```
 
+## Flows (the point of this repo)
+
+Omarchy's *behaviours*, ported — not its looks. One entry point:
+
+```sh
+mac                     # discoverable list of everything below
+mac update              # brew + casks + mas + mise + cleanup   (= omarchy update)
+mac mise                # just mise tools + AI CLIs             (= mup)
+mac dl [url]            # yt-dlp the video on the current Chrome tab -> ~/Movies
+mac url                 # copy current Chrome tab URL
+mac transcode f.mov mp4 1080p     # also gif / jpg / png
+mac wm status|reload    # window manager state
+mac doctor              # mise + brew + aerospace health
+mac edit aliases|functions|wm|mise|brew|tmux
+```
+
+Shell flows in `config/zsh/functions.zsh` (zsh ports of Omarchy's bash fns):
+
+| Command | Does |
+|---|---|
+| `tdl <ai> [ai2]` | tmux dev layout: editor + AI pane(s) + terminal strip |
+| `tdlm <ai> [ai2]` | one such layout per subdirectory |
+| `tsl <n> <cmd>` | swarm layout — `<cmd>` in n tiled panes |
+| `ga <branch>` / `gd` | git worktree add+cd / remove worktree+branch |
+| `compress <dir>` | tar.gz a directory |
+| `img2jpg`, `transcode-video-1080p`, … | transcoding wrappers |
+
+`ghostty-run <cmd>` opens a new window in the **existing** Ghostty — never
+`open -na`, which spawns a duplicate app instance per launch.
+
 ## Window management (AeroSpace)
 
 [AeroSpace](https://github.com/nikitabobko/AeroSpace) is an i3-style tiling WM that
