@@ -103,6 +103,37 @@ Accessibility → enable **AeroSpace**. It starts at login thereafter.
 | `SUPER+-` / `=` | `⌥+-` / `=` | resize (or `⌥+R` for resize mode) |
 | — | `⌥+Shift+C` | reload config |
 
+## Touch ID in the terminal (Omarchy's fingerprint auth)
+
+`config/pam/sudo_local` makes `sudo` accept Touch ID. `pam_reattach` is listed
+**first** on purpose — without it Touch ID silently fails inside tmux/screen,
+because those processes aren't attached to the GUI session. One-time install
+(needs sudo; `/etc/pam.d/sudo_local` survives macOS updates):
+
+```sh
+brew install pam-reattach
+sudo cp config/pam/sudo_local /etc/pam.d/sudo_local
+sudo chmod 444 /etc/pam.d/sudo_local
+sudo -k && sudo true      # test — should prompt for fingerprint
+```
+
+## The SUPER key (Karabiner)
+
+Omarchy's binds are all `SUPER+…`. On macOS ⌘ is unusable for that (it owns
+⌘W/⌘Q/⌘1-9), so `config/karabiner/karabiner.json` makes **Caps Lock** the Super
+key instead:
+
+- **Hold Caps Lock** → acts as ⌥, so every AeroSpace bind below becomes
+  `Caps+key` — i.e. `Caps+Enter`, `Caps+1..9`, `Caps+W`, exactly like Omarchy.
+- **Tap Caps Lock alone** → Escape (vim-friendly).
+- **Right ⌘** → a second Super key, for when Caps is awkward.
+
+This is why the AeroSpace binds stayed on ⌥: nothing had to be rewritten, and
+both ⌥ and Caps Lock work as Super.
+
+Karabiner needs **Input Monitoring** + its driver extension approved on first
+run (System Settings → Privacy & Security).
+
 ## Notes
 
 - Prompt is **starship** (Omarchy's config); oh-my-zsh is kept for plugins/completion

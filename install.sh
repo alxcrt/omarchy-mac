@@ -26,6 +26,7 @@ link config/tmux/tmux.conf     .config/tmux/tmux.conf
 link config/aerospace/aerospace.toml .config/aerospace/aerospace.toml
 link config/zsh/functions.zsh  .config/zsh/functions.zsh
 link config/btop/btop.conf     .config/btop/btop.conf
+link config/karabiner/karabiner.json .config/karabiner/karabiner.json
 for s in macup mise-install mac ghostty-run transcode webdl weburl; do
   link "local/bin/$s" ".local/bin/$s"
   chmod +x "$HOME/.local/bin/$s"
