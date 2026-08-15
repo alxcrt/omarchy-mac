@@ -92,18 +92,19 @@ alt-r = 'mode resize'
 # New WINDOW in the existing Ghostty (not `open -na`, which spawns a whole new
 # app instance and litters the Dock with duplicate icons).
 alt-enter = '''exec-and-forget osascript -e 'tell application "Ghostty" to activate' -e 'tell application "System Events" to keystroke "n" using command down' '''
-alt-shift-enter = 'exec-and-forget open -a "Google Chrome"'                     # browser
-alt-ctrl-enter = 'exec-and-forget open -na Ghostty --args -e herdr'             # agent manager
-alt-shift-n = 'exec-and-forget open -na Ghostty --args -e nvim'                 # editor
+alt-shift-enter = '''exec-and-forget osascript -e 'tell application "Google Chrome" to make new window' -e 'tell application "Google Chrome" to activate' '''
+alt-shift-ctrl-b = '''exec-and-forget osascript -e 'tell application "Google Chrome" to make new window with properties {mode:"incognito"}' -e 'tell application "Google Chrome" to activate' '''
+alt-ctrl-enter = 'exec-and-forget ghostty-run herdr'             # agent manager
+alt-shift-n = 'exec-and-forget ghostty-run nvim'                 # editor
 alt-shift-o = 'exec-and-forget open -a Obsidian'                                # Obsidian
-alt-shift-d = 'exec-and-forget open -na Ghostty --args -e lazydocker'           # Docker
-alt-shift-m = 'exec-and-forget open -na Ghostty --args -e cliamp'               # music
+alt-shift-d = 'exec-and-forget ghostty-run lazydocker'           # Docker
+alt-shift-m = 'exec-and-forget ghostty-run cliamp'               # music
 alt-shift-a = 'exec-and-forget open -a ChatGPT'                                 # AI
 alt-shift-slash = 'exec-and-forget open -a "1Password"'                         # passwords
 alt-shift-f = 'exec-and-forget open -a Finder'                                  # file manager
 
 # ── System (Omarchy: Super+Ctrl+<key> panels) ──
-alt-ctrl-t = 'exec-and-forget open -na Ghostty --args -e btop'                   # activity
+alt-ctrl-t = 'exec-and-forget ghostty-run btop'                   # activity
 alt-ctrl-q = 'exec-and-forget open -a Calculator'                                # calculator
 alt-ctrl-s = 'exec-and-forget open -a LocalSend'                                 # share
 alt-ctrl-a = 'exec-and-forget open x-apple.systempreferences:com.apple.Sound-Settings.extension'

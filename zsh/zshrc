@@ -112,6 +112,7 @@ eval "$(/opt/homebrew/bin/mise activate)"
 # --- Omarchy-on-macOS shell layer ---
 export PATH="$HOME/.local/bin:$PATH"
 source ~/.config/zsh/aliases.zsh
+source ~/.config/zsh/functions.zsh
 eval "$(zoxide init zsh)"
 alias cd='z'
 eval "$(starship init zsh)"

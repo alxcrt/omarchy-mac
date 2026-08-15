@@ -1,0 +1,32 @@
+#!/bin/bash
+# ghostty-run <command...>
+# Open a new WINDOW in the already-running Ghostty and run <command> in it.
+#
+# Why not `open -na Ghostty --args -e cmd`? The -n flag starts a whole new
+# Ghostty *application instance*, which gets its own Dock icon. Doing that
+# per launch litters the Dock with duplicates. Ghostty's `+new-window` action
+# is not supported on macOS, so we drive the existing instance via AppleScript.
+set -e
+
+cmd="$*"
+[[ -z $cmd ]] && { echo "Usage: ghostty-run <command...>"; exit 1; }
+
+# Escape backslashes and double quotes for the AppleScript string literal.
+esc=${cmd//\\/\\\\}
+esc=${esc//\"/\\\"}
+
+# NB: pgrep is unreliable for Ghostty on macOS (process name doesn't match the
+# bundle path), so ask LaunchServices via AppleScript instead.
+if [[ "$(osascript -e 'application "Ghostty" is running' 2>/dev/null)" == "true" ]]; then
+  # Running: open a new window in the existing instance, then type the command.
+  osascript \
+    -e 'tell application "Ghostty" to activate' \
+    -e 'delay 0.15' \
+    -e 'tell application "System Events" to keystroke "n" using command down' \
+    -e 'delay 0.35' \
+    -e "tell application \"System Events\" to keystroke \"$esc\"" \
+    -e 'tell application "System Events" to key code 36' >/dev/null
+else
+  # Not running: a plain launch is fine — this is the first instance.
+  open -a Ghostty --args -e "$@"
+fi

@@ -1,0 +1,136 @@
+# ~/.config/zsh/functions.zsh
+# Omarchy's shell functions, ported to zsh (basecamp/omarchy default/bash/fns).
+# NOTE: zsh arrays are 1-indexed, so bash's ${panes[0]} becomes ${panes[1]}.
+# Sourced from ~/.zshrc.
+
+# ── tmux dev layout: editor + AI + terminal ────────────────────────────────
+# tdl <ai> [<second_ai>]   e.g.  tdl cx     |  tdl cx cy
+tdl() {
+  [[ -z $1 ]] && { echo "Usage: tdl <c|cx|codex|other_ai> [<second_ai>]"; return 1; }
+  [[ -z $TMUX ]] && { echo "You must start tmux to use tdl."; return 1; }
+
+  local current_dir="${PWD}"
+  local editor_pane ai_pane ai2_pane
+  local ai="$1"
+  local ai2="$2"
+
+  editor_pane="$TMUX_PANE"
+
+  tmux rename-window -t "$editor_pane" "$(basename "$current_dir")"
+
+  # Bottom terminal strip (15%)
+  tmux split-window -v -l 15% -t "$editor_pane" -c "$current_dir"
+
+  # AI pane on the right (30%)
+  ai_pane=$(tmux split-window -h -l 30% -t "$editor_pane" -c "$current_dir" -P -F '#{pane_id}')
+
+  if [[ -n $ai2 ]]; then
+    ai2_pane=$(tmux split-window -v -t "$ai_pane" -c "$current_dir" -P -F '#{pane_id}')
+    tmux send-keys -t "$ai2_pane" "$ai2" C-m
+  fi
+
+  tmux send-keys -t "$ai_pane" "$ai" C-m
+  tmux send-keys -t "$editor_pane" "${EDITOR:-nvim} ." C-m
+  tmux select-pane -t "$editor_pane"
+}
+
+# tdlm <ai> [<second_ai>] — one tdl layout per subdirectory
+tdlm() {
+  [[ -z $1 ]] && { echo "Usage: tdlm <c|cx|codex|other_ai> [<second_ai>]"; return 1; }
+  [[ -z $TMUX ]] && { echo "You must start tmux to use tdlm."; return 1; }
+
+  local ai="$1"
+  local ai2="$2"
+  local base_dir="$PWD"
+  local first=true
+  local dir dirpath pane_id
+
+  tmux rename-session "$(basename "$base_dir" | tr '.:' '--')"
+
+  for dir in "$base_dir"/*/; do
+    [[ -d $dir ]] || continue
+    dirpath="${dir%/}"
+
+    if $first; then
+      tmux send-keys -t "$TMUX_PANE" "cd '$dirpath' && tdl $ai $ai2" C-m
+      first=false
+    else
+      pane_id=$(tmux new-window -c "$dirpath" -P -F '#{pane_id}')
+      tmux send-keys -t "$pane_id" "tdl $ai $ai2" C-m
+    fi
+  done
+}
+
+# tsl <pane_count> <command> — swarm layout, same command in N tiled panes
+tsl() {
+  [[ -z $1 || -z $2 ]] && { echo "Usage: tsl <pane_count> <command>"; return 1; }
+  [[ -z $TMUX ]] && { echo "You must start tmux to use tsl."; return 1; }
+
+  local count="$1"
+  local cmd="$2"
+  local current_dir="${PWD}"
+  local -a panes
+  local new_pane split_target pane
+
+  tmux rename-window -t "$TMUX_PANE" "$(basename "$current_dir")"
+  panes+=("$TMUX_PANE")
+
+  while (( ${#panes[@]} < count )); do
+    split_target="${panes[-1]}"
+    new_pane=$(tmux split-window -h -t "$split_target" -c "$current_dir" -P -F '#{pane_id}')
+    panes+=("$new_pane")
+    tmux select-layout -t "${panes[1]}" tiled
+  done
+
+  for pane in "${panes[@]}"; do
+    tmux send-keys -t "$pane" "$cmd" C-m
+  done
+
+  tmux select-pane -t "${panes[1]}"
+}
+
+# ── Compression ────────────────────────────────────────────────────────────
+compress() { tar -czf "${1%/}.tar.gz" "${1%/}"; }
+
+# ── Git worktrees ──────────────────────────────────────────────────────────
+# ga <branch> — add a worktree as ../<repo>--<branch> and cd into it
+ga() {
+  if [[ -z "$1" ]]; then
+    echo "Usage: ga [branch name]"
+    return 1
+  fi
+
+  local branch="$1"
+  local base="$(basename "$PWD")"
+  local wt_path="../${base}--${branch}"
+
+  git worktree add -b "$branch" "$wt_path"
+  mise trust "$wt_path"
+  cd "$wt_path"
+}
+
+# gd — remove the worktree you're standing in, and its branch
+# (Omarchy uses `gum confirm`; falls back to a plain read prompt if absent.)
+gd() {
+  local confirm
+  if command -v gum >/dev/null 2>&1; then
+    gum confirm "Remove worktree and branch?" || return 0
+  else
+    read "confirm?Remove worktree and branch? [y/N] "
+    [[ "$confirm" == [yY]* ]] || return 0
+  fi
+
+  local cwd base branch root worktree
+
+  cwd="$(pwd)"
+  worktree="$(basename "$cwd")"
+
+  root="${worktree%%--*}"
+  branch="${worktree#*--}"
+
+  if [[ "$root" != "$worktree" ]]; then
+    cd "../$root"
+    git worktree remove "$cwd" --force || return 1
+    git branch -D "$branch"
+  fi
+}

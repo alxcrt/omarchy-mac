@@ -24,6 +24,10 @@ alias cx='printf "\033[2J\033[3J\033[H" && claude --permission-mode bypassPermis
 alias cy='codex -s danger-full-access -a never'
 alias d='docker'
 alias t='tmux attach || tmux new -s Work'
+# Omarchy dev-layout shortcuts (see functions.zsh: tdl)
+alias ic='tdl c'
+alias ix='tdl cx'
+alias icx='tdl c cx'
 n() { if [ "$#" -eq 0 ]; then command nvim . ; else command nvim "$@"; fi; }
 
 # --- Git ---
