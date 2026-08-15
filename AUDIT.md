@@ -92,9 +92,14 @@ check and were due to be **disabled on 2026-09-01**. All three removed:
 alacritty and stolendata-mpv were redundant (Ghostty is the terminal; IINA owns
 every media type), and qbittorrent was replaced with **Transmission**.
 
-qbittorrent was uninstalled *without* `--zap`, so its session data
-(`~/Library/Application Support/qBittorrent/BT_backup`, 7 .torrent files)
-survives — re-add those in Transmission if you still want them seeding.
+**The 7 torrents were migrated.** Their `.fastresume` files all recorded
+`save_path = ~/Downloads`, so Transmission was configured to match
+(`DownloadFolder=~/Downloads`, `DownloadChoice=Constant`, no per-torrent
+prompt) *before* importing — that way it verifies the existing data instead of
+re-downloading 165GB. All 7 are loaded.
+
+qBittorrent's `~/Library/Application Support/qBittorrent` (8.8MB) is kept as a
+safety net; delete it once Transmission has finished verifying.
 
 ## Known upstream/platform behaviour (not our bug)
 
