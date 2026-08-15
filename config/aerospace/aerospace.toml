@@ -101,3 +101,39 @@ minus = 'resize smart -50'
 equal = 'resize smart +50'
 enter = 'mode main'
 esc = 'mode main'
+
+# --- Auto-float utility/dialog windows (like Omarchy's Hyprland windowrules) ---
+# Tiling these feels wrong; float them so they pop over the tiles instead.
+[[on-window-detected]]
+if.app-id = 'com.apple.systempreferences'
+run = 'layout floating'
+
+[[on-window-detected]]
+if.app-id = 'com.apple.calculator'
+run = 'layout floating'
+
+[[on-window-detected]]
+if.app-id = 'com.apple.ActivityMonitor'
+run = 'layout floating'
+
+[[on-window-detected]]
+if.app-id = 'com.apple.SystemProfiler'
+run = 'layout floating'
+
+[[on-window-detected]]
+if.app-id = 'com.apple.AppStore'
+run = 'layout floating'
+
+[[on-window-detected]]
+if.app-id = 'com.apple.archiveutility'
+run = 'layout floating'
+
+[[on-window-detected]]
+if.app-id = 'com.apple.finder'
+if.window-title-regex-substring = 'Info|Copy|Move|Delete'
+run = 'layout floating'
+
+[[on-window-detected]]
+if.app-id = 'com.1password.1password'
+if.window-title-regex-substring = 'Quick Access'
+run = 'layout floating'
