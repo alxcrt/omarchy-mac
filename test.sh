@@ -188,9 +188,20 @@ for x in yt-dlp copy-url whatsapp-slim; do
   python3 -c "import json;json.load(open('$E/$x/manifest.json'))" 2>/dev/null \
     && ok "$x manifest is valid JSON" || bad "$x manifest" "invalid/missing"
 done
-broken=$(find "$E" -type l ! -exec test -e {} \; -print 2>/dev/null | wc -l | tr -d ' ')
-[ "$broken" = 0 ] && ok "no broken symlinks in extensions" || bad "extensions" "$broken broken symlinks"
-file "$E/copy-url/icon.png" 2>/dev/null | grep -q PNG && ok "copy-url icon is a real PNG" || bad "copy-url icon" "not a PNG"
+# Symlinks at all are a bug here: Chrome resolves icons relative to the
+# extension dir, and upstream's icon.png symlinks out of the repo root.
+# `file` follows symlinks, so test for a REGULAR file explicitly.
+for base in "$E" ~/omarchy-mac/config/chromium/extensions; do
+  [ -d "$base" ] || continue
+  n=$(find "$base" -type l 2>/dev/null | wc -l | tr -d ' ')
+  [ "$n" = 0 ] && ok "no symlinks under $(basename "$(dirname "$base")")/$(basename "$base")" \
+                || bad "extensions" "$n symlink(s) under $base"
+done
+for base in "$E" ~/omarchy-mac/config/chromium/extensions; do
+  i="$base/copy-url/icon.png"
+  [ -f "$i" ] && [ ! -L "$i" ] && file "$i" | grep -q PNG \
+    && ok "copy-url icon is a real PNG file ($base)" || bad "copy-url icon" "not a regular PNG at $i"
+done
 NMH="$HOME/Library/Application Support/Google/Chrome/NativeMessagingHosts"
 for m in com.omarchy.ytdlp com.omarchy.copy_url; do
   python3 -c "

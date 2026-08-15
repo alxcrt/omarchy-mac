@@ -132,13 +132,18 @@ equal = 'resize smart +50'
 enter = 'mode main'
 esc = 'mode main'
 
-# --- Auto-float utility/dialog windows (like Omarchy's Hyprland windowrules) ---
+# --- Auto-float utility/dialog/media windows -------------------------------
+# Omarchy's Hyprland windowrules float dialogs, settings and media players
+# rather than tiling them. All bundle IDs below were read from the installed
+# .app bundles, not guessed.
+
+# Settings & system utilities
 [[on-window-detected]]
-if.app-id = 'com.apple.systempreferences'
+if.app-id = 'com.apple.systempreferences'      # System Settings
 run = 'layout floating'
 
 [[on-window-detected]]
-if.app-id = 'com.apple.calculator'
+if.app-id = 'com.apple.SystemProfiler'         # System Information
 run = 'layout floating'
 
 [[on-window-detected]]
@@ -146,7 +151,15 @@ if.app-id = 'com.apple.ActivityMonitor'
 run = 'layout floating'
 
 [[on-window-detected]]
-if.app-id = 'com.apple.SystemProfiler'
+if.app-id = 'com.apple.DiskUtility'
+run = 'layout floating'
+
+[[on-window-detected]]
+if.app-id = 'com.apple.keychainaccess'
+run = 'layout floating'
+
+[[on-window-detected]]
+if.app-id = 'com.apple.calculator'
 run = 'layout floating'
 
 [[on-window-detected]]
@@ -158,11 +171,68 @@ if.app-id = 'com.apple.archiveutility'
 run = 'layout floating'
 
 [[on-window-detected]]
+if.app-id = 'com.apple.FontBook'
+run = 'layout floating'
+
+# Media players — tiling a video window is never what you want
+[[on-window-detected]]
+if.app-id = 'com.colliderli.iina'              # IINA
+run = 'layout floating'
+
+[[on-window-detected]]
+if.app-id = 'com.apple.QuickTimePlayerX'
+run = 'layout floating'
+
+[[on-window-detected]]
+if.app-id = 'io.mpv'                           # mpv (stolendata cask)
+run = 'layout floating'
+
+[[on-window-detected]]
+if.app-id = 'no.mifi.losslesscut-mac'          # LosslessCut
+run = 'layout floating'
+
+[[on-window-detected]]
+if.app-id = 'com.apple.Photos'
+run = 'layout floating'
+
+# Input/remapping & launcher UIs
+[[on-window-detected]]
+if.app-id = 'org.pqrs.Karabiner-Elements.Settings'
+run = 'layout floating'
+
+[[on-window-detected]]
+if.app-id = 'org.pqrs.Karabiner-EventViewer'
+run = 'layout floating'
+
+[[on-window-detected]]
+if.app-id = 'com.raycast.macos'
+run = 'layout floating'
+
+[[on-window-detected]]
+if.app-id = 'org.localsend.localsendApp'       # share sheet equivalent
+run = 'layout floating'
+
+[[on-window-detected]]
+if.app-id = 'com.docker.docker'
+run = 'layout floating'
+
+# Dialog-ish windows of otherwise-tiled apps
+[[on-window-detected]]
 if.app-id = 'com.apple.finder'
-if.window-title-regex-substring = 'Info|Copy|Move|Delete'
+if.window-title-regex-substring = 'Info|Copy|Move|Delete|Preferences'
 run = 'layout floating'
 
 [[on-window-detected]]
 if.app-id = 'com.1password.1password'
 if.window-title-regex-substring = 'Quick Access'
+run = 'layout floating'
+
+[[on-window-detected]]
+if.app-id = 'com.apple.Preview'
+if.window-title-regex-substring = 'Info|Open|Export'
+run = 'layout floating'
+
+# Anything whose title looks like a modal
+[[on-window-detected]]
+if.window-title-regex-substring = 'Preferences|Settings…|About '
 run = 'layout floating'
