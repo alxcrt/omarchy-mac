@@ -2,6 +2,11 @@
 # Omarchy's shell functions, ported to zsh (basecamp/omarchy default/bash/fns).
 # NOTE: zsh arrays are 1-indexed, so bash's ${panes[0]} becomes ${panes[1]}.
 # Sourced from ~/.zshrc.
+#
+# oh-my-zsh's git plugin claims `ga`/`gd` (and friends) as ALIASES. In zsh you
+# cannot define a function whose name is an existing alias — it's a parse error
+# that aborts sourcing the rest of this file. So drop those aliases first.
+unalias ga gd 2>/dev/null || true
 
 # ── tmux dev layout: editor + AI + terminal ────────────────────────────────
 # tdl <ai> [<second_ai>]   e.g.  tdl cx     |  tdl cx cy
