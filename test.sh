@@ -332,21 +332,47 @@ if want karabiner; then
 sec "Karabiner (SUPER key)"
 K=~/.config/karabiner/karabiner.json
 python3 -c "import json;json.load(open('$K'))" 2>/dev/null && ok "karabiner.json valid JSON" || bad "karabiner.json" "invalid"
-python3 - <<PY && ok "caps_lock -> option, escape when tapped" || bad "caps rule" "not configured"
+python3 - <<PY && ok "caps_lock -> SUPER (ctrl+opt+cmd), Escape when tapped" || bad "caps rule" "not configured"
 import json,sys
 d=json.load(open("$K"))
 p=[x for x in d["profiles"] if x.get("selected")][0]
 r=[m for rule in p["complex_modifications"]["rules"] for m in rule["manipulators"]]
-capsx=[m for m in r if m["from"].get("key_code")=="caps_lock"]
-sys.exit(0 if capsx and capsx[0]["to"][0]["key_code"]=="left_option"
-         and capsx[0]["to_if_alone"][0]["key_code"]=="escape" else 1)
+caps=[m for m in r if m["from"].get("key_code")=="caps_lock"]
+if not caps: sys.exit(1)
+to=caps[0]["to"][0]
+mods=set(to.get("modifiers",[])) | {to["key_code"]}
+# SUPER must be ctrl+opt+cmd and must NOT include shift, or Super+Shift collides.
+want={"left_command","left_control","left_option"}
+sys.exit(0 if mods==want
+         and not any("shift" in m for m in mods)
+         and caps[0]["to_if_alone"][0]["key_code"]=="escape" else 1)
 PY
-[ "$(osascript -e 'application "Karabiner-Elements" is running' 2>/dev/null)" = true ] \
-  && ok "Karabiner-Elements running" || skip "Karabiner not running" "launch it to activate"
+# NB: karabiner_grabber no longer exists — modern Karabiner runs
+# Karabiner-Core-Service instead. Check that, and ask karabiner_cli directly.
+ps -Ao comm | grep -q 'Karabiner-Core-Service' && ok "Karabiner-Core-Service running (remapping active)" \
+  || skip "Karabiner core service not running" "launch Karabiner-Elements"
+ps -Ao comm | grep -q 'Karabiner-VirtualHIDDevice-Daemon' && ok "VirtualHIDDevice daemon running" \
+  || skip "VirtualHIDDevice daemon not running" "approve the driver"
+CLI="/Library/Application Support/org.pqrs/Karabiner-Elements/bin/karabiner_cli"
+[ "$("$CLI" --show-current-profile-name 2>/dev/null)" = "Omarchy" ] \
+  && ok "active Karabiner profile is 'Omarchy'" || bad "karabiner profile" "not Omarchy"
+"$CLI" --lint-complex-modifications ~/.config/karabiner/karabiner.json 2>&1 | grep -q ': ok' \
+  && ok "karabiner config lints clean" || bad "karabiner config" "lint failed"
 if systemextensionsctl list 2>/dev/null | grep -qi 'karabiner.*activated enabled'; then
-  ok "Karabiner driver approved (Caps Lock is live)"
+  ok "Karabiner driver approved + enabled (Caps Lock is live)"
 else
   skip "Karabiner driver NOT approved" "System Settings > Privacy & Security > Allow"
+fi
+# End-to-end: synthesize SUPER+3 and confirm AeroSpace actually acts on it.
+if command -v aerospace >/dev/null 2>&1; then
+  _b=$(aerospace list-workspaces --focused 2>/dev/null)
+  osascript -e 'tell application "System Events" to key code 20 using {control down, option down, command down}' 2>/dev/null
+  sleep 1
+  _a=$(aerospace list-workspaces --focused 2>/dev/null)
+  [ "$_a" = "3" ] && ok "SUPER+3 switches workspace (binds respond end-to-end)" \
+                  || bad "SUPER binds" "workspace did not change ($_b -> $_a)"
+  osascript -e "tell application \"System Events\" to key code 18 using {control down, option down, command down}" 2>/dev/null
+  sleep 1
 fi
 fi
 
