@@ -52,5 +52,20 @@ macup    # everything: brew, casks, Mac App Store, mise, cleanup
 - Prompt is **starship** (Omarchy's config); oh-my-zsh is kept for plugins/completion
   with its own theme disabled.
 - Reports available macOS updates but never auto-installs them.
-- Docker Desktop is intentionally not in the Brewfile — it needs an interactive admin
-  password; install with `brew install --cask docker-desktop`.
+- **Docker Desktop** is in the Brewfile; its install/upgrade prompts for an admin
+  password (`brew install --cask docker-desktop`).
+- **Adobe Acrobat Reader** was intentionally dropped — the `26.001.21662` cask has a
+  broken pkg install script that fails under `installer` even with sudo. macOS Preview
+  handles PDFs; grab Reader from adobe.com directly if you truly need it.
+
+### First-run: trust third-party casks/formulae
+
+Homebrew now requires trusting third-party taps or it silently ignores their
+casks/formulae during upgrades. After `install.sh`, run once:
+
+```sh
+brew trust --cask   nikitabobko/tap/aerospace
+brew trust --formula anomalyco/tap/opencode
+brew trust --cask   anomalyco/tap/cmux
+brew trust --formula bjarneo/cliamp/cliamp
+```
