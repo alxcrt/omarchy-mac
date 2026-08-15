@@ -51,6 +51,15 @@ macup    # everything: brew, casks, Mac App Store, mise, cleanup
 See **[KEYBINDINGS.md](KEYBINDINGS.md)** for every keybinding (generated from the
 live configs with `mac keys`).
 
+## Claude Code skill
+
+`skills/omarchy-mac/SKILL.md` is a Claude Code skill (linked to
+`~/.claude/skills/`). It teaches a Claude session the layering rules, the flow
+commands, how to run `test.sh`, and the gotchas that have already cost time —
+cursor-warp focus jumps, `open -na` spawning duplicate app instances, zsh
+1-indexed arrays, oh-my-zsh's `ga`/`gd` alias clash, and why tests must assert
+on behaviour rather than prose.
+
 ## Flows (the point of this repo)
 
 Omarchy's *behaviours*, ported — not its looks. One entry point:

@@ -34,6 +34,8 @@ for s in macup mise-install mac mac-keys mac-hook ghostty-run transcode webdl we
 done
 # .zshrc is linked separately so you can opt out (it assumes oh-my-zsh).
 link zsh/zshrc                 .zshrc
+# Claude Code skill: teaches future sessions how this setup works.
+link skills/omarchy-mac/SKILL.md .claude/skills/omarchy-mac/SKILL.md
 
 section "Ensuring Homebrew"
 if ! command -v brew >/dev/null 2>&1; then
