@@ -1,0 +1,39 @@
+#!/bin/bash
+# webdl [url] — download the video on the current browser page to ~/Movies.
+# macOS port of Omarchy's Alt+Shift+D flow (yt-dlp + Chromium extension).
+# With no argument it grabs the URL of the frontmost Chrome tab via AppleScript.
+# ~/Movies is used rather than ~/Videos — that's the macOS equivalent folder.
+set -e
+
+dest="$HOME/Movies"
+mkdir -p "$dest"
+
+url=$1
+if [[ -z $url ]]; then
+  url=$(osascript -e 'tell application "Google Chrome" to return URL of active tab of front window' 2>/dev/null || true)
+fi
+[[ -z $url ]] && { echo "No URL (pass one, or focus a Chrome tab)"; exit 1; }
+
+notify() {
+  osascript -e "display notification \"$1\" with title \"webdl\"" >/dev/null 2>&1 || true
+}
+
+notify "Downloading…"
+echo "→ $url"
+
+# Use the browser's cookies so logged-in / age-gated videos work, and merge to
+# mp4 so the result plays everywhere (QuickTime included).
+if yt-dlp \
+    --cookies-from-browser chrome \
+    --no-playlist \
+    --restrict-filenames \
+    -f 'bv*+ba/b' \
+    --merge-output-format mp4 \
+    -o "$dest/%(title)s.%(ext)s" \
+    "$url"; then
+  notify "Saved to ~/Movies"
+  echo "Saved to $dest"
+else
+  notify "Download failed"
+  exit 1
+fi

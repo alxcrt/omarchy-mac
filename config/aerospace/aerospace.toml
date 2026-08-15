@@ -114,6 +114,11 @@ alt-ctrl-d = 'exec-and-forget open x-apple.systempreferences:com.apple.Displays-
 alt-ctrl-p = 'exec-and-forget open x-apple.systempreferences:com.apple.Battery-Settings.extension'
 alt-ctrl-l = 'exec-and-forget pmset displaysleepnow'                             # lock screen
 
+# ── Web flows (Omarchy: Alt+Shift+L copy URL, Alt+Shift+D download video) ──
+# Download uses ctrl too, because alt-shift-d is already Docker (Super+Shift+D).
+alt-shift-l = 'exec-and-forget weburl'
+alt-shift-ctrl-d = 'exec-and-forget webdl'
+
 # ── Reload ──
 alt-shift-c = 'reload-config'
 

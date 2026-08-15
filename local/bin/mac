@@ -1,0 +1,73 @@
+#!/bin/bash
+# mac — a single entry point for this setup's flows, the way `omarchy <verb>`
+# works on Linux. Everything here is discoverable: run `mac` with no args.
+set -e
+
+cmd=${1:-help}; shift || true
+
+case "$cmd" in
+  update)     exec macup "$@" ;;
+  up)         exec macup "$@" ;;
+  mise|tools) exec env MISE_MINIMUM_RELEASE_AGE=0 mise up "$@" ;;
+
+  dl|download) exec webdl "$@" ;;
+  url)         exec weburl "$@" ;;
+  transcode)   exec transcode "$@" ;;
+
+  term)        exec ghostty-run "$@" ;;
+  install)     exec mise-install "$@" ;;
+
+  wm)
+    case "${1:-status}" in
+      reload)  exec aerospace reload-config ;;
+      status)  aerospace list-monitors
+               aerospace list-workspaces --visible --monitor all \
+                 --format '%{workspace} -> %{monitor-name}' ;;
+      *)       echo "mac wm <reload|status>"; exit 1 ;;
+    esac ;;
+
+  doctor)
+    echo "== mise ==";  mise doctor 2>&1 | tail -3
+    echo "== brew ==";  brew doctor 2>&1 | head -3
+    echo "== aerospace =="; aerospace reload-config && echo "config OK"
+    ;;
+
+  edit)
+    case "${1:-}" in
+      aliases)   exec "${EDITOR:-nvim}" ~/.config/zsh/aliases.zsh ;;
+      functions) exec "${EDITOR:-nvim}" ~/.config/zsh/functions.zsh ;;
+      wm)        exec "${EDITOR:-nvim}" ~/.config/aerospace/aerospace.toml ;;
+      mise)      exec "${EDITOR:-nvim}" ~/.config/mise/config.toml ;;
+      brew)      exec "${EDITOR:-nvim}" ~/.config/homebrew/Brewfile ;;
+      tmux)      exec "${EDITOR:-nvim}" ~/.config/tmux/tmux.conf ;;
+      *)         echo "mac edit <aliases|functions|wm|mise|brew|tmux>"; exit 1 ;;
+    esac ;;
+
+  help|--help|-h|"")
+    cat <<'EOF'
+mac — Omarchy-style flows on macOS
+
+  mac update              update everything (brew, casks, mas, mise, cleanup)
+  mac mise                update mise tools + AI CLIs only (fast)
+  mac install <pkg>       create a self-updating mise-backed wrapper
+
+  mac dl [url]            download video on the current Chrome page -> ~/Movies
+  mac url                 copy the current Chrome tab URL
+  mac transcode <f> <fmt> [quality]   mp4 | gif | jpg | png
+
+  mac term <cmd>          open a new Ghostty window running <cmd>
+  mac wm status|reload    window manager state / reload config
+  mac doctor              health check across mise, brew, aerospace
+  mac edit <what>         open a config: aliases functions wm mise brew tmux
+
+Shell flows (from ~/.config/zsh/functions.zsh):
+  tdl <ai> [ai2]          tmux dev layout: editor + AI + terminal
+  tdlm <ai> [ai2]         one dev layout per subdirectory
+  tsl <n> <cmd>           swarm layout: <cmd> in n tiled panes
+  ga <branch> / gd        git worktree add+cd / remove+delete branch
+  compress <dir>          tar.gz a directory
+EOF
+    ;;
+
+  *) echo "Unknown: $cmd (try 'mac help')"; exit 1 ;;
+esac
