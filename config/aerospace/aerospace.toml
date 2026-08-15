@@ -34,11 +34,9 @@ outer.right      = 8
 alt-w = 'close'                                    # close window
 alt-shift-w = 'close-all-windows-but-current'      # closest to "close all"
 alt-t = 'layout floating tiling'                   # toggle tiling/floating
+alt-j = 'layout tiles horizontal vertical'         # toggle window position (SUPER+J)
+alt-l = 'layout tiles accordion'                   # toggle layout style (SUPER+L)
 alt-f = 'fullscreen'                               # go full screen
-# NOTE: Omarchy's SUPER+J (toggle split) and SUPER+L (toggle layout) are
-# deliberately NOT bound here. Ghostty uses opt+h/j/k/l for split navigation
-# and AeroSpace grabs keys globally, which would break it. Use the CLI if
-# needed:  aerospace layout tiles horizontal vertical  /  aerospace layout tiles accordion
 
 # ── Focus / swap (Super+Arrow, Super+Shift+Arrow) ──
 alt-left  = 'focus left'

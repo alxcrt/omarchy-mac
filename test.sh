@@ -318,12 +318,15 @@ done
 n=$(grep -cE '^alt-|^ctrl-' "$C"); [ "$n" -ge 60 ] && ok "$n binds defined" || bad "binds" "only $n"
 f=$(grep -c 'on-window-detected' "$C"); [ "$f" -ge 5 ] && ok "$f auto-float rules" || bad "float rules" "only $f"
 grep -q 'open -na Ghostty' "$C" && bad "aerospace" "still spawns duplicate Ghostty instances" || ok "no 'open -na' instance-spawning binds"
-# Plain Option must stay free: Ghostty binds opt+hjkl for split navigation, and
-# AeroSpace grabs keys globally, so any bare alt-<letter> bind would break them.
-for g in h j k l; do
-  grep -qE "^alt-$g " "$C" && bad "conflict" "aerospace grabs opt+$g — breaks Ghostty splits" \
-    || ok "opt+$g free for Ghostty splits"
+# Upstream Omarchy ships NO Ghostty split binds (it uses tmux panes), so ⌥J/⌥L
+# belong to AeroSpace as SUPER+J / SUPER+L. Assert Ghostty does not re-claim them.
+for g in j l; do
+  grep -qE "opt\\+$g=" ~/.config/ghostty/config 2>/dev/null \
+    && bad "conflict" "ghostty binds opt+$g — collides with AeroSpace SUPER+$g" \
+    || ok "ghostty leaves opt+$g to AeroSpace"
 done
+grep -qE "^alt-j |^alt-l " "$C" && ok "SUPER+J / SUPER+L bound (Omarchy parity)" \
+  || bad "binds" "SUPER+J/L missing"
 grep -qE '^alt-enter' "$C" && ok "binds use ⌥ as SUPER" || bad "binds" "alt binds missing"
 fi
 

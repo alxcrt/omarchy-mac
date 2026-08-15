@@ -1,0 +1,52 @@
+# ~/.config/ghostty/config
+# Omarchy's Ghostty config (basecamp/omarchy config/ghostty/config), adapted
+# for macOS. Upstream deliberately ships NO split-navigation binds — Omarchy
+# uses tmux panes for that (Alt+Enter / Alt+Shift+Enter, Ctrl+Alt+arrows), so
+# ⌥J and ⌥L stay free for AeroSpace's SUPER+J / SUPER+L.
+
+# ── Font ──
+# Upstream uses size 9, which is a Linux/HiDPI value; 15 is the macOS equivalent.
+font-family = "JetBrainsMono Nerd Font"
+font-style = Regular
+font-size = 15
+font-thicken = true
+
+# ── Window ──
+window-padding-x = 14
+window-padding-y = 14
+confirm-close-surface = false
+resize-overlay = never
+background-opacity = 0.95
+background-blur = true
+window-save-state = always
+
+# macOS-only: native tabs, and Option must behave as Alt for tmux/Neovim.
+macos-titlebar-style = tabs
+macos-option-as-alt = true
+
+# ── Cursor ──
+cursor-style = "block"
+cursor-style-blink = false
+
+# All shell integration options must be passed together.
+shell-integration-features = no-cursor,ssh-env
+
+# ── Keybindings (upstream) ──
+keybind = shift+insert=paste_from_clipboard
+keybind = control+insert=copy_to_clipboard
+# Send Shift+Enter as CSI-u so TUIs can distinguish it from Enter.
+keybind = shift+enter=csi:13;2u
+# Legacy encoding sends Alt+Shift+Enter the same as Alt+Enter; send CSI-u so
+# tmux can match M-S-Enter (its horizontal split).
+keybind = alt+shift+enter=csi:13;4u
+keybind = super+control+shift+alt+arrow_down=resize_split:down,100
+keybind = super+control+shift+alt+arrow_up=resize_split:up,100
+keybind = super+control+shift+alt+arrow_left=resize_split:left,100
+keybind = super+control+shift+alt+arrow_right=resize_split:right,100
+
+# macOS additions: quick terminal + reload, no upstream counterpart.
+keybind = global:cmd+grave_accent=toggle_quick_terminal
+keybind = ctrl+shift+r=reload_config
+
+# Slow down mouse scrolling
+mouse-scroll-multiplier = 0.95
