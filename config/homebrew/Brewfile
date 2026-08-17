@@ -45,7 +45,9 @@ brew "xh"
 
 # --- GUI casks ---
 cask "ghostty"                 # terminal
-cask "google-chrome"           # primary browser (Phase 7 webapp target)
+# google-chrome deliberately NOT a cask on this Mac: it's installed root-owned
+# and self-updates via system-wide Keystone (/Library/Google), so brew can
+# neither upgrade nor reinstall it — greedy upgrades just error on it.
 cask "iina"                    # media player (macOS-native mpv)
 cask "localsend"
 cask "transmission"            # replaced qbittorrent (Gatekeeper-deprecated, disabled 2026-09-01)
