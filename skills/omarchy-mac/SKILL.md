@@ -93,6 +93,32 @@ extensions.
 - **Homebrew 6 refuses untrusted third-party taps** and aborts the whole
   `brew bundle` run. `brew trust <tap>` first. Also: the ✔︎ marks in bundle's
   "Fetching" phase mean *downloaded*, not installed — check `brew list`.
+- **Homebrew 6 asks y/n before every upgrade** ("ask mode" is the default).
+  Any unattended flow must pass `--yes` (`macup` does).
+- **Never run two brew bundles at once.** A second run collides with the
+  first's download locks and both report spurious failures. Check
+  `pgrep -fl brew` before assuming a bundle died.
+- **On a Jamf/MDM-managed Mac, apps the MDM owns are root-owned** (Chrome
+  here) and self-update outside brew. Brew's cask metadata goes stale and
+  greedy upgrades fail forever on them — drop such casks from the Brewfile
+  and let the MDM/vendor updater own them (see the google-chrome note there).
+- **Karabiner driver "code signature invalid" (error 8) on Tahoe** even when
+  `codesign`/Gatekeeper pass: the fix that worked was a full
+  `brew uninstall --cask --zap karabiner-elements` + reinstall (per
+  pqrs-org/Karabiner-Elements#4314). Note `--zap` deletes
+  `~/.config/karabiner/karabiner.json` — relink it from the repo afterwards.
+  If reinstall doesn't fix it, suspect the endpoint-security agent (Jamf
+  Protect) and check `/Library/SystemExtensions/db.plist` for whether the
+  extension is even being staged.
+- **`mise install` fails transiently while brew saturates the network**
+  ("address not available"). Just rerun it; already-installed tools are kept.
+- **brew formulae can pull `go`/`node` in as build deps**, silently violating
+  the one-layer rule. After big brew operations, `test.sh layering` catches
+  it; `brew uses --installed <tool>` then `brew uninstall` if nothing needs it.
+- **The osascript keystroke tests** (`SUPER binds`, `terminal placement`) can
+  only pass from a terminal with Accessibility/Automation grants. From other
+  contexts (agents, CI) they fail with "osascript is not allowed to send
+  keystrokes" — that is the runner's permission, not a real regression.
 
 ## Working rules
 
