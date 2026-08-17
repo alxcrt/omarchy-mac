@@ -123,3 +123,7 @@ eval "$(zoxide init zsh)"
 # `cd` is aliased to the zd() wrapper in aliases.zsh (matching Omarchy) —
 # do not re-alias it to plain `z` here, that would shadow the wrapper.
 eval "$(starship init zsh)"
+
+# Machine-local additions (not tracked in the repo): PATH entries, ssh-add,
+# work-specific aliases. Keep anything host-specific there, not here.
+[ -f "$HOME/.zshrc.local" ] && source "$HOME/.zshrc.local"
