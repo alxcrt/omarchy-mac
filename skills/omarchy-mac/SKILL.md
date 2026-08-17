@@ -88,7 +88,11 @@ extensions.
   raises one confirmation dialog per type. Don't loop over many UTIs blindly.
 - Some things need a human click and cannot be automated: Accessibility and
   Input Monitoring grants, system-extension approval, loading unpacked Chrome
-  extensions. Report them as pending — never claim success.
+  extensions, and any cask whose installer runs sudo. Report them as pending —
+  never claim success.
+- **Homebrew 6 refuses untrusted third-party taps** and aborts the whole
+  `brew bundle` run. `brew trust <tap>` first. Also: the ✔︎ marks in bundle's
+  "Fetching" phase mean *downloaded*, not installed — check `brew list`.
 
 ## Working rules
 
