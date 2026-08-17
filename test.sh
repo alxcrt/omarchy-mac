@@ -386,7 +386,7 @@ if want karabiner; then
 sec "Karabiner (SUPER key)"
 K=~/.config/karabiner/karabiner.json
 python3 -c "import json;json.load(open('$K'))" 2>/dev/null && ok "karabiner.json valid JSON" || bad "karabiner.json" "invalid"
-python3 - <<PY && ok "caps_lock -> ⌥ (optional extra SUPER), Escape when tapped" || bad "caps rule" "not configured"
+python3 - <<PY && ok "caps_lock -> Hyper (⌘⌃⌥⇧), Escape when tapped" || bad "caps rule" "not configured"
 import json,sys
 d=json.load(open("$K"))
 p=[x for x in d["profiles"] if x.get("selected")][0]
@@ -394,9 +394,10 @@ r=[m for rule in p["complex_modifications"]["rules"] for m in rule["manipulators
 caps=[m for m in r if m["from"].get("key_code")=="caps_lock"]
 if not caps: sys.exit(1)
 to=caps[0]["to"][0]
-mods=set(to.get("modifiers",[])) | {to["key_code"]}
-# SUPER must be ctrl+opt+cmd and must NOT include shift, or Super+Shift collides.
-sys.exit(0 if to["key_code"]=="left_option" and not to.get("modifiers")
+# Hyper = cmd held with ctrl+opt+shift (Raycast's hyper chords; Raycast's own
+# Hyper Key feature must stay off so only Karabiner remaps the key).
+sys.exit(0 if to["key_code"]=="left_command"
+         and set(to.get("modifiers",[]))=={"left_control","left_option","left_shift"}
          and caps[0]["to_if_alone"][0]["key_code"]=="escape" else 1)
 PY
 # NB: karabiner_grabber no longer exists — modern Karabiner runs

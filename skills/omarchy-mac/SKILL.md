@@ -37,7 +37,7 @@ into `~/.config` + `~/.local/bin`.
 | `~/.config/zsh/aliases.zsh` | Omarchy aliases, macOS-adjusted |
 | `~/.config/zsh/functions.zsh` | `tdl`/`tds`/`tdlm`/`tsl`, `ga`/`gd`, transcode wrappers |
 | `~/.config/aerospace/aerospace.toml` | tiling WM: binds + auto-float rules |
-| `~/.config/karabiner/karabiner.json` | Caps Lock → ⌥ (optional 2nd Super) |
+| `~/.config/karabiner/karabiner.json` | Caps Lock → Hyper ⌘⌃⌥⇧ (Raycast), Esc on tap |
 | `~/.config/tmux/tmux.conf` | upstream Omarchy verbatim |
 | `~/.config/ghostty/config` | upstream Omarchy, macOS-adjusted |
 | `~/.local/bin/` | `mac`, `macup`, `mac-keys`, `mac-hook`, `ghostty-run`, `transcode`, `webdl`, `weburl`, `browser-url`, `chrome-extensions`, `chromium-native-host`, `mise-install`, `agent-usage-*` |
