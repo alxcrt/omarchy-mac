@@ -410,7 +410,11 @@ CLI="/Library/Application Support/org.pqrs/Karabiner-Elements/bin/karabiner_cli"
   && ok "active Karabiner profile is 'Omarchy'" || bad "karabiner profile" "not Omarchy"
 "$CLI" --lint-complex-modifications ~/.config/karabiner/karabiner.json 2>&1 | grep -q ': ok' \
   && ok "karabiner config lints clean" || bad "karabiner config" "lint failed"
-if systemextensionsctl list 2>/dev/null | grep -qi 'karabiner.*activated enabled'; then
+# Karabiner v16+ has no system extension (systemextensionsctl shows nothing);
+# a running VirtualHIDDevice daemon IS the post-approval state. Only nag about
+# approval when the daemon is genuinely absent.
+if systemextensionsctl list 2>/dev/null | grep -qi 'karabiner.*activated enabled' \
+   || ps -Ao comm | grep -q 'Karabiner-VirtualHIDDevice-Daemon'; then
   ok "Karabiner driver approved + enabled (Caps Lock is live)"
 else
   skip "Karabiner driver NOT approved" "System Settings > Privacy & Security > Allow"
