@@ -59,13 +59,6 @@ alt-shift-w = 'close-all-windows-but-current'      # close all but current
 alt-shift-ctrl-w = '''exec-and-forget /bin/sh -c 'aerospace close-all-windows-but-current; aerospace close' '''
 alt-t = 'layout floating tiling'                   # toggle tiling/floating
 alt-j = 'layout tiles horizontal vertical'         # toggle window position (SUPER+J)
-# AeroSpace has no Hyprland-style auto-dwindle: new windows join the current
-# container in one direction ('split' is incompatible with the flatten
-# normalization, per AeroSpace itself — join-with is the supported primitive).
-# ⌥S tucks the freshly spawned window under its left neighbor in an
-# opposite-oriented nested container: spawn, ⌥S, spawn, ⌥S ≈ the fibonacci
-# spiral (opposite-orientation normalization keeps nested splits alternating).
-alt-s = 'join-with left'
 alt-l = 'layout tiles accordion'                   # toggle layout style (SUPER+L)
 alt-f = 'fullscreen'                               # go full screen
 
