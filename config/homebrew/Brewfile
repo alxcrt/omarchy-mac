@@ -62,6 +62,7 @@ cask "t3-code@nightly"         # T3 Code nightly — multi-agent control plane (
 cask "betterdisplay"
 cask "cleanshot"
 cask "ollama-app"
+cask "lm-studio"               # local LLMs: MLX (fastest on Apple Silicon) + GGUF
 cask "obsidian"
 cask "obs"
 cask "losslesscut"             # video/screen-recording trimmer (Omacut equivalent)
