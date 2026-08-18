@@ -50,6 +50,7 @@ cask "ghostty"                 # terminal
 # neither upgrade nor reinstall it — greedy upgrades just error on it.
 cask "iina"                    # media player (macOS-native mpv)
 cask "localsend"
+cask "tailscale-app"           # mesh VPN (menu-bar app; ships its own CLI)
 cask "transmission"            # replaced qbittorrent (Gatekeeper-deprecated, disabled 2026-09-01)
 cask "aerospace"               # i3-style tiling WM (no SIP disable needed)
 cask "karabiner-elements"      # Caps Lock -> Option remap (config/karabiner)
