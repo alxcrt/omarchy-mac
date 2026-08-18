@@ -58,7 +58,7 @@ cask "cursor"
 cask "visual-studio-code"
 cask "zed"
 cask "cmux"
-cask "t3-code"                 # T3 Code — multi-agent control plane (t3.codes)
+cask "t3-code@nightly"         # T3 Code nightly — multi-agent control plane (t3.codes)
 cask "betterdisplay"
 cask "cleanshot"
 cask "ollama-app"
