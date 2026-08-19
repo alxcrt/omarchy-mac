@@ -1,9 +1,20 @@
+[settings]
+# pipx-backend tools install through mise's own uv (no standalone pipx/uv)
+pipx.uvx = true
+
 [tools]
 # Runtimes
 node = "latest"
 go = "latest"
 rust = "latest"
 bun = "latest"
+uv = "latest"
+
+# Local LLMs on Apple Silicon (mlx_lm.chat / .generate / .server)
+"pipx:mlx-lm" = "latest"
+
+# Hermes Agent (NousResearch) — official PyPI package, not the npm bridge
+"pipx:hermes-agent" = "latest"
 
 # AI CLIs + gh — migrated off Homebrew into mise so `mup`/`macup` bump them.
 # All floated at "latest"; MISE_MINIMUM_RELEASE_AGE=0 in the update path
