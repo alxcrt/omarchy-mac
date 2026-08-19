@@ -31,6 +31,9 @@ gh = "latest"
 # registry `pi` shortname, which resolves to the unrelated earendil-works/pi.
 "github:badlogic/pi-mono" = "latest"
 
+# bcode (browser-use/browsercode) — replaced its curl installer (~/.bcode)
+"github:browser-use/browsercode" = "latest"
+
 # Terminal workspace manager (herdr.dev = github.com/herdrdev/herdr).
 # Ships a herdr-macos-aarch64 release binary, so it stays in the update path.
 "github:herdrdev/herdr" = "latest"
