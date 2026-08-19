@@ -27,6 +27,9 @@ gh = "latest"
 # From your Linux config
 "npm:@xai-official/grok" = "latest"
 "github:can1357/oh-my-pi" = "latest"
+# pi as Omarchy ships it (badlogic/pi-mono, Mario Zechner) — NOT mise's
+# registry `pi` shortname, which resolves to the unrelated earendil-works/pi.
+"github:badlogic/pi-mono" = "latest"
 
 # Terminal workspace manager (herdr.dev = github.com/herdrdev/herdr).
 # Ships a herdr-macos-aarch64 release binary, so it stays in the update path.
