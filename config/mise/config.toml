@@ -34,6 +34,9 @@ gh = "latest"
 # bcode (browser-use/browsercode) — replaced its curl installer (~/.bcode)
 "github:browser-use/browsercode" = "latest"
 
+# Browser automation CLI for AI agents (was an nvm-era npm global)
+"npm:agent-browser" = "latest"
+
 # Terminal workspace manager (herdr.dev = github.com/herdrdev/herdr).
 # Ships a herdr-macos-aarch64 release binary, so it stays in the update path.
 "github:herdrdev/herdr" = "latest"
