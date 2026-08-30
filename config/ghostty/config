@@ -50,3 +50,8 @@ keybind = ctrl+shift+r=reload_config
 
 # Slow down mouse scrolling
 mouse-scroll-multiplier = 0.95
+
+# Audible bell: Ghostty 1.3 defaults to no-system,no-audio, which silences
+# herdr's BEL notifications. `system` plays the macOS alert sound; `attention`
+# bounces the Dock icon when unfocused; `title` keeps the tab indicator.
+bell-features = system,attention,title
