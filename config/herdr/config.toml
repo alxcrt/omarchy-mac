@@ -1,3 +1,4 @@
+onboarding = false
 # Mirrors the Omarchy tmux config in config/tmux/tmux.conf
 # tmux session -> herdr workspace, tmux window -> herdr tab, tmux pane -> herdr pane
 
@@ -94,3 +95,10 @@ mouse_capture = true
 # the basename of the pane cwd. This is what Hyprland shows in the group bar,
 # and it resolves on the server so remote sessions name the remote host.
 # window_title = "{hostname}: {workspace}"
+
+# Play sounds when agents change state in background workspaces. Sounds come
+# from the process rendering the UI — over plain ssh they'd play on the remote
+# box (into nothing); attach with `herdr --remote <host>` so the client runs
+# locally and the sound comes out of this machine.
+[ui.sound]
+enabled = true
