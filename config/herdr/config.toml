@@ -18,6 +18,9 @@ new_cwd = "follow"
 [keys]
 prefix = "ctrl+space"
 
+# Forward clipboard images to the remote agent pane (herdr --remote only)
+remote_image_paste = "ctrl+v"
+
 # Config and help
 reload_config = "prefix+q"
 help = "prefix+?"
