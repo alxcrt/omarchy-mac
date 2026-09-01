@@ -68,6 +68,7 @@ cask "obsidian"
 cask "obs"
 cask "losslesscut"             # video/screen-recording trimmer (Omacut equivalent)
 cask "chatgpt"                 # ChatGPT desktop app (Omarchy 4 Install > AI)
+cask "claude"                  # Claude desktop app
 cask "1password"
 cask "1password-cli"
 cask "libreoffice"
