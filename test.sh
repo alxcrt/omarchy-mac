@@ -473,7 +473,8 @@ for f in bat eza fd fzf ripgrep zoxide jq btop fastfetch starship tmux neovim la
 done
 mise doctor 2>&1 | grep -q 'No problems found' && ok "mise doctor clean" || bad "mise doctor" "problems reported"
 for t in claude codex gh opencode bun node go; do
-  mise ls 2>/dev/null | grep -q "^$t " && ok "mise manages $t" || bad "mise" "$t not managed"
+  # tolerate a backend prefix (codex is npm:@openai/codex, not the aqua shortname)
+  mise ls 2>/dev/null | grep -qE "(^|[:/])$t " && ok "mise manages $t" || bad "mise" "$t not managed"
 done
 # match real declarations only — the Brewfile mentions these in a comment
 grep -qE '^\s*(cask|brew)\s+"(claude-code|codex|gh)"' ~/.config/homebrew/Brewfile \

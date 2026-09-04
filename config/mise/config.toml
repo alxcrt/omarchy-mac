@@ -20,7 +20,11 @@ uv = "latest"
 # All floated at "latest"; MISE_MINIMUM_RELEASE_AGE=0 in the update path
 # overrides mise's cooldown so these track today's release, not last week's.
 claude = "latest"
-codex = "latest"
+# codex via npm, NOT the registry shortname (aqua:openai/codex): aqua's version
+# list for this repo is broken — it enumerates alphas but no stable 0.153.x, so
+# `mise up` resolves "latest" to an older release than codex's own updater
+# reports. npm's dist-tag is the vendor's channel and is instant.
+"npm:@openai/codex" = "latest"
 opencode = "latest"
 gh = "latest"
 
