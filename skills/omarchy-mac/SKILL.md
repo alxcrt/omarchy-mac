@@ -110,6 +110,14 @@ extensions.
   If reinstall doesn't fix it, suspect the endpoint-security agent (Jamf
   Protect) and check `/Library/SystemExtensions/db.plist` for whether the
   extension is even being staged.
+- **`mise up` can silently lag behind a tool's real latest release.** codex's
+  aqua package enumerates alpha tags but no stable `0.153.x`, so `mise latest
+  codex` resolved an older build than codex's own updater reported, while
+  `mise install codex@<exact>` worked fine. Neither `mise cache clear` nor
+  `MISE_AQUA_BAKED_REGISTRY=false` fixed it. When a CLI reports a newer version
+  than `mup` installs, compare `mise latest <t>` against the vendor channel
+  (`npm view <pkg> version`, `gh api repos/<o>/<r>/releases/latest`) and switch
+  that tool to the `npm:` backend, whose dist-tag is instant.
 - **`mise install` fails transiently while brew saturates the network**
   ("address not available"). Just rerun it; already-installed tools are kept.
 - **brew formulae can pull `go`/`node` in as build deps**, silently violating
