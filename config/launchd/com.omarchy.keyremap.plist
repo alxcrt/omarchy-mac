@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <key>Label</key>
+  <string>com.omarchy.keyremap</string>
+
+  <!-- hidutil mappings do not survive a reboot, so reapply them at login.
+       $HOME is not expanded inside ProgramArguments, hence the sh -c. -->
+  <key>ProgramArguments</key>
+  <array>
+    <string>/bin/sh</string>
+    <string>-c</string>
+    <string>exec "$HOME/.local/bin/mac-keyremap" --apply</string>
+  </array>
+
+  <key>RunAtLoad</key>
+  <true/>
+  <key>StandardErrorPath</key>
+  <string>/tmp/com.omarchy.keyremap.err</string>
+</dict>
+</plist>

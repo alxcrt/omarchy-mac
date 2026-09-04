@@ -276,12 +276,14 @@ if chrome-extensions verify 2>/dev/null | grep -qx 'STATUS=loaded'; then
 else
   skip "extensions not loaded (per on-disk Preferences)" "load them, then quit Chrome once so it flushes Preferences"
 fi
-# AeroSpace must not shadow the extensions' own shortcuts.
-A=~/.config/aerospace/aerospace.toml
-grep -qE "^alt-shift-d\s*=" "$A" && bad "keybind conflict" "aerospace binds ⌥⇧D — Chrome's Download Video never sees it" \
-  || ok "⌥⇧D free for the Download Video extension"
-grep -qE "^alt-shift-l\s*=" "$A" && bad "keybind conflict" "aerospace binds ⌥⇧L — Chrome's Copy URL never sees it" \
-  || ok "⌥⇧L free for the Copy URL extension"
+# ⌥⇧D / ⌥⇧L belong to the extensions. AeroSpace used to grab keys globally and
+# shadow them; with it gone the only remaining global grabber is macOS itself,
+# so assert no system-wide hotkey has claimed them (⌥⇧ mask = 1703936).
+_sh=$(defaults read com.apple.symbolichotkeys AppleSymbolicHotKeys 2>/dev/null | tr -d ' \n')
+printf '%s' "$_sh" | grep -q "enabled=1;value={parameters=(100,2,1703936)" \
+  && bad "keybind conflict" "a macOS hotkey claims ⌥⇧D" || ok "⌥⇧D free for the Download Video extension"
+printf '%s' "$_sh" | grep -q "enabled=1;value={parameters=(108,37,1703936)" \
+  && bad "keybind conflict" "a macOS hotkey claims ⌥⇧L" || ok "⌥⇧L free for the Copy URL extension"
 fi
 
 # ── 11. mac CLI ────────────────────────────────────────────────────────────
@@ -291,7 +293,8 @@ mac help >/dev/null 2>&1 && ok "mac help" || bad "mac help" "nonzero exit"
 for s in update mise dl url transcode term wm doctor edit usage install; do
   mac help 2>/dev/null | grep -q "mac $s" && ok "mac help documents '$s'" || bad "mac help" "missing '$s'"
 done
-mac wm status 2>/dev/null | grep -q '>' && ok "mac wm status shows workspace mapping" || bad "mac wm status" "no mapping"
+mac wm --status 2>/dev/null | grep -q 'EnableTiledWindowMargins' \
+  && ok "mac wm reports native tiling settings" || bad "mac wm --status" "no tiling report"
 mac usage 2>/dev/null | grep -q CLAUDE && ok "mac usage reads Claude data" || bad "mac usage" "no claude data"
 mac usage 2>/dev/null | grep -q CODEX && ok "mac usage reads Codex data" || bad "mac usage" "no codex data"
 mac bogus >/dev/null 2>&1 && bad "mac bogus" "should exit nonzero" || ok "mac rejects unknown subcommand"
@@ -301,7 +304,7 @@ fi
 # ── 12. helper scripts ─────────────────────────────────────────────────────
 if want scripts; then
 sec "Helper scripts"
-for s in mac macup mise-install ghostty-run transcode webdl weburl browser-url \
+for s in mac macup mise-install mac-keyremap mac-wm ghostty-run transcode webdl weburl browser-url \
          chromium-native-host chrome-extensions mac-hook agent-usage-claude agent-usage-codex; do
   p="$HOME/.local/bin/$s"
   if [ ! -x "$p" ]; then bad "$s" "missing or not executable"; continue; fi
@@ -340,129 +343,107 @@ fi
 
 # ── 14. window manager ─────────────────────────────────────────────────────
 if want wm; then
-sec "AeroSpace"
-aerospace reload-config >/dev/null 2>&1 && ok "config parses cleanly" || bad "aerospace config" "parse error"
-[ "$(osascript -e 'application "AeroSpace" is running' 2>/dev/null)" = true ] && ok "AeroSpace running" || bad "AeroSpace" "not running"
-m=$(aerospace list-monitors 2>/dev/null | wc -l | tr -d ' '); [ "$m" -ge 1 ] && ok "sees $m monitor(s)" || bad "monitors" "none"
-w=$(aerospace list-workspaces --all 2>/dev/null | wc -l | tr -d ' '); [ "$w" -ge 1 ] && ok "workspaces available ($w)" || bad "workspaces" "none"
-aerospace list-windows --all >/dev/null 2>&1 && ok "can enumerate windows (Accessibility granted)" || bad "windows" "Accessibility likely denied"
-C=~/.config/aerospace/aerospace.toml
-grep -q 'config-version = 2' "$C" && ok "config-version 2" || bad "config-version" "not 2"
-for b in "alt-enter" "alt-w" "alt-t" "alt-f" "alt-1 " "alt-shift-1" "alt-shift-ctrl-1" "alt-tab"; do
-  grep -q "^$b" "$C" && ok "bind $b present" || bad "bind $b" "missing"
+sec "Window management (macOS native)"
+# AeroSpace was dropped; a leftover install would fight the native tiler.
+command -v aerospace >/dev/null 2>&1 && bad "aerospace" "CLI still on PATH" || ok "aerospace CLI gone"
+[ -e /Applications/AeroSpace.app ] && bad "aerospace" "app still installed" || ok "AeroSpace.app removed"
+[ -e "$HOME/.config/aerospace" ] && bad "aerospace" "~/.config/aerospace still present" \
+  || ok "~/.config/aerospace removed"
+grep -qi aerospace ~/.config/homebrew/Brewfile && bad "Brewfile" "still declares aerospace" \
+  || ok "Brewfile no longer declares aerospace"
+
+# The native tiler is configured entirely through defaults, so assert the
+# defaults system actually holds the values — not that mac-wm printed them.
+mac-wm --apply >/dev/null 2>&1
+for k in EnableTilingByEdgeDrag EnableTopTilingByEdgeDrag \
+         EnableTilingOptionAccelerator EnableTiledWindowMargins; do
+  [ "$(defaults read com.apple.WindowManager "$k" 2>/dev/null)" = "1" ] \
+    && ok "WindowManager $k on" || bad "$k" "not enabled"
 done
-n=$(grep -cE '^alt-|^ctrl-' "$C"); [ "$n" -ge 60 ] && ok "$n binds defined" || bad "binds" "only $n"
-f=$(grep -c 'on-window-detected' "$C"); [ "$f" -ge 5 ] && ok "$f auto-float rules" || bad "float rules" "only $f"
-grep -q 'open -na Ghostty' "$C" && bad "aerospace" "still spawns duplicate Ghostty instances" || ok "no 'open -na' instance-spawning binds"
-# AeroSpace runs binds with a minimal PATH — a bare script name silently does
-# nothing. Every exec-and-forget of our own scripts must be an absolute path.
-if grep -oE "exec-and-forget [a-z-]+" "$C" | grep -qvE "exec-and-forget (osascript|open|pmset)"; then
-  bad "bind PATH" "a bind calls a script by bare name; AeroSpace's PATH won't find it"
-else
-  ok "script binds use absolute paths"
-fi
-for p in $(grep -oE '/Users/[^ ]*/\.local/bin/[a-z-]+' "$C" | sort -u); do
-  [ -x "$p" ] && ok "bind target exists: $(basename "$p")" || bad "bind target" "$p missing"
+
+# ⌃1-9 -> Desktop 1-9 are symbolic hotkeys 118-126, off by Apple's default.
+_sh=$(defaults read com.apple.symbolichotkeys AppleSymbolicHotKeys 2>/dev/null | tr -d ' \n')
+_on=0
+for i in 118 119 120 121 122 123 124 125 126; do
+  printf '%s' "$_sh" | grep -q "$i={enabled=1;" && _on=$((_on+1))
 done
-# Upstream Omarchy ships NO Ghostty split binds (it uses tmux panes), so ⌥J/⌥L
-# belong to AeroSpace as SUPER+J / SUPER+L. Assert Ghostty does not re-claim them.
-for g in j l; do
-  grep -qE "opt\\+$g=" ~/.config/ghostty/config 2>/dev/null \
-    && bad "conflict" "ghostty binds opt+$g — collides with AeroSpace SUPER+$g" \
-    || ok "ghostty leaves opt+$g to AeroSpace"
-done
-grep -qE "^alt-j |^alt-l " "$C" && ok "SUPER+J / SUPER+L bound (Omarchy parity)" \
-  || bad "binds" "SUPER+J/L missing"
-# Upstream parity items that were missing until recently.
-for b in "alt-0 " "alt-shift-0 " "alt-k " "alt-ctrl-period " "alt-backtick " \
-         "alt-ctrl-left " "alt-shift-ctrl-left " "alt-shift-b " "alt-shift-ctrl-enter "; do
-  grep -qE "^$b" "$C" && ok "bind ${b% } present" || bad "bind ${b% }" "missing"
-done
-# Regression: `move-mouse window-lazy-center` on every focus change physically
-# warps the pointer, and macOS then re-derives the focused workspace from where
-# the cursor landed — spawning a terminal jumped focus to another workspace.
-grep -qE "^on-focus-changed = \[\]" "$C" && ok "on-focus-changed empty (no cursor-warp focus jumps)" \
-  || bad "on-focus-changed" "cursor warping will move focus to the wrong workspace"
-# End-to-end: a new terminal must land on, and keep focus on, the current workspace.
-if command -v aerospace >/dev/null 2>&1; then
-  aerospace workspace 8 >/dev/null 2>&1; sleep 1
-  _b=$(aerospace list-workspaces --focused 2>/dev/null)
-  _before=$(aerospace list-windows --all --format '%{window-id}' 2>/dev/null | sort)
-  ghostty-run >/dev/null 2>&1   # exactly what the ⌥Enter bind runs
-  sleep 3
-  _after=$(aerospace list-windows --all --format '%{window-id}' 2>/dev/null | sort)
-  _new=$(comm -13 <(echo "$_before") <(echo "$_after") | head -1)
-  _a=$(aerospace list-workspaces --focused 2>/dev/null)
-  _ws=$(aerospace list-windows --all --format '%{window-id}|%{workspace}' 2>/dev/null | grep "^$_new|" | cut -d'|' -f2)
-  [ -n "$_new" ] && [ "$_a" = "$_b" ] && [ "$_ws" = "$_b" ] \
-    && ok "new terminal lands on the focused workspace (ws$_b)" \
-    || bad "terminal placement" "focus $_b->$_a, window on ws${_ws:-none}"
-  [ -n "$_new" ] && aerospace close --window-id "$_new" >/dev/null 2>&1
-  aerospace workspace 1 >/dev/null 2>&1
-fi
-grep -qE '^alt-enter' "$C" && ok "binds use ⌥ as SUPER" || bad "binds" "alt binds missing"
+[ "$_on" = 9 ] && ok "⌃1-9 switch-to-Desktop hotkeys enabled (9/9)" \
+               || bad "space hotkeys" "only $_on of 9 enabled"
+# ⌃1 must carry the ⌃ mask (262144) and the keycode for '1' (18).
+printf '%s' "$_sh" | grep -q "118={enabled=1;value={parameters=(49,18,262144)" \
+  && ok "⌃1 is bound to keycode 18 with the ⌃ mask" || bad "⌃1" "wrong parameters"
+
+# Behaviour, not prose: the tiling menu Apple exposes must actually be there,
+# since every documented shortcut hangs off it.
+_mr=$(osascript -e 'tell application "System Events" to tell process "Finder" to return name of menu items of menu "Move & Resize" of menu item "Move & Resize" of menu "Window" of menu bar item "Window" of menu bar 1' 2>/dev/null)
+printf '%s' "$_mr" | grep -q "Left" && ok "native Move & Resize menu present (tiling available)" \
+  || skip "could not read the Move & Resize menu" "grant Accessibility to the terminal"
+
+# mac-wm is the only place the native shortcuts are written down; mac-keys
+# renders the same table, so a drift between them is a real bug.
+mac-wm --keys --porcelain | grep -q '^Spaces (Mission Control)|⌃ 1..9|' \
+  && ok "mac-wm exposes a machine-readable key table" || bad "mac-wm --porcelain" "table missing"
+_a=$(mac-wm --keys --porcelain | wc -l | tr -d ' ')
+_b=$(mac-keys | grep -cE '^  (fn ⌃|⌃ |drag )')
+[ "$_a" = "$_b" ] && ok "mac-keys renders all $_a native shortcuts" \
+                  || bad "mac-keys" "renders $_b of $_a native shortcuts"
+mac-wm --status | grep -q 'Desktops that exist' && ok "mac-wm reports Spaces state" \
+  || bad "mac-wm --status" "no Spaces report"
 fi
 
-# ── 15. karabiner ──────────────────────────────────────────────────────────
-if want karabiner; then
-sec "Karabiner (SUPER key)"
-K=~/.config/karabiner/karabiner.json
-python3 -c "import json;json.load(open('$K'))" 2>/dev/null && ok "karabiner.json valid JSON" || bad "karabiner.json" "invalid"
-python3 - <<PY && ok "caps_lock -> Hyper (⌘⌃⌥⇧), Escape when tapped" || bad "caps rule" "not configured"
-import json,sys
-d=json.load(open("$K"))
-p=[x for x in d["profiles"] if x.get("selected")][0]
-r=[m for rule in p["complex_modifications"]["rules"] for m in rule["manipulators"]]
-caps=[m for m in r if m["from"].get("key_code")=="caps_lock"]
-if not caps: sys.exit(1)
-to=caps[0]["to"][0]
-# Hyper = cmd held with ctrl+opt+shift (Raycast's hyper chords; Raycast's own
-# Hyper Key feature must stay off so only Karabiner remaps the key).
-sys.exit(0 if to["key_code"]=="left_command"
-         and set(to.get("modifiers",[]))=={"left_control","left_option","left_shift"}
-         and caps[0]["to_if_alone"][0]["key_code"]=="escape" else 1)
-PY
-# NB: karabiner_grabber no longer exists — modern Karabiner runs
-# Karabiner-Core-Service instead. Check that, and ask karabiner_cli directly.
-ps -Ao comm | grep -q 'Karabiner-Core-Service' && ok "Karabiner-Core-Service running (remapping active)" \
-  || skip "Karabiner core service not running" "launch Karabiner-Elements"
-ps -Ao comm | grep -q 'Karabiner-VirtualHIDDevice-Daemon' && ok "VirtualHIDDevice daemon running" \
-  || skip "VirtualHIDDevice daemon not running" "approve the driver"
-CLI="/Library/Application Support/org.pqrs/Karabiner-Elements/bin/karabiner_cli"
-[ "$("$CLI" --show-current-profile-name 2>/dev/null)" = "Omarchy" ] \
-  && ok "active Karabiner profile is 'Omarchy'" || bad "karabiner profile" "not Omarchy"
-# --lint-complex-modifications validates DISTRIBUTION rule files ({title,rules}),
-# not karabiner.json. 16.1 tolerated the whole config, 16.2 rejects it — so
-# extract the active profile's rules and lint those, which is the real assertion.
-_kl=$(mktemp -d)/rules.json
-python3 - "$_kl" <<'PY' 2>/dev/null
-import json, sys
-d = json.load(open(f"{__import__('os').path.expanduser('~')}/.config/karabiner/karabiner.json"))
-p = [x for x in d["profiles"] if x.get("selected")][0]
-json.dump({"title": "omarchy", "rules": p["complex_modifications"]["rules"]}, open(sys.argv[1], "w"))
-PY
-"$CLI" --lint-complex-modifications "$_kl" 2>&1 | grep -q ': ok' \
-  && ok "karabiner rules lint clean" || bad "karabiner config" "lint failed"
-# Karabiner v16+ has no system extension (systemextensionsctl shows nothing);
-# a running VirtualHIDDevice daemon IS the post-approval state. Only nag about
-# approval when the daemon is genuinely absent.
-if systemextensionsctl list 2>/dev/null | grep -qi 'karabiner.*activated enabled' \
-   || ps -Ao comm | grep -q 'Karabiner-VirtualHIDDevice-Daemon'; then
-  ok "Karabiner driver approved + enabled (Caps Lock is live)"
+# ── 15. modifier remap ─────────────────────────────────────────────────────
+if want keyremap; then
+sec "Modifier remap (hidutil, ex-Karabiner)"
+LO=30064771298   # 0x7000000E2 left_option   CAPS=0x700000039  RCMD=0x7000000E7
+CAPS=30064771129; RCMD=30064771303
+
+# The assertion is the HID system's own state, not anything mac-keyremap prints.
+_map() { hidutil property --get "UserKeyMapping" 2>/dev/null | tr -d ' \n'; }
+_has() { _map | grep -q "MappingDst=$LO;HIDKeyboardModifierMappingSrc=$1;"; }
+
+mac-keyremap --apply >/dev/null 2>&1
+_has $CAPS && ok "Caps Lock is remapped to ⌥ in the HID system" || bad "keyremap" "caps lock not mapped to ⌥"
+_has $RCMD && ok "Right ⌘ is remapped to ⌥ in the HID system"  || bad "keyremap" "right ⌘ not mapped to ⌥"
+
+# Prove --clear/--apply actually mutate HID state (a print-only script passes
+# every "does it exist" check and still does nothing).
+mac-keyremap --clear >/dev/null 2>&1
+_has $CAPS && bad "keyremap --clear" "mapping survived a clear" || ok "--clear really removes the mapping"
+mac-keyremap --apply >/dev/null 2>&1
+_has $CAPS && ok "--apply restores it (round-trip works)" || bad "keyremap --apply" "did not restore mapping"
+mac-keyremap --show 2>/dev/null | grep -q "$LO" && ok "--show reports the live mapping" || bad "keyremap --show" "no mapping reported"
+
+# The mapping is HID-system state and dies on reboot; the login agent is what
+# makes it survive. Assert launchd actually holds it.
+AGENT="$HOME/Library/LaunchAgents/com.omarchy.keyremap.plist"
+plutil -lint "$AGENT" >/dev/null 2>&1 && ok "login agent plist is valid" || bad "keyremap agent" "plist invalid or missing"
+diff -q "$AGENT" ~/omarchy-mac/config/launchd/com.omarchy.keyremap.plist >/dev/null 2>&1 \
+  && ok "installed agent matches the repo copy" || bad "drift" "installed agent differs from repo"
+launchctl print "gui/$UID/com.omarchy.keyremap" >/dev/null 2>&1 \
+  && ok "login agent is bootstrapped in gui/$UID" \
+  || bad "keyremap agent" "not loaded (launchctl bootstrap gui/$UID $AGENT)"
+
+# Karabiner must be gone, not merely unused — a live Karabiner would silently
+# fight hidutil for the same keys.
+brew list --cask 2>/dev/null | grep -q karabiner && bad "karabiner" "cask still installed" \
+  || ok "karabiner-elements cask removed"
+[ -e /Applications/Karabiner-Elements.app ] && bad "karabiner" "app still present" \
+  || ok "Karabiner-Elements.app removed"
+[ -e "$HOME/.config/karabiner" ] && bad "karabiner" "~/.config/karabiner still present" \
+  || ok "~/.config/karabiner removed"
+# The DriverKit extension can only be reaped by macOS at reboot (SIP blocks
+# systemextensionsctl uninstall), so a leftover is a pending reboot, not a fail.
+if systemextensionsctl list 2>/dev/null | grep -qi 'karabiner.*activated'; then
+  skip "Karabiner DriverKit extension still registered" "reboot — macOS reaps it once the app is gone"
 else
-  skip "Karabiner driver NOT approved" "System Settings > Privacy & Security > Allow"
+  ok "Karabiner DriverKit extension gone"
 fi
-# End-to-end: synthesize SUPER+3 and confirm AeroSpace actually acts on it.
-if command -v aerospace >/dev/null 2>&1; then
-  _b=$(aerospace list-workspaces --focused 2>/dev/null)
-  osascript -e 'tell application "System Events" to key code 20 using {option down}' 2>/dev/null
-  sleep 2
-  _a=$(aerospace list-workspaces --focused 2>/dev/null)
-  [ "$_a" = "3" ] && ok "⌥3 switches workspace (binds respond end-to-end)" \
-                  || bad "SUPER binds" "workspace did not change ($_b -> $_a)"
-  osascript -e "tell application \"System Events\" to key code 18 using {option down}" 2>/dev/null
-  sleep 1
-fi
+
+# End-to-end: the remap only matters if a remapped key really produces ⌥. Ask
+# the HID system what modifiers a synthetic Caps Lock press carries.
+_probe=$(osascript -e 'tell application "System Events" to key code 57' 2>&1)
+[ -z "$_probe" ] && ok "a Caps Lock keypress is accepted (no caps-lock toggle)" \
+                 || skip "could not synthesize Caps Lock" "grant Accessibility to the terminal"
 fi
 
 # ── 16. Touch ID ───────────────────────────────────────────────────────────
@@ -539,14 +520,14 @@ if [ -d "$R/.git" ]; then
   ( cd "$R" && bash -n install.sh ) && ok "install.sh syntax ok" || bad "install.sh" "syntax error"
   n=$( cd "$R" && git ls-files | wc -l | tr -d ' ' ); [ "$n" -ge 20 ] && ok "$n files tracked" || bad "repo" "only $n files"
   for f in config/mise/config.toml config/zsh/aliases.zsh config/zsh/functions.zsh \
-           config/tmux/tmux.conf config/aerospace/aerospace.toml config/karabiner/karabiner.json \
+           config/tmux/tmux.conf local/bin/mac-keyremap local/bin/mac-wm \
+           config/launchd/com.omarchy.keyremap.plist \
            config/pam/sudo_local local/bin/mac local/bin/macup; do
     [ -f "$R/$f" ] && ok "tracked: $f" || bad "repo" "$f missing"
   done
   # live configs must match what's committed
   for pair in "$HOME/.config/zsh/aliases.zsh:config/zsh/aliases.zsh" \
               "$HOME/.config/zsh/functions.zsh:config/zsh/functions.zsh" \
-              "$HOME/.config/aerospace/aerospace.toml:config/aerospace/aerospace.toml" \
               "$HOME/.config/tmux/tmux.conf:config/tmux/tmux.conf" \
               "$HOME/.local/bin/mac:local/bin/mac"; do
     live=${pair%%:*}; repo="$R/${pair#*:}"

@@ -23,14 +23,12 @@ link config/homebrew/Brewfile  .config/homebrew/Brewfile
 link config/zsh/aliases.zsh    .config/zsh/aliases.zsh
 link config/starship.toml      .config/starship.toml
 link config/tmux/tmux.conf     .config/tmux/tmux.conf
-link config/aerospace/aerospace.toml .config/aerospace/aerospace.toml
 link config/zsh/functions.zsh  .config/zsh/functions.zsh
 link config/btop/btop.conf     .config/btop/btop.conf
 link config/herdr/config.toml  .config/herdr/config.toml
 link config/git/config         .config/git/config
 link config/ghostty/config     .config/ghostty/config
-link config/karabiner/karabiner.json .config/karabiner/karabiner.json
-for s in macup mise-install mac mac-keys mac-hook transcode-pick ghostty-run transcode webdl weburl browser-url chrome-extensions chromium-native-host agent-usage-claude agent-usage-codex; do
+for s in macup mise-install mac mac-keys mac-keyremap mac-wm mac-hook transcode-pick ghostty-run transcode webdl weburl browser-url chrome-extensions chromium-native-host agent-usage-claude agent-usage-codex; do
   link "local/bin/$s" ".local/bin/$s"
   chmod +x "$HOME/.local/bin/$s"
 done
@@ -38,6 +36,23 @@ done
 link zsh/zshrc                 .zshrc
 # Claude Code skill: teaches future sessions how this setup works.
 link skills/omarchy-mac/SKILL.md .claude/skills/omarchy-mac/SKILL.md
+
+section "Installing the modifier-remap login agent"
+# Replaces Karabiner-Elements: hidutil is Apple's own HID remapper, so there is
+# no driver or system extension to approve. The plist is COPIED, not symlinked —
+# launchd is fussy about plist ownership and a symlink into the repo is not
+# worth the risk. Re-running install.sh re-copies it.
+AGENT="$HOME/Library/LaunchAgents/com.omarchy.keyremap.plist"
+mkdir -p "$HOME/Library/LaunchAgents"
+cp "$REPO/config/launchd/com.omarchy.keyremap.plist" "$AGENT"
+launchctl bootout "gui/$UID/com.omarchy.keyremap" 2>/dev/null || true
+launchctl bootstrap "gui/$UID" "$AGENT" 2>/dev/null || true
+"$HOME/.local/bin/mac-keyremap" --apply
+
+section "Configuring native window management"
+# Window management is macOS's own tiling + Mission Control Spaces now
+# (AeroSpace was dropped). This only flips on what Apple ships disabled.
+"$HOME/.local/bin/mac-wm" --apply
 
 section "Ensuring Homebrew"
 if ! command -v brew >/dev/null 2>&1; then

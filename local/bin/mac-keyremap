@@ -1,0 +1,42 @@
+#!/bin/bash
+# mac-keyremap — this setup's modifier remapping, done with macOS's own hidutil.
+#
+# Replaces Karabiner-Elements. hidutil is Apple's built-in HID remapper: no
+# kernel driver, no DriverKit system extension to approve, no Input Monitoring
+# grant, no menu-bar app, nothing to break on a macOS upgrade.
+#
+# The trade-off, stated plainly: hidutil is strictly key -> key. It cannot do
+# dual-role keys (tap = Escape, hold = modifier) and it cannot emit a
+# multi-modifier "Hyper" (⌘⌃⌥⇧) from one key. Tapping Caps Lock for Escape is
+# therefore gone; Caps Lock is now purely a second ⌥. If you ever want Hyper
+# back for Raycast chords, turn on Raycast > Settings > Advanced > Hyper Key
+# rather than reinstalling a driver.
+#
+#   mac-keyremap [--apply]   apply the mapping (default)
+#   mac-keyremap --show      print the mapping macOS currently holds
+#   mac-keyremap --clear     restore stock keys
+#
+# hidutil mappings live in the HID system, not on disk: they are lost on reboot
+# and can be dropped when a keyboard re-enumerates. The login agent
+# ~/Library/LaunchAgents/com.omarchy.keyremap.plist reapplies this at login;
+# rerun `mac-keyremap` by hand if a keyboard reconnect ever loses it.
+set -e
+
+# HID usage page 0x07 codes, as 0x700000000 + usage:
+#   0x39 caps_lock   0xE2 left_option   0xE7 right_command
+# SUPER is ⌥, matching aerospace.toml's alt-* binds. Both Caps Lock and the
+# right ⌘ become ⌥ so SUPER is reachable from either side of the keyboard.
+MAPPING='{"UserKeyMapping":[{"HIDKeyboardModifierMappingSrc":0x700000039,"HIDKeyboardModifierMappingDst":0x7000000E2},{"HIDKeyboardModifierMappingSrc":0x7000000E7,"HIDKeyboardModifierMappingDst":0x7000000E2}]}'
+
+case "${1:---apply}" in
+  --apply)
+    hidutil property --set "$MAPPING" >/dev/null
+    echo "Caps Lock -> ⌥ (SUPER), Right ⌘ -> ⌥" ;;
+  --show)
+    hidutil property --get "UserKeyMapping" ;;
+  --clear)
+    hidutil property --set '{"UserKeyMapping":[]}' >/dev/null
+    echo "modifier remapping cleared (stock keys)" ;;
+  *)
+    echo "usage: mac-keyremap [--apply|--show|--clear]" >&2; exit 1 ;;
+esac

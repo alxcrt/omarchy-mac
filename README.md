@@ -24,7 +24,7 @@ config/homebrew/Brewfile     → ~/.config/homebrew/Brewfile    # the system + G
 config/zsh/aliases.zsh       → ~/.config/zsh/aliases.zsh      # ported Omarchy aliases (macOS-adjusted)
 config/starship.toml         → ~/.config/starship.toml        # Omarchy's prompt
 config/tmux/tmux.conf        → ~/.config/tmux/tmux.conf
-config/aerospace/aerospace.toml → ~/.config/aerospace/aerospace.toml  # tiling WM binds
+config/launchd/com.omarchy.keyremap.plist → ~/Library/LaunchAgents/  # hidutil modifier remap at login
 local/bin/macup              → ~/.local/bin/macup             # update-everything command
 local/bin/mise-install       → ~/.local/bin/mise-install      # self-updating mise wrapper generator
 zsh/zshrc                    → ~/.zshrc                       # oh-my-zsh + starship + mise
@@ -73,7 +73,7 @@ mac url                 # copy current Chrome tab URL
 mac transcode f.mov mp4 1080p     # also gif / jpg / png
 mac wm status|reload    # window manager state
 mac usage               # AI token usage + rate limits (from Omarchy)
-mac doctor              # mise + brew + aerospace health
+mac doctor              # mise + brew + window mgmt + keyremap health
 mac edit aliases|functions|wm|mise|brew|tmux
 ```
 
@@ -91,35 +91,43 @@ Shell flows in `config/zsh/functions.zsh` (zsh ports of Omarchy's bash fns):
 `ghostty-run <cmd>` opens a new window in the **existing** Ghostty — never
 `open -na`, which spawns a duplicate app instance per launch.
 
-## Window management (AeroSpace)
+## Window management (macOS native)
 
-[AeroSpace](https://github.com/nikitabobko/AeroSpace) is an i3-style tiling WM that
-does **not** require disabling SIP. `config/aerospace/aerospace.toml` ports Omarchy's
-Hyprland binds. **SUPER = Option (⌥)**, matching Omarchy directly. Karabiner additionally maps
-Caps Lock to ⌥ as an optional second Super (tap it alone for Escape).
+There is **no tiling window manager here any more.** AeroSpace was removed;
+macOS 26 tiles windows itself and Mission Control provides the workspaces, so
+the setup uses what the OS ships rather than a third-party WM that has to be
+granted Accessibility and restarted after every upgrade.
 
-Because AeroSpace grabs keys globally, `⌥J` and `⌥L` (Omarchy's SUPER+J /
-SUPER+L) are deliberately **left unbound** — Ghostty uses `opt+h/j/k/l` for
-split navigation and binding them would break it.
+`~/.local/bin/mac-wm` turns on the parts Apple ships switched off and reports
+the state — it is the only "config" there is:
 
-First run needs **Accessibility permission**: System Settings → Privacy & Security →
-Accessibility → enable **AeroSpace**. It starts at login thereafter.
+```sh
+mac wm              # what tiling / Spaces are set to
+mac wm --apply      # edge-drag tiling, tiled margins, ⌃1-9 Spaces
+mac wm --keys       # the native shortcuts
+```
 
-| Omarchy | Here | Action |
-|---|---|---|
-| `SUPER+Enter` | `⌥Enter` | terminal (Ghostty) |
-| `SUPER+Shift+<key>` | `⌥⇧<key>` | browser / Obsidian / nvim / music / AI |
-| `SUPER+W` | `⌥W` | close window |
-| `SUPER+arrows` | `⌥arrows` | move focus |
-| `SUPER+Shift+arrows` | `⌥⇧arrows` | move window |
-| `SUPER+1..9` | `⌥1..9` | switch workspace |
-| `SUPER+Shift+1..9` | `⌥⇧1..9` | send window to workspace |
-| `SUPER+J` / `SUPER+L` | — | unbound: Ghostty owns `opt+j`/`opt+l` |
-| `SUPER+T` | `⌥T` | toggle floating/tiling |
-| `SUPER+F` | `⌥F` | fullscreen |
-| `SUPER+-` / `=` | `⌥-` / `⌥=` | resize (`⌥R` for resize mode) |
-| — | `⌥⇧C` | reload config |
-| system panels | `⌥⌃+A/B/W/D/P/T/Q/S/L` | audio, bluetooth, wifi, display, battery, btop, calc, share, lock |
+| Keys | Action |
+|---|---|
+| `fn ⌃ ←/→/↑/↓` | tile window to a half |
+| `fn ⌃ ⇧ ←/→/↑/↓` | arrange this window and the next |
+| `fn ⌃ ⌥ ⇧ ←/→/↑/↓` | arrange half + quarters |
+| `fn ⌃ F` / `fn ⌃ C` / `fn ⌃ R` | fill / centre / previous size |
+| drag to screen edge | tile (hold ⌥ while dragging for the preview) |
+| `⌃ 1..9` | switch to Desktop 1-9 |
+| `⌃ ←/→` | previous / next Desktop |
+| `⌃ ↑` | Mission Control — add Desktops here with **+** |
+
+**What this costs, stated plainly.** Omarchy's `SUPER+<key>` app launchers
+(`⌥Enter` terminal, `⌥⇧B` browser, `⌥⇧N` nvim, `⌥⌃T` btop, the `⌥⌃` system
+panels, `⌥K` cheat sheet…) were AeroSpace binds and **are gone** — macOS has no
+native global launch-hotkey system. Raycast is installed and is the natural
+home for them (Raycast → Extensions → assign a hotkey, or a Script Command
+pointing at `ghostty-run <cmd>`). The flows themselves all still work from the
+shell: `mac term`, `mac keys`, `mac dl`, `mac transcode`, and so on.
+
+Two more things macOS will not let a script do: **creating Desktops** (add them
+by hand in Mission Control) and assigning Raycast hotkeys.
 
 ## Touch ID in the terminal (Omarchy's fingerprint auth)
 
@@ -135,21 +143,38 @@ sudo chmod 444 /etc/pam.d/sudo_local
 sudo -k && sudo true      # test — should prompt for fingerprint
 ```
 
-## The SUPER key (Karabiner)
+## The SUPER key (hidutil)
 
 Omarchy's binds are all `SUPER+…`. On macOS ⌘ is unusable for that (it owns
-⌘W/⌘Q/⌘1-9), so `config/karabiner/karabiner.json` makes **Caps Lock** the Super
-key instead:
+⌘W/⌘Q/⌘1-9), so **SUPER is ⌥**. Two more keys are remapped onto ⌥ so it is
+reachable without contorting your left hand:
 
-- **Hold Caps Lock** → acts as ⌥, an optional second Super.
-- **Tap Caps Lock alone** → Escape (vim-friendly).
-- **Right ⌘** → also ⌥.
+- **Caps Lock** → ⌥
+- **Right ⌘** → ⌥
 
-Karabiner is optional here: ⌥ is the real Super, so every binding works
-without touching Caps Lock at all.
+This used to be Karabiner-Elements. It is now `~/.local/bin/mac-keyremap`,
+which drives **`hidutil`** — Apple's own HID remapper, built into macOS. No
+kernel driver, no DriverKit system extension to approve, no Input Monitoring
+grant, no menu-bar app, nothing to re-approve after a macOS upgrade.
 
-Karabiner needs **Input Monitoring** + its driver extension approved on first
-run (System Settings → Privacy & Security).
+```sh
+mac keyremap            # apply
+mac keyremap --show     # what the HID system currently holds
+mac keyremap --clear    # back to stock keys
+```
+
+`hidutil` remaps live in the HID system rather than on disk, so they are lost
+on reboot; `config/launchd/com.omarchy.keyremap.plist` is installed to
+`~/Library/LaunchAgents` and reapplies the mapping at login.
+
+**The trade-off, stated plainly:** `hidutil` is strictly key → key. It cannot
+do dual-role keys, so **tap-Caps-Lock-for-Escape is gone** — Caps Lock is now
+purely a second ⌥. It also cannot emit a multi-modifier Hyper (⌘⌃⌥⇧) from one
+key; if you want Hyper chords for Raycast, use Raycast → Settings → Advanced →
+**Hyper Key** rather than reinstalling a driver.
+
+The remap is a convenience, not a requirement: ⌥ is the real Super, so every
+binding works with the mapping cleared.
 
 ## Notes
 
@@ -168,7 +193,6 @@ Homebrew now requires trusting third-party taps or it silently ignores their
 casks/formulae during upgrades. After `install.sh`, run once:
 
 ```sh
-brew trust --cask   nikitabobko/tap/aerospace
 brew trust --formula anomalyco/tap/opencode
 brew trust --cask   anomalyco/tap/cmux
 brew trust --formula bjarneo/cliamp/cliamp

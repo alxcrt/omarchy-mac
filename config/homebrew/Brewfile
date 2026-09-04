@@ -50,7 +50,6 @@ cask "iina"                    # media player (macOS-native mpv)
 cask "localsend"
 cask "tailscale-app"           # mesh VPN (menu-bar app; ships its own CLI)
 cask "transmission"            # replaced qbittorrent (Gatekeeper-deprecated, disabled 2026-09-01)
-cask "aerospace"               # i3-style tiling WM (no SIP disable needed)
 cask "raycast"                 # launcher
 # cursor NOT a cask here: installed root-owned and self-updating, so every
 # greedy upgrade dies on "Permission denied .../Cursor.app/Contents/

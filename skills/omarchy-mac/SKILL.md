@@ -2,7 +2,8 @@
 name: omarchy-mac
 description: >-
   Work on Alex's Omarchy-on-macOS setup — the brew/mise package layering, the
-  `mac` CLI and flow scripts, AeroSpace tiling, Karabiner, tmux/Ghostty configs,
+  `mac` CLI and flow scripts, native macOS tiling, hidutil key remapping,
+  tmux/Ghostty configs,
   and the omarchy-mac dotfiles repo. Use whenever a request touches package
   installs, updates (`macup`/`mup`), keybindings, window management, terminal
   behaviour, the AI CLIs, or any config under ~/.config that this setup owns.
@@ -36,11 +37,11 @@ into `~/.config` + `~/.local/bin`.
 | `~/.config/homebrew/Brewfile` | system + GUI layer (declarative) |
 | `~/.config/zsh/aliases.zsh` | Omarchy aliases, macOS-adjusted |
 | `~/.config/zsh/functions.zsh` | `tdl`/`tds`/`tdlm`/`tsl`, `ga`/`gd`, transcode wrappers |
-| `~/.config/aerospace/aerospace.toml` | tiling WM: binds + auto-float rules |
-| `~/.config/karabiner/karabiner.json` | Caps Lock → Hyper ⌘⌃⌥⇧ (Raycast), Esc on tap |
+| `~/.local/bin/mac-wm` | window management: native tiling + Spaces settings, and the only place the native shortcuts are written down |
+| `config/launchd/com.omarchy.keyremap.plist` | login agent that reapplies the hidutil remap |
 | `~/.config/tmux/tmux.conf` | upstream Omarchy verbatim |
 | `~/.config/ghostty/config` | upstream Omarchy, macOS-adjusted |
-| `~/.local/bin/` | `mac`, `macup`, `mac-keys`, `mac-hook`, `ghostty-run`, `transcode`, `webdl`, `weburl`, `browser-url`, `chrome-extensions`, `chromium-native-host`, `mise-install`, `agent-usage-*` |
+| `~/.local/bin/` | `mac`, `macup`, `mac-keys`, `mac-keyremap`, `mac-hook`, `ghostty-run`, `transcode`, `webdl`, `weburl`, `browser-url`, `chrome-extensions`, `chromium-native-host`, `mise-install`, `agent-usage-*` |
 
 ## Commands
 
@@ -57,7 +58,7 @@ workspaces, `⌥W` close, `⌥⇧1..9` send window. Full generated list:
 `~/omarchy-mac/test.sh` is ~265 real functional tests (it executes things and
 checks effects; it does not assert files exist). Run a section with
 `./test.sh <name>`: `layering aliases functions cd transcode compress tmux git
-browser extensions mac scripts hooks wm karabiner touchid shell brew repo`.
+browser extensions mac scripts hooks wm keyremap touchid shell brew repo`.
 
 **Run the relevant section after any change, and the full suite before
 committing.** Two skips are expected only if the user hasn't loaded the Chrome
@@ -72,11 +73,18 @@ extensions.
   Assert on **behaviour and machine-readable status**, not prose or process names.
 - **`open -na <App>` spawns a whole new application instance** (its own Dock
   icon). Use `ghostty-run`, which drives the existing instance via AppleScript.
-- **AeroSpace grabs keys globally.** Any bind here shadows the same key in every
-  app — that's why `⌥⇧D`/`⌥⇧L` must stay unbound (the Chrome extensions own them).
-- **`on-focus-changed = ['move-mouse ...']` must stay empty.** It physically
-  warps the cursor; macOS then re-derives the focused workspace from the pointer,
-  so spawning a terminal jumps focus to another workspace.
+- **There is no tiling WM any more.** AeroSpace was removed along with Karabiner;
+  window management is macOS 26's own tiling (`fn+⌃+arrows`, Window > Move &
+  Resize) plus Mission Control Spaces (`⌃1-9`). `mac-wm` turns on what Apple
+  ships disabled — edge-drag tiling, tiled margins, the ⌃1-9 hotkeys (symbolic
+  hotkey ids 118-126) — and is the single source for the shortcut table, which
+  `mac-keys` renders via `mac-wm --keys --porcelain`. Don't duplicate that table.
+- **Dropping AeroSpace killed every `SUPER+<key>` app launcher** (`⌥Enter`,
+  `⌥⇧B`, `⌥K`, the `⌥⌃` system panels…). macOS has no native global
+  launch-hotkey system; Raycast is the intended home for them, and its hotkey
+  config is **not scriptable** — that's a human step, report it as pending.
+- **macOS will not let a script create Spaces.** `⌃1-9` only reaches Desktops
+  that already exist; adding them is Mission Control (`⌃↑`, then `+`) by hand.
 - **zsh arrays are 1-indexed.** Ports of Omarchy's bash functions must use
   `${arr[1]}`, not `${arr[0]}`.
 - **oh-my-zsh's git plugin aliases `ga`/`gd`.** A function can't share a name
@@ -102,14 +110,29 @@ extensions.
   here) and self-update outside brew. Brew's cask metadata goes stale and
   greedy upgrades fail forever on them — drop such casks from the Brewfile
   and let the MDM/vendor updater own them (see the google-chrome note there).
-- **Karabiner driver "code signature invalid" (error 8) on Tahoe** even when
-  `codesign`/Gatekeeper pass: the fix that worked was a full
-  `brew uninstall --cask --zap karabiner-elements` + reinstall (per
-  pqrs-org/Karabiner-Elements#4314). Note `--zap` deletes
-  `~/.config/karabiner/karabiner.json` — relink it from the repo afterwards.
-  If reinstall doesn't fix it, suspect the endpoint-security agent (Jamf
-  Protect) and check `/Library/SystemExtensions/db.plist` for whether the
-  extension is even being staged.
+- **Karabiner is gone — the modifier remap is `mac-keyremap` (hidutil).** It was
+  removed because its DriverKit extension kept breaking on Tahoe ("code
+  signature invalid", error 8) and needed re-approval after every macOS bump.
+  `hidutil` is Apple's own HID remapper: no driver, no extension, no Input
+  Monitoring grant. The price is that it is strictly **key → key** — no
+  dual-role (tap Caps = Escape is gone) and no multi-modifier Hyper. Route
+  Hyper chords through Raycast's own Hyper Key setting instead.
+- **hidutil mappings are HID-system state, not files.** They vanish on reboot
+  and can drop when a keyboard re-enumerates, so the mapping only persists via
+  `~/Library/LaunchAgents/com.omarchy.keyremap.plist`. That plist is **copied,
+  not symlinked** (launchd is fussy about plist ownership) — so `install.sh`
+  must re-copy it, and the test asserts it matches the repo.
+- **A removed system extension survives until reboot.** `systemextensionsctl
+  uninstall` refuses to run while SIP is on, so after zapping a driver-based
+  app the dext stays `activated enabled` and its processes keep running. macOS
+  reaps it at the next boot once the owning app is gone — report it as pending,
+  don't claim the removal is complete.
+- **Live configs drift out of symlink into real files.** `--zap` (and manual
+  edits) replaced `~/.config/karabiner/karabiner.json`,
+  `~/.config/aerospace/aerospace.toml` and `~/.claude/skills/omarchy-mac/SKILL.md`
+  with plain copies, so committed changes silently never reached the machine —
+  a Caps-Lock-to-Hyper commit sat unused for weeks. `ls -l` the live path before
+  trusting that a repo edit is live.
 - **`mise up` can silently lag behind a tool's real latest release.** codex's
   aqua package enumerates alpha tags but no stable `0.153.x`, so `mise latest
   codex` resolved an older build than codex's own updater reported, while

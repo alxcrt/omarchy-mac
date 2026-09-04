@@ -1,0 +1,103 @@
+#!/bin/bash
+# mac-wm — window management, using macOS's own tiling and Spaces.
+#
+# Replaces AeroSpace. macOS 26 tiles windows natively (Window > Move & Resize)
+# and Mission Control provides the workspaces; this script just turns on the
+# parts Apple ships switched off and reports the result.
+#
+#   mac-wm [--status]   what the window manager is currently set to
+#   mac-wm --apply      turn on edge-drag tiling, margins and ⌃1-9 Spaces
+#   mac-wm --keys       the native shortcuts, since there is no config file
+#
+# What this does NOT do, and cannot: create the Spaces themselves. macOS has no
+# API for that — add Desktops by hand in Mission Control (⌃↑, then + on the
+# right of the Spaces bar). ⌃1-9 only jumps to Desktops that exist.
+set -e
+
+WM=com.apple.WindowManager
+
+apply() {
+  # Tiling. Apple ships edge-drag tiling on but margins off; margins are the
+  # closest native equivalent of Omarchy's 8px gaps.
+  defaults write $WM EnableTilingByEdgeDrag        -bool true
+  defaults write $WM EnableTopTilingByEdgeDrag     -bool true
+  defaults write $WM EnableTilingOptionAccelerator -bool true
+  defaults write $WM EnableTiledWindowMargins      -bool true
+
+  # ⌃1..⌃9 -> switch to Desktop 1..9. Off by default; the symbolic hotkey ids
+  # for "Switch to Desktop N" are 118..126. parameters = (ascii, keycode, mods)
+  # and 262144 is the ⌃ mask.
+  local ascii=(49 50 51 52 53 54 55 56 57)
+  local keycode=(18 19 20 21 23 22 26 28 25)
+  local i
+  for i in 0 1 2 3 4 5 6 7 8; do
+    defaults write com.apple.symbolichotkeys AppleSymbolicHotKeys -dict-add $((118 + i)) "
+      <dict><key>enabled</key><true/>
+      <key>value</key><dict>
+        <key>parameters</key><array>
+          <integer>${ascii[$i]}</integer><integer>${keycode[$i]}</integer><integer>262144</integer>
+        </array>
+        <key>type</key><string>standard</string>
+      </dict></dict>"
+  done
+
+  # Reload the shortcut table so ⌃1-9 works without logging out.
+  /System/Library/PrivateFrameworks/SystemAdministration.framework/Resources/activateSettings -u 2>/dev/null || true
+  killall Dock 2>/dev/null || true
+  echo "native tiling + ⌃1-9 Spaces applied"
+}
+
+status() {
+  local b
+  printf 'Tiling (%s)\n' "$WM"
+  for k in EnableTilingByEdgeDrag EnableTopTilingByEdgeDrag \
+           EnableTilingOptionAccelerator EnableTiledWindowMargins; do
+    b=$(defaults read $WM "$k" 2>/dev/null || echo "unset")
+    printf '  %-32s %s\n' "$k" "$b"
+  done
+
+  printf '\nSpaces\n'
+  local n on=0 i
+  for i in 0 1 2 3 4 5 6 7 8; do
+    defaults read com.apple.symbolichotkeys AppleSymbolicHotKeys 2>/dev/null \
+      | tr -d ' \n' | grep -q "$((118 + i))={enabled=1;" && on=$((on + 1))
+  done
+  printf '  %-32s %s of 9\n' "⌃1-9 switch-to-Desktop enabled" "$on"
+  n=$(defaults read com.apple.spaces SpacesDisplayConfiguration 2>/dev/null \
+      | grep -c 'ManagedSpaceID' || true)
+  printf '  %-32s %s\n' "Desktops that exist" "${n:-unknown}"
+}
+
+# The native shortcuts are built into macOS and have no config file to read,
+# so this table is the one place they are written down. mac-keys renders the
+# same table via --porcelain, so the cheat sheet can never disagree with this.
+KEYTABLE() {
+  cat <<'TBL'
+Tiling (Window > Move & Resize)|fn ⌃ ←/→/↑/↓|tile window to a half
+Tiling (Window > Move & Resize)|fn ⌃ ⇧ ←/→/↑/↓|arrange this window and the next
+Tiling (Window > Move & Resize)|fn ⌃ ⌥ ⇧ ←/→/↑/↓|arrange half + quarters
+Tiling (Window > Move & Resize)|fn ⌃ F|fill screen
+Tiling (Window > Move & Resize)|fn ⌃ C|centre window
+Tiling (Window > Move & Resize)|fn ⌃ R|return to previous size
+Tiling (Window > Move & Resize)|drag to screen edge|tile (hold ⌥ while dragging for the preview)
+Spaces (Mission Control)|⌃ 1..9|switch to Desktop 1-9 (enable with: mac wm --apply)
+Spaces (Mission Control)|⌃ ←/→|previous / next Desktop
+Spaces (Mission Control)|⌃ ↑|Mission Control — add Desktops here with +
+Spaces (Mission Control)|drag window to top edge|then drop onto a Desktop to move it
+TBL
+}
+
+keys() {
+  if [ "${1:-}" = "--porcelain" ]; then KEYTABLE; return; fi
+  echo "Native window management (macOS 26) — built in, no config file."
+  KEYTABLE | awk -F'|' '
+    $1 != last { printf "\n  %s\n", $1; last = $1 }
+    { printf "    %-22s %s\n", $2, $3 }'
+}
+
+case "${1:---status}" in
+  --status|status) status ;;
+  --apply|apply)   apply ;;
+  --keys|keys)     shift; keys "$@" ;;
+  *) echo "usage: mac-wm [--status|--apply|--keys]" >&2; exit 1 ;;
+esac
