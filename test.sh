@@ -409,8 +409,18 @@ ps -Ao comm | grep -q 'Karabiner-VirtualHIDDevice-Daemon' && ok "VirtualHIDDevic
 CLI="/Library/Application Support/org.pqrs/Karabiner-Elements/bin/karabiner_cli"
 [ "$("$CLI" --show-current-profile-name 2>/dev/null)" = "Omarchy" ] \
   && ok "active Karabiner profile is 'Omarchy'" || bad "karabiner profile" "not Omarchy"
-"$CLI" --lint-complex-modifications ~/.config/karabiner/karabiner.json 2>&1 | grep -q ': ok' \
-  && ok "karabiner config lints clean" || bad "karabiner config" "lint failed"
+# --lint-complex-modifications validates DISTRIBUTION rule files ({title,rules}),
+# not karabiner.json. 16.1 tolerated the whole config, 16.2 rejects it — so
+# extract the active profile's rules and lint those, which is the real assertion.
+_kl=$(mktemp -d)/rules.json
+python3 - "$_kl" <<'PY' 2>/dev/null
+import json, sys
+d = json.load(open(f"{__import__('os').path.expanduser('~')}/.config/karabiner/karabiner.json"))
+p = [x for x in d["profiles"] if x.get("selected")][0]
+json.dump({"title": "omarchy", "rules": p["complex_modifications"]["rules"]}, open(sys.argv[1], "w"))
+PY
+"$CLI" --lint-complex-modifications "$_kl" 2>&1 | grep -q ': ok' \
+  && ok "karabiner rules lint clean" || bad "karabiner config" "lint failed"
 # Karabiner v16+ has no system extension (systemextensionsctl shows nothing);
 # a running VirtualHIDDevice daemon IS the post-approval state. Only nag about
 # approval when the daemon is genuinely absent.
@@ -483,6 +493,10 @@ brew list --cask claude-code >/dev/null 2>&1 && bad "layering" "claude-code cask
 # THE core rule: nothing mise manages may also be installed by Homebrew.
 # `brew upgrade` reinstalled opencode from a tap once and shadowed the mise one.
 for t in $(mise ls --installed 2>/dev/null | awk '{print $1}' | sed 's|.*[:/]||'); do
+  # `claude` is a name collision, not a layering breach: the cask is the Claude
+  # DESKTOP app (/Applications/Claude.app, no CLI), while mise owns the Claude
+  # Code CLI. The dangerous cask is claude-code, checked separately above.
+  [ "$t" = claude ] && continue
   if brew list "$t" >/dev/null 2>&1 || brew list --cask "$t" >/dev/null 2>&1; then
     bad "layering" "$t is installed by BOTH brew and mise"
   fi

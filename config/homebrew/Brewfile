@@ -55,7 +55,9 @@ cask "transmission"            # replaced qbittorrent (Gatekeeper-deprecated, di
 cask "aerospace"               # i3-style tiling WM (no SIP disable needed)
 cask "karabiner-elements"      # Caps Lock -> Option remap (config/karabiner)
 cask "raycast"                 # launcher
-cask "cursor"
+# cursor NOT a cask here: installed root-owned and self-updating, so every
+# greedy upgrade dies on "Permission denied .../Cursor.app/Contents/
+# CodeResources". Same story as google-chrome below. Install manually once.
 cask "visual-studio-code"
 cask "zed"
 cask "cmux"
@@ -69,7 +71,7 @@ cask "obs"
 cask "losslesscut"             # video/screen-recording trimmer (Omacut equivalent)
 cask "chatgpt"                 # ChatGPT desktop app (Omarchy 4 Install > AI)
 cask "claude"                  # Claude desktop app
-cask "1password"
+# 1password NOT a cask here: same root-owned self-updater problem as cursor.
 cask "1password-cli"
 cask "libreoffice"
 cask "kdenlive"
