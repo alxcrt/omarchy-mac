@@ -15,7 +15,14 @@ section "Homebrew casks"
 brew upgrade --cask --greedy --yes
 
 section "Mac App Store"
-command -v mas >/dev/null && mas upgrade || echo "mas not installed, skipping"
+if command -v mas >/dev/null; then
+  # Apple's own bundled apps (GarageBand, iMovie) always fail here with
+  # "No downloads initiated" — mas cannot drive their delivery mechanism.
+  # Report it honestly instead of claiming mas is missing, and don't abort.
+  mas upgrade || echo "mas: some apps were not upgraded (Apple's bundled apps update via the App Store app itself)"
+else
+  echo "mas not installed, skipping"
+fi
 
 section "mise tools"
 # Same override as the `mup` alias: mise withholds releases younger than its
