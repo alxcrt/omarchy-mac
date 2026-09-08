@@ -55,7 +55,11 @@ notify "Downloading…" "$url"
 
 # --print after_move only fires on a successful download+move, so a captured
 # path means success — same success signal Omarchy uses.
-filepath=$(yt-dlp \
+# PROGRESS lines go to stdout so a caller (the browser native host) can stream
+# them live; --newline keeps them one per line instead of \r-overwriting.
+out=$(mktemp)
+trap 'rm -f "$out"' EXIT
+yt-dlp \
   --no-playlist \
   --restrict-filenames \
   --cookies-from-browser "$cookie_browser" \
@@ -63,8 +67,10 @@ filepath=$(yt-dlp \
   --paths "$DOWNLOAD_DIR" \
   -o '%(title)s [%(id)s].%(ext)s' \
   --print 'after_move:%(filepath)s' \
+  --newline --progress-template 'download:PROGRESS %(progress._percent_str)s' \
   --no-simulate --quiet --no-warnings --progress \
-  "$url" | tail -1)
+  "$url" | tee "$out"
+filepath=$(grep -v '^PROGRESS' "$out" | tail -1)
 
 if [[ -n ${filepath:-} && -f $filepath ]]; then
   notify "Download complete" "$(basename "$filepath")"

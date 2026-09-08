@@ -246,6 +246,28 @@ r=subprocess.run([h,"chrome-extension://bgpiichlckmfanooecilcjemknkcpngb/"],
     input=frame({"url":"javascript:alert(1)"}),capture_output=True)
 sys.exit(0 if r.returncode==0 and not r.stdout else 1)
 PY
+# Download flow: the host must relay live progress and a real file back, and
+# the notification-button actions must refuse a path that isn't a file. Uses a
+# 2.8MB sample rather than a stub, so the whole webdl/yt-dlp chain is exercised.
+python3 - <<'DLPY' && ok "native host: streams download progress + done" || bad "native host download" "no progress/done relayed"
+import json,struct,subprocess,os,sys,tempfile
+h=os.path.expanduser("~/.local/bin/chromium-native-host")
+def call(msg,env=None):
+    d=json.dumps(msg).encode()
+    p=subprocess.run([h],input=struct.pack("@I",len(d))+d,capture_output=True,
+                     env={**os.environ,**(env or {})},timeout=180)
+    out,msgs=p.stdout,[]
+    while len(out)>=4:
+        (n,)=struct.unpack("@I",out[:4]); msgs.append(json.loads(out[4:4+n])); out=out[4+n:]
+    return msgs
+with tempfile.TemporaryDirectory() as d:
+    m=call({"url":"https://download.samplelib.com/mp4/sample-5s.mp4"},{"OMARCHY_YTDLP_DIR":d})
+    prog=[x["progress"] for x in m if "progress" in x]
+    done=[x for x in m if x.get("done")]
+    ok_dl=bool(prog) and bool(done) and os.path.isfile(done[0]["path"])
+guard = call({"action":"reveal","path":"/nope/not-a-file"}) == [{"ok":True}]
+sys.exit(0 if ok_dl and guard else 1)
+DLPY
 chrome-extensions list >/dev/null 2>&1 && ok "chrome-extensions list runs" || bad "chrome-extensions list" "nonzero"
 # Match the machine-readable status line, NOT prose: "NOT LOADED in any
 # profile" contains the substring "LOADED in ", which false-passed twice.
