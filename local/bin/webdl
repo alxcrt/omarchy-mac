@@ -42,12 +42,22 @@ notify() {
 
 mkdir -p "$DOWNLOAD_DIR"
 
+probe() { yt-dlp --no-playlist --simulate --quiet --no-warnings "$@" "$url" >/dev/null 2>&1; }
+
 # Like Omarchy: don't show anything until yt-dlp confirms there's a video here.
-if ! yt-dlp --no-playlist --simulate --quiet --no-warnings \
-      --cookies-from-browser "$cookie_browser" "$url" >/dev/null 2>&1; then
-  notify "No video found for download" "$url"
-  echo "No video found for download: $url" >&2
-  exit 0
+# Cookies are a bonus, not a requirement: when the browser's cookie store can't
+# be read (no profile at the expected path, Keychain access denied), yt-dlp
+# aborts outright — retry without them so public videos still download.
+# (${cookies[@]+...}: bash 3.2 under set -u rejects an empty "${cookies[@]}".)
+cookies=(--cookies-from-browser "$cookie_browser")
+if ! probe "${cookies[@]}"; then
+  if probe; then
+    cookies=()
+  else
+    notify "No video found for download" "$url"
+    echo "No video found for download: $url" >&2
+    exit 0
+  fi
 fi
 
 echo "→ $url"
@@ -62,7 +72,7 @@ trap 'rm -f "$out"' EXIT
 yt-dlp \
   --no-playlist \
   --restrict-filenames \
-  --cookies-from-browser "$cookie_browser" \
+  ${cookies[@]+"${cookies[@]}"} \
   --merge-output-format mp4 \
   --paths "$DOWNLOAD_DIR" \
   -o '%(title)s [%(id)s].%(ext)s' \
