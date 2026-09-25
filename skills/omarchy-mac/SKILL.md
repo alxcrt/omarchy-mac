@@ -132,7 +132,13 @@ extensions.
   `~/.config/aerospace/aerospace.toml` and `~/.claude/skills/omarchy-mac/SKILL.md`
   with plain copies, so committed changes silently never reached the machine —
   a Caps-Lock-to-Hyper commit sat unused for weeks. `ls -l` the live path before
-  trusting that a repo edit is live.
+  trusting that a repo edit is live. In Sept 2026, 21 of 24 linked paths had
+  become copies (a stale `macup` without `--yes` kept hitting brew's y/n prompt).
+  `test.sh repo` now asserts every `install.sh` link is a real symlink, and
+  `install.sh --links` repairs them (backing up each copy to `.bak`) without
+  running the rest of the installer. Diff the `.bak`s afterwards: live copies
+  can hold edits the repo lacks, e.g. installer-appended `.zshrc` lines, which
+  belong in `~/.zshrc.local`.
 - **`mise up` can silently lag behind a tool's real latest release.** codex's
   aqua package enumerates alpha tags but no stable `0.153.x`, so `mise latest
   codex` resolved an older build than codex's own updater reported, while

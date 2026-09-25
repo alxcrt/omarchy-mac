@@ -325,6 +325,17 @@ for s in "brew update" "brew upgrade" "mas upgrade" "mise up" "brew cleanup"; do
   grep -q "$s" ~/.local/bin/macup && ok "macup runs '$s'" || bad "macup" "missing '$s'"
 done
 grep -q 'mac-hook post-update' ~/.local/bin/macup && ok "macup fires post-update hook" || bad "macup" "no hook call"
+# Behaviour, not grep: run macup against stubs that log their argv. brew fails
+# on purpose, to prove one broken layer no longer skips the rest.
+STUB="$T/macup-stubs"; LOG="$T/macup.log"; mkdir -p "$STUB"; : >"$LOG"
+for c in brew mas mise softwareupdate mac-hook; do
+  printf '#!/bin/bash\necho "%s $*" >>"%s"\n[ "%s $1" = "brew upgrade" ] && exit 1\nexit 0\n' "$c" "$LOG" "$c" >"$STUB/$c"
+  chmod +x "$STUB/$c"
+done
+PATH="$STUB:/usr/bin:/bin" ~/.local/bin/macup </dev/null >/dev/null 2>&1; rc=$?
+grep -q '^brew upgrade .*--yes' "$LOG" && ok "macup upgrades with --yes (never stalls at y/n)" || bad "macup" "brew upgrade without --yes"
+grep -q '^mise up' "$LOG" && ok "macup still updates mise after a brew failure" || bad "macup" "brew failure skipped mise"
+[ "$rc" -ne 0 ] && ok "macup exits non-zero when a step failed" || bad "macup" "hid a failed step"
 fi
 
 # ── 13. hooks ──────────────────────────────────────────────────────────────
@@ -525,14 +536,16 @@ if [ -d "$R/.git" ]; then
            config/pam/sudo_local local/bin/mac local/bin/macup; do
     [ -f "$R/$f" ] && ok "tracked: $f" || bad "repo" "$f missing"
   done
-  # live configs must match what's committed
-  for pair in "$HOME/.config/zsh/aliases.zsh:config/zsh/aliases.zsh" \
-              "$HOME/.config/zsh/functions.zsh:config/zsh/functions.zsh" \
-              "$HOME/.config/tmux/tmux.conf:config/tmux/tmux.conf" \
-              "$HOME/.local/bin/mac:local/bin/mac"; do
-    live=${pair%%:*}; repo="$R/${pair#*:}"
-    diff -q "$live" "$repo" >/dev/null 2>&1 && ok "in sync: $(basename "$live")" || bad "drift" "$(basename "$live") differs from repo"
-  done
+  # Every path install.sh links must still BE a symlink into the repo. A
+  # content diff isn't enough: a plain copy matches until the next commit, then
+  # silently stays behind (a stale macup kept prompting y/n this way).
+  # Repair with: ~/omarchy-mac/install.sh --links
+  # (process substitution, not a pipe: a piped loop's ok/bad counts are lost)
+  while read -r src dest; do
+    [ "$(readlink "$HOME/$dest")" = "$R/$src" ] && ok "linked: ~/$dest" \
+      || bad "drift" "~/$dest is not a symlink to the repo (install.sh --links)"
+  done < <(grep -E '^link ' "$R/install.sh" | awk '{print $2, $3}'
+           for f in "$R"/local/bin/*; do echo "local/bin/${f##*/} .local/bin/${f##*/}"; done)
 else
   skip "repo tests" "~/omarchy-mac not a git repo"
 fi

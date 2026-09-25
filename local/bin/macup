@@ -1,25 +1,43 @@
 #!/bin/bash
 # macup — one command to update everything. Port of `omarchy update`.
-set -e
+#
+# No `set -e`: one failing layer (a cask whose installer needs sudo, a flaky
+# mise download) must not skip the rest. Each step's failure is recorded and
+# reported at the end, and the exit status says whether anything failed.
 
 section() { echo -e "\n\033[0;32m$1\033[0m"; }
+FAILED=()
+step() { "$@" || FAILED+=("$*"); }
 
-section "Homebrew formulae"
-brew update
-# --yes: Homebrew 6 defaults to asking before every upgrade, which would
-# stall this unattended flow at a y/n prompt.
-brew upgrade --yes
+# Stale symlinks mean you're running old copies of these scripts/configs
+# (that's how an old macup without --yes kept prompting). Warn; don't auto-fix,
+# since relinking replaces whatever local edits the copy holds.
+if [ ! -L "$HOME/.local/bin/macup" ] || [ ! -L "$HOME/.config/mise/config.toml" ]; then
+  echo -e "\033[0;33mwarning: live configs are copies, not repo symlinks — run ~/omarchy-mac/install.sh --links\033[0m"
+fi
 
-section "Homebrew casks"
-# --greedy also catches apps that self-update, so they don't drift.
-brew upgrade --cask --greedy --yes
+# softwareupdate --list takes 10-30s of network round-trips; start it now and
+# read the result at the end instead of waiting on it serially.
+SWU=$(mktemp); trap 'rm -f "$SWU"' EXIT
+softwareupdate --list >"$SWU" 2>&1 &
+SWU_PID=$!
+
+section "Homebrew"
+step brew update --quiet
+# One upgrade call for formulae and casks: a single dependency resolve instead
+# of two. --greedy also catches casks that self-update, so they don't drift.
+# --yes: Homebrew 6+ asks y/n before every upgrade by default.
+step brew upgrade --greedy --yes
 
 section "Mac App Store"
 if command -v mas >/dev/null; then
-  # Apple's own bundled apps (GarageBand, iMovie) always fail here with
-  # "No downloads initiated" — mas cannot drive their delivery mechanism.
-  # Report it honestly instead of claiming mas is missing, and don't abort.
-  mas upgrade || echo "mas: some apps were not upgraded (Apple's bundled apps update via the App Store app itself)"
+  if [ -n "$(mas outdated 2>/dev/null)" ]; then
+    # Apple's own bundled apps (GarageBand, iMovie) always fail here with
+    # "No downloads initiated" — mas cannot drive their delivery mechanism.
+    mas upgrade || echo "mas: some apps were not upgraded (Apple's bundled apps update via the App Store app itself)"
+  else
+    echo "Everything up to date"
+  fi
 else
   echo "mas not installed, skipping"
 fi
@@ -27,18 +45,27 @@ fi
 section "mise tools"
 # Same override as the `mup` alias: mise withholds releases younger than its
 # cooldown window, which leaves the AI CLIs (claude/codex/gh) days behind.
-# Asking to update means now.
-MISE_MINIMUM_RELEASE_AGE=0 mise up
+# Runs after brew, never alongside it: mise downloads fail with "address not
+# available" while brew saturates the network.
+step env MISE_MINIMUM_RELEASE_AGE=0 mise up
 
 section "Cleanup"
-brew cleanup -s
-brew autoremove
+step brew cleanup -s --prune=all
+step brew autoremove
 
 section "Status"
-brew doctor || true
-mise doctor || true
+# brew doctor is slow and its warnings rarely actionable after an update;
+# `mac doctor` runs it on demand. mise doctor is fast and catches PATH breakage.
+mise doctor >/dev/null 2>&1 || echo "mise doctor reports problems — run: mise doctor"
 # Report available macOS updates — never auto-install them.
-softwareupdate --list 2>&1 | tail -5
+wait "$SWU_PID"
+grep -q 'No new software available' "$SWU" && echo "macOS up to date" || tail -5 "$SWU"
 
 # User hooks (port of omarchy's hook system) — see ~/.config/omarchy-mac/hooks/
-command -v mac-hook >/dev/null && mac-hook post-update || true
+command -v mac-hook >/dev/null && mac-hook post-update
+
+if [ ${#FAILED[@]} -gt 0 ]; then
+  echo -e "\n\033[0;31mFailed:\033[0m"; printf '  %s\n' "${FAILED[@]}"
+  exit 1
+fi
+echo -e "\n\033[0;32mAll up to date.\033[0m"

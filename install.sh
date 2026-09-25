@@ -28,14 +28,20 @@ link config/btop/btop.conf     .config/btop/btop.conf
 link config/herdr/config.toml  .config/herdr/config.toml
 link config/git/config         .config/git/config
 link config/ghostty/config     .config/ghostty/config
-for s in macup mise-install mac mac-keys mac-keyremap mac-wm mac-hook transcode-pick ghostty-run transcode webdl weburl browser-url chrome-extensions chromium-native-host agent-usage-claude agent-usage-codex; do
+# Every script in local/bin — no hand-kept list to fall out of date.
+for f in "$REPO"/local/bin/*; do
+  s=$(basename "$f")
   link "local/bin/$s" ".local/bin/$s"
-  chmod +x "$HOME/.local/bin/$s"
+  chmod +x "$f"
 done
 # .zshrc is linked separately so you can opt out (it assumes oh-my-zsh).
 link zsh/zshrc                 .zshrc
 # Claude Code skill: teaches future sessions how this setup works.
 link skills/omarchy-mac/SKILL.md .claude/skills/omarchy-mac/SKILL.md
+
+# --links: just repair the symlinks (live files drift into plain copies after
+# --zap, installers appending to .zshrc, or editors that write via rename).
+[ "${1:-}" = "--links" ] && exit 0
 
 section "Installing the modifier-remap login agent"
 # Replaces Karabiner-Elements: hidutil is Apple's own HID remapper, so there is
