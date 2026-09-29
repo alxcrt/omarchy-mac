@@ -44,7 +44,7 @@ brew "whisper-cpp"
 brew "xh"
 
 # --- GUI casks ---
-cask "ghostty"                 # terminal
+cask "ghostty@tip"             # terminal (tip builds)
 cask "google-chrome"           # primary browser (Phase 7 webapp target)
 cask "iina"                    # media player (macOS-native mpv)
 cask "localsend"
