@@ -103,6 +103,22 @@ extensions.
   "Fetching" phase mean *downloaded*, not installed — check `brew list`.
 - **Homebrew 6 asks y/n before every upgrade** ("ask mode" is the default).
   Any unattended flow must pass `--yes` (`macup` does).
+- **`mas update` needs root, and can't touch apps another Apple Account
+  owns.** Developer and TestFlight here were bought under a different account:
+  every update attempt pops a modal "Redownload Unavailable with This Apple
+  Account" dialog and mas prints "No downloads initiated for ADAM ID <id>".
+  That is NOT "Apple's bundled apps" (an old wrong comment in macup). `macup`
+  now pre-auths sudo (Touch ID) and remembers such IDs in
+  `~/.local/state/macup/mas-skip`, keyed to the app's receipt mtime, so the
+  dialog shows once and a reinstall clears the entry. The real fix is per app:
+  `mas uninstall <id> && mas get <id>` under the signed-in account. Don't run
+  `mas update` to "reproduce" it: each run pops the dialogs on the user's screen.
+- **An app deleted by hand leaves brew's cask record behind.** brew then
+  lists it as outdated on every `--greedy` run and never fixes it (zed and
+  betterdisplay did this). `brew uninstall --cask <c>` clears the record. The
+  reverse, an app installed outside brew (Claude.app), makes `brew bundle`
+  fail on "already an App at"; `brew install --cask --adopt <c>` takes it
+  over in place without replacing the app, which matters when it's running.
 - **Never run two brew bundles at once.** A second run collides with the
   first's download locks and both report spurious failures. Check
   `pgrep -fl brew` before assuming a bundle died.

@@ -56,10 +56,8 @@ cask "raycast"                 # launcher
 # greedy upgrade dies on "Permission denied .../Cursor.app/Contents/
 # CodeResources". Same story as google-chrome below. Install manually once.
 cask "visual-studio-code"
-cask "zed"
 cask "cmux"
 cask "t3-code@nightly"        # T3 Code (Nightly) — minimal GUI for AI code agents
-cask "betterdisplay"
 cask "cleanshot"
 cask "ollama-app"
 cask "obsidian"

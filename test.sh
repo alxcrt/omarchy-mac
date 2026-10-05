@@ -321,7 +321,7 @@ rm -f ~/.local/bin/_ttjq
 for s in macup mac; do grep -q 'MISE_MINIMUM_RELEASE_AGE=0' "$HOME/.local/bin/$s" \
   && ok "$s forces MISE_MINIMUM_RELEASE_AGE=0" || bad "$s" "missing age override"; done
 grep -q 'softwareupdate --list' ~/.local/bin/macup && ok "macup only lists macOS updates (never installs)" || bad "macup" "may auto-install OS updates"
-for s in "brew update" "brew upgrade" "mas upgrade" "mise up" "brew cleanup"; do
+for s in "brew update" "brew upgrade" "mas update" "mise install" "mise up" "brew cleanup"; do
   grep -q "$s" ~/.local/bin/macup && ok "macup runs '$s'" || bad "macup" "missing '$s'"
 done
 grep -q 'mac-hook post-update' ~/.local/bin/macup && ok "macup fires post-update hook" || bad "macup" "no hook call"
@@ -336,6 +336,33 @@ PATH="$STUB:/usr/bin:/bin" ~/.local/bin/macup </dev/null >/dev/null 2>&1; rc=$?
 grep -q '^brew upgrade .*--yes' "$LOG" && ok "macup upgrades with --yes (never stalls at y/n)" || bad "macup" "brew upgrade without --yes"
 grep -q '^mise up' "$LOG" && ok "macup still updates mise after a brew failure" || bad "macup" "brew failure skipped mise"
 [ "$rc" -ne 0 ] && ok "macup exits non-zero when a step failed" || bad "macup" "hid a failed step"
+# App Store: an app owned by another Apple Account pops a modal dialog on every
+# update attempt. macup must try it once, report it under "Needs you" (not as
+# a failure), and skip it on the next run. Developer's real ADAM ID is used so
+# the receipt lookup runs against a real app.
+cat >"$STUB/mas" <<EOF
+#!/bin/bash
+echo "mas \$*" >>"$LOG"
+case \$1 in
+  outdated) echo "640199958  Developer   (11.0.2 -> 11.1)" ;;
+  update)   echo "Error: No downloads initiated for ADAM ID 640199958"; exit 1 ;;
+esac
+EOF
+printf '#!/bin/bash\nexit 0\n' >"$STUB/sudo"; chmod +x "$STUB/mas" "$STUB/sudo"
+for run in 1 2; do
+  : >"$LOG"
+  out=$(XDG_STATE_HOME="$T/state" PATH="$STUB:/usr/bin:/bin" ~/.local/bin/macup </dev/null 2>&1)
+  n=$(grep -c '^mas update' "$LOG")
+  if [ $run = 1 ]; then
+    [ "$n" = 1 ] && ok "macup tries an outdated App Store app" || bad "macup mas" "first run: $n update calls"
+  else
+    [ "$n" = 0 ] && ok "macup skips a foreign-account app next run (no repeat dialog)" || bad "macup mas" "retried a foreign-account app"
+  fi
+  grep -q 'Developer (640199958) belongs to another Apple Account' <<<"$out" \
+    && ok "run $run: foreign-account app reported under Needs you" || bad "macup mas" "run $run: not reported"
+  sed -n '/^.*Failed:/,$p' <<<"$out" | grep -q 'mas update' \
+    && bad "macup mas" "run $run: counted as a failure" || ok "run $run: foreign-account app is not a failure"
+done
 fi
 
 # ── 13. hooks ──────────────────────────────────────────────────────────────
@@ -481,7 +508,9 @@ sec "Prompt + environment"
 [ "$(zsh -ic 'echo $BAT_THEME' 2>/dev/null | tail -1)" = ansi ] && ok "BAT_THEME=ansi" || bad "BAT_THEME" "not ansi"
 zsh -ic 'echo $MANPAGER' 2>/dev/null | grep -q bat && ok "MANPAGER uses bat" || bad "MANPAGER" "not bat"
 zsh -ic 'echo $PATH' 2>/dev/null | tr ':' '\n' | grep -qx "$HOME/.local/bin" && ok "~/.local/bin on PATH" || bad "PATH" "~/.local/bin missing"
-for gone in "$HOME/.bun" "$HOME/.pixi" "$HOME/.local/bin/uv"; do
+# ~/.bun/bin is the old curl installer. ~/.bun/install/cache is fine: it is the
+# package cache the mise-managed bun itself writes, so ~/.bun reappears there.
+for gone in "$HOME/.bun/bin" "$HOME/.pixi" "$HOME/.local/bin/uv"; do
   [ -e "$gone" ] && bad "cleanup" "$gone still present" || ok "removed: $(basename "$gone")"
 done
 starship_cfg=~/.config/starship.toml

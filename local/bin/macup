@@ -7,6 +7,7 @@
 
 section() { echo -e "\n\033[0;32m$1\033[0m"; }
 FAILED=()
+NEEDS_YOU=()   # not failures: things only a human can fix, reported at the end
 step() { "$@" || FAILED+=("$*"); }
 
 # Stale symlinks mean you're running old copies of these scripts/configs
@@ -30,23 +31,73 @@ step brew update --quiet
 step brew upgrade --greedy --yes
 
 section "Mac App Store"
-if command -v mas >/dev/null; then
-  if [ -n "$(mas outdated 2>/dev/null)" ]; then
-    # Apple's own bundled apps (GarageBand, iMovie) always fail here with
-    # "No downloads initiated" — mas cannot drive their delivery mechanism.
-    mas upgrade || echo "mas: some apps were not upgraded (Apple's bundled apps update via the App Store app itself)"
-  else
-    echo "Everything up to date"
+# Two traps, both hit on this Mac:
+#  - `mas update` needs root (mas 2+). Authenticate once up front so sudo can
+#    use Touch ID (pam_tid) instead of mas's own password prompt; with no
+#    terminal to ask in, skip rather than hang.
+#  - An app owned by a DIFFERENT Apple Account (Developer and TestFlight were)
+#    can never be updated from this one. Every attempt pops a modal
+#    "Redownload Unavailable with This Apple Account" dialog and mas prints
+#    "No downloads initiated for ADAM ID <id>". Remember those IDs, keyed to
+#    the app's receipt, and skip them: the dialog shows once, not every run,
+#    and a reinstall (new receipt) clears the entry by itself.
+MAS_SKIP="${XDG_STATE_HOME:-$HOME/.local/state}/macup/mas-skip"
+receipt_stamp() {
+  local app; app=$(mdfind "kMDItemAppStoreAdamID == $1" 2>/dev/null | head -1)
+  stat -f %m "$app/Contents/_MASReceipt/receipt" 2>/dev/null || echo 0
+}
+foreign_app() {
+  NEEDS_YOU+=("$2 ($1) belongs to another Apple Account; reinstall it under yours: mas uninstall $1 && mas get $1")
+}
+app_store() {
+  command -v mas >/dev/null || { echo "mas not installed, skipping"; return; }
+  local outdated id todo=() out rc known
+  # Lines look like: "640199958  Developer   (11.0.2 -> 11.1)"
+  outdated=$(mas outdated 2>/dev/null)
+  # /bin/bash is 3.2 on macOS: no associative arrays, so look names up here.
+  name_of() { awk -v id="$1" '$1 == id { $1 = ""; sub(/^ +/, ""); sub(/ *\(.*$/, ""); print }' <<<"$outdated"; }
+  [ -n "$outdated" ] || { echo "Everything up to date"; return; }
+  mkdir -p "${MAS_SKIP%/*}" && touch "$MAS_SKIP"
+  for id in $(awk '{print $1}' <<<"$outdated"); do
+    if grep -qx "$id $(receipt_stamp "$id")" "$MAS_SKIP"; then
+      foreign_app "$id" "$(name_of "$id")"
+    else
+      todo+=("$id")
+    fi
+  done
+  [ ${#todo[@]} -gt 0 ] || { echo "Nothing mas can update"; return; }
+
+  if ! sudo -n true 2>/dev/null; then
+    if [ -t 0 ]; then
+      sudo -v || { FAILED+=("mas update (sudo declined)"); return; }
+    else
+      NEEDS_YOU+=("${#todo[@]} App Store update(s) need sudo; run macup from a terminal")
+      return
+    fi
   fi
-else
-  echo "mas not installed, skipping"
-fi
+  out=$(mas update "${todo[@]}" 2>&1); rc=$?
+  [ -n "$out" ] && echo "$out"
+  for id in $(grep -oE 'No downloads initiated for ADAM ID [0-9]+' <<<"$out" | awk '{print $NF}'); do
+    echo "$id $(receipt_stamp "$id")" >>"$MAS_SKIP"
+    foreign_app "$id" "$(name_of "$id")"
+  done
+  # Any other error is a real failure, and so is a nonzero exit with no
+  # recognisable cause.
+  known=$(grep -c 'No downloads initiated' <<<"$out")
+  if [ $rc -ne 0 ] && { [ "$known" -eq 0 ] || grep -v 'No downloads initiated' <<<"$out" | grep -q '^Error'; }; then
+    FAILED+=("mas update")
+  fi
+}
+app_store
 
 section "mise tools"
 # Same override as the `mup` alias: mise withholds releases younger than its
 # cooldown window, which leaves the AI CLIs (claude/codex/gh) days behind.
 # Runs after brew, never alongside it: mise downloads fail with "address not
 # available" while brew saturates the network.
+# `mise up` only upgrades what is already installed, so install anything newly
+# declared in config.toml first (a no-op when nothing is missing).
+step env MISE_MINIMUM_RELEASE_AGE=0 mise install
 step env MISE_MINIMUM_RELEASE_AGE=0 mise up
 
 section "Cleanup"
@@ -64,8 +115,11 @@ grep -q 'No new software available' "$SWU" && echo "macOS up to date" || tail -5
 # User hooks (port of omarchy's hook system) — see ~/.config/omarchy-mac/hooks/
 command -v mac-hook >/dev/null && mac-hook post-update
 
+if [ ${#NEEDS_YOU[@]} -gt 0 ]; then
+  echo -e "\n\033[0;33mNeeds you:\033[0m"; printf '  %s\n' "${NEEDS_YOU[@]}"
+fi
 if [ ${#FAILED[@]} -gt 0 ]; then
   echo -e "\n\033[0;31mFailed:\033[0m"; printf '  %s\n' "${FAILED[@]}"
   exit 1
 fi
-echo -e "\n\033[0;32mAll up to date.\033[0m"
+[ ${#NEEDS_YOU[@]} -gt 0 ] && echo -e "\n\033[0;32mDone.\033[0m" || echo -e "\n\033[0;32mAll up to date.\033[0m"
