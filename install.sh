@@ -59,10 +59,6 @@ section "Configuring native window management"
 # (AeroSpace was dropped). This only flips on what Apple ships disabled.
 "$HOME/.local/bin/mac-wm" --apply
 
-section "Applying macOS defaults"
-# Key repeat, Finder hidden files/path bar/status bar, instant Dock autohide, ~/Developer.
-"$HOME/.local/bin/mac-defaults" --apply
-
 section "Ensuring Homebrew"
 if ! command -v brew >/dev/null 2>&1; then
   /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
@@ -78,6 +74,12 @@ section "Reconciling Homebrew layer (Brewfile)"
 for t in bjarneo/cliamp blacktop/tap mateussiqueira/unleash; do brew tap "$t"; done
 brew trust --formula bjarneo/cliamp/cliamp blacktop/tap/ipsw mateussiqueira/unleash/unleash
 brew bundle --file="$HOME/.config/homebrew/Brewfile" || true
+
+section "Applying macOS defaults"
+# Key repeat, Finder hidden files/path bar/status bar, instant Dock autohide,
+# Transmission's prefs + magnet/.torrent handler, ~/Developer. After the
+# Brewfile, since the default apps need duti and Transmission installed.
+"$HOME/.local/bin/mac-defaults" --apply
 
 section "Reconciling mise layer"
 mise trust "$HOME/.config/mise/config.toml"

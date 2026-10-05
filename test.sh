@@ -684,9 +684,9 @@ fi
 
 # ── macOS defaults ─────────────────────────────────────────────────────────
 if want defaults; then
-sec "macOS defaults (key repeat, Finder, Dock)"
-# Sandboxed first: a stub `defaults` backed by a temp file and a stub `killall`
-# that logs, so drift detection and --apply are exercised for real without
+sec "macOS defaults (key repeat, Finder, Dock, Transmission)"
+# Sandboxed first: a stub `defaults` and `duti` backed by temp files and a stub
+# `killall` that logs, so drift detection and --apply are exercised for real without
 # touching this Mac's preferences.
 DS="$T/defaults-stub"; mkdir -p "$DS" "$T/dhome"; DB="$T/defaults.db"; KL="$T/killall.log"; : >"$DB"; : >"$KL"
 cat >"$DS/defaults" <<EOF
@@ -697,22 +697,44 @@ case \$op in
   write) [ "\$val" = true ] && val=1; [ "\$val" = false ] && val=0; echo "\$dom \$key=\$val" >>"$DB" ;;
 esac
 EOF
-printf '#!/bin/bash\necho "$*" >>"%s"\n' "$KL" >"$DS/killall"; chmod +x "$DS/defaults" "$DS/killall"
+UB="$T/duti.db"; : >"$UB"
+cat >"$DS/duti" <<EOF
+#!/bin/bash
+case \$1 in
+  -s) echo "\$3=\$2" >>"$UB" ;;
+  -d) v=\$(grep "^\$2=" "$UB" | tail -1 | cut -d= -f2); [ -n "\$v" ] && echo "\$v" || exit 1 ;;
+  -x) v=\$(grep "^\\.\$2=" "$UB" | tail -1 | cut -d= -f2); [ -n "\$v" ] && printf 'App.app\n/Applications/App.app\n%s\n' "\$v" || exit 1 ;;
+esac
+EOF
+printf '#!/bin/bash\necho "$*" >>"%s"\n' "$KL" >"$DS/killall"; chmod +x "$DS/defaults" "$DS/duti" "$DS/killall"
 MD() { HOME="$T/dhome" PATH="$DS:/usr/bin:/bin" ~/.local/bin/mac-defaults "$@"; }
 MD --status >/dev/null 2>&1 && bad "mac-defaults" "unset prefs reported as fine" || ok "--status flags unset prefs (exit 1)"
 MD --apply >/dev/null 2>&1
 MD --status >/dev/null 2>&1 && ok "--apply makes --status clean" || bad "mac-defaults --apply" "drift remains after apply"
+grep -qx "org.m0k.transmission DownloadFolder=$T/dhome/Downloads" "$DB" && ok "--apply expands ~ in Transmission's download folder" || bad "mac-defaults" "DownloadFolder not \$HOME/Downloads"
+grep -qx "magnet=org.m0k.transmission" "$UB" && grep -qx ".torrent=org.m0k.transmission" "$UB" \
+  && ok "--apply points magnet links and .torrent files at Transmission" || bad "mac-defaults" "default apps not set: $(tr '\n' ' ' <"$UB")"
+grep -q Transmission "$KL" && bad "mac-defaults" "quit Transmission (cuts off downloads)" || ok "--apply never quits Transmission"
 grep -q Dock "$KL" && grep -q Finder "$KL" && ok "--apply restarts Dock and Finder after changing them" || bad "mac-defaults" "did not restart Dock/Finder"
 [ -d "$T/dhome/Developer" ] && ok "--apply creates ~/Developer" || bad "mac-defaults" "no ~/Developer"
 : >"$KL"; MD --apply >/dev/null 2>&1
 [ -s "$KL" ] && bad "mac-defaults" "restarts Dock/Finder with nothing to change" || ok "a second --apply changes nothing and restarts nothing"
+# A fresh Mac runs this before brew has installed duti: it must skip, not abort.
+chmod -x "$DS/duti"; : >"$DB"
+MD --apply >/dev/null 2>&1 && grep -q "InitialKeyRepeat" "$DB" && ok "--apply without duti still sets the prefs" || bad "mac-defaults" "aborts when duti is missing"
+MD --status >/dev/null 2>&1 && bad "mac-defaults" "--status clean without duti" || ok "--status flags missing duti as drift"
+chmod +x "$DS/duti"
 # Then the real Mac, read straight from cfprefs rather than through the script.
 for kv in "-g InitialKeyRepeat 15" "-g KeyRepeat 1" "com.apple.finder AppleShowAllFiles 1" \
           "com.apple.finder ShowPathbar 1" "com.apple.finder ShowStatusBar 1" \
-          "com.apple.dock autohide 1" "com.apple.dock autohide-delay 0" "com.apple.dock autohide-time-modifier 0"; do
+          "com.apple.dock autohide 1" "com.apple.dock autohide-delay 0" "com.apple.dock autohide-time-modifier 0" \
+          "org.m0k.transmission DownloadLocationConstant 1" "org.m0k.transmission DownloadFolder $HOME/Downloads" \
+          "org.m0k.transmission WarningDonate 0" "org.m0k.transmission WarningLegal 0"; do
   set -- $kv
   [ "$(defaults read "$1" "$2" 2>/dev/null)" = "$3" ] && ok "live: $2 = $3" || bad "live default" "$2 is $(defaults read "$1" "$2" 2>&1), want $3"
 done
+[ "$(duti -d magnet 2>/dev/null)" = org.m0k.transmission ] && ok "live: magnet links open in Transmission" || bad "live handler" "magnet → $(duti -d magnet 2>&1)"
+[ "$(duti -x torrent 2>/dev/null | sed -n 3p)" = org.m0k.transmission ] && ok "live: .torrent files open in Transmission" || bad "live handler" ".torrent → $(duti -x torrent 2>&1 | sed -n 3p)"
 fi
 
 # ── notifications ──────────────────────────────────────────────────────────

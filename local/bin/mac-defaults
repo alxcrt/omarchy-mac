@@ -5,9 +5,11 @@
 #   mac-defaults --apply      write them; restart Finder/Dock only if they changed
 #
 # Key repeat is read at login: apps opened before a logout keep the old rate.
+# Transmission reads its prefs at launch; --apply never quits it, since that
+# would cut off running downloads.
 set -e
 
-# domain|key|type|value|what it does
+# domain|key|type|value|what it does   (a leading ~ in a value is $HOME)
 #   InitialKeyRepeat 15 is the shortest delay the Settings slider allows;
 #   KeyRepeat 1 is faster than its fastest stop (2).
 #   autohide is on so the two Dock timings have something to speed up.
@@ -18,14 +20,25 @@ com.apple.finder|ShowPathbar|bool|true|Finder shows the full path at the bottom
 com.apple.finder|ShowStatusBar|bool|true|Finder shows item count and free disk space
 com.apple.dock|autohide|bool|true|Dock hides itself
 com.apple.dock|autohide-delay|float|0|Dock shows with no delay
-com.apple.dock|autohide-time-modifier|int|0|Dock hides/shows with no animation'
+com.apple.dock|autohide-time-modifier|int|0|Dock hides/shows with no animation
+org.m0k.transmission|DownloadLocationConstant|bool|true|Transmission saves to one fixed folder
+org.m0k.transmission|DownloadFolder|string|~/Downloads|Transmission saves to ~/Downloads
+org.m0k.transmission|WarningDonate|bool|false|Transmission never asks for donations
+org.m0k.transmission|WarningLegal|bool|false|Transmission skips its legal notice'
+
+# Default apps, set with duti (from the Brewfile).
+# bundle id|URL scheme, or .extension for a file type|what it does
+HANDLERS='org.m0k.transmission|magnet|magnet links open in Transmission
+org.m0k.transmission|.torrent|.torrent files open in Transmission'
 
 # `defaults read` prints booleans as 1/0
-readback() { case "$1|$2" in bool\|true) echo 1 ;; bool\|false) echo 0 ;; *) echo "$2" ;; esac; }
+readback() { case "$1|$2" in bool\|true) echo 1 ;; bool\|false) echo 0 ;; *) echo "${2/#\~/$HOME}" ;; esac; }
 current()  { defaults read "$1" "$2" 2>/dev/null || echo "(unset)"; }
+# `duti -x ext` prints the app's name, path and bundle id, one per line.
+handler()  { case "$1" in .*) duti -x "${1#.}" 2>/dev/null | sed -n 3p ;; *) duti -d "$1" 2>/dev/null || true ;; esac; }
 
 status() {
-  local drift=0 domain key type value desc now want
+  local drift=0 domain key type value desc now want bundle target
   while IFS='|' read -r domain key type value desc; do
     now=$(current "$domain" "$key"); want=$(readback "$type" "$value")
     if [ "$now" = "$want" ]; then
@@ -34,18 +47,45 @@ status() {
       printf '  ✗ %-24s %s (is %s, want %s)\n' "$key" "$desc" "$now" "$want"; drift=1
     fi
   done <<<"$SETTINGS"
+  if command -v duti >/dev/null; then
+    while IFS='|' read -r bundle target desc; do
+      now=$(handler "$target")
+      if [ "$now" = "$bundle" ]; then
+        printf '  ✓ %-24s %s\n' "$target" "$desc"
+      else
+        printf '  ✗ %-24s %s (is %s)\n' "$target" "$desc" "${now:-(unset)}"; drift=1
+      fi
+    done <<<"$HANDLERS"
+  else
+    echo "  ✗ duti missing, so default apps can't be checked (brew bundle)"; drift=1
+  fi
   [ -d "$HOME/Developer" ] && echo "  ✓ ~/Developer exists" || { echo "  ✗ ~/Developer missing"; drift=1; }
   return $drift
 }
 
 apply() {
-  local domain key type value desc restart=()
+  local domain key type value desc restart=() bundle target role
   while IFS='|' read -r domain key type value desc; do
     [ "$(current "$domain" "$key")" = "$(readback "$type" "$value")" ] && continue
+    value=${value/#\~/$HOME}
     defaults write "$domain" "$key" "-$type" "$value"
     echo "set $key = $value ($desc)"
     case "$domain" in com.apple.finder) restart+=(Finder) ;; com.apple.dock) restart+=(Dock) ;; esac
   done <<<"$SETTINGS"
+  if command -v duti >/dev/null; then
+    while IFS='|' read -r bundle target desc; do
+      [ "$(handler "$target")" = "$bundle" ] && continue
+      # A file type needs a role; `all` covers viewer and editor.
+      case "$target" in .*) role=all ;; *) role= ;; esac
+      if duti -s "$bundle" "$target" $role 2>/dev/null; then
+        echo "set $target → $bundle ($desc)"
+      else
+        echo "skipped $target: $bundle is not installed yet"
+      fi
+    done <<<"$HANDLERS"
+  else
+    echo "skipped default apps: duti is not installed yet (brew bundle)"
+  fi
   # Finder gives ~/Developer its own folder icon.
   mkdir -p "$HOME/Developer"
   if [ ${#restart[@]} -gt 0 ]; then

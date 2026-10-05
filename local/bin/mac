@@ -71,7 +71,7 @@ mac — Omarchy-style flows on macOS
 
   mac term <cmd>          open a new Ghostty window running <cmd>
   mac wm [--status|--apply|--keys]  native tiling + Spaces settings
-  mac defaults [--apply]  key repeat, Finder, instant Dock, ~/Developer
+  mac defaults [--apply]  key repeat, Finder, Dock, Transmission
   mac doctor              health check across mise, brew, window mgmt
   mac edit <what>         open a config: aliases functions mise brew herdr
 
