@@ -29,15 +29,10 @@ case "${OMARCHY_BROWSER:-Google Chrome}" in
   *)               cookie_browser=chrome ;;
 esac
 
+# notify <title> <message> [file] — clicking it reveals the file (mac-notify).
+# One group per run, so each notification replaces this run's previous one.
 notify() {
-  local title=$1 msg=$2
-  # Pass strings as argv rather than interpolating into AppleScript source —
-  # a URL or filename containing " or \\ would otherwise break the script.
-  osascript \
-    -e 'on run argv' \
-    -e 'display notification (item 2 of argv) with title (item 1 of argv)' \
-    -e 'end run' \
-    "$title" "$msg" || echo "notify failed (rc=$?)" >&2
+  MAC_NOTIFY_GROUP="webdl-$$" "$HOME/.local/bin/mac-notify" "$@" || echo "notify failed (rc=$?)" >&2
 }
 
 mkdir -p "$DOWNLOAD_DIR"
@@ -83,7 +78,7 @@ yt-dlp \
 filepath=$(grep -v '^PROGRESS' "$out" | tail -1)
 
 if [[ -n ${filepath:-} && -f $filepath ]]; then
-  notify "Download complete" "$(basename "$filepath")"
+  notify "Download complete" "$(basename "$filepath")" "$filepath"
   echo "$filepath"
 else
   notify "Download failed" "$url"

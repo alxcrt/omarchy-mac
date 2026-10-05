@@ -22,6 +22,7 @@ brew "zoxide"       # aliased over cd
 brew "jq"
 brew "gum"          # confirm prompt in gd (functions.zsh)
 brew "try"          # tobi/try experiment dirs (upstream init; lazy-loaded in zshrc)
+brew "terminal-notifier"  # clickable notifications (mac-notify); osascript's open Script Editor
 brew "bjarneo/cliamp/cliamp"  # Omarchy's music TUI (upstream base package)
 brew "btop"
 brew "fastfetch"

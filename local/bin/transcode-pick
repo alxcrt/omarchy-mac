@@ -11,9 +11,9 @@ choice=$(osascript -e 'choose from list {"mp4 1080p","mp4 4k","gif 1080p","jpg h
 
 set -- $choice
 if out=$(transcode "$file" "$1" "$2" 2>&1 | tail -1); then
-  osascript -e 'on run argv' -e 'display notification (item 1 of argv) with title "Transcode complete"' -e 'end run' "$(basename "$out")" >/dev/null 2>&1
+  mac-notify "Transcode complete" "$(basename "$out")" "$out" >/dev/null 2>&1
   echo "$out"
 else
-  osascript -e 'on run argv' -e 'display notification (item 1 of argv) with title "Transcode failed"' -e 'end run' "$out" >/dev/null 2>&1
+  mac-notify "Transcode failed" "$out" >/dev/null 2>&1
   exit 1
 fi

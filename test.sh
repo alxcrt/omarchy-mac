@@ -583,6 +583,32 @@ for kv in "-g InitialKeyRepeat 15" "-g KeyRepeat 1" "com.apple.finder AppleShowA
 done
 fi
 
+# ── notifications ──────────────────────────────────────────────────────────
+if want notify; then
+sec "Notifications (mac-notify -> terminal-notifier)"
+/opt/homebrew/bin/terminal-notifier -version >/dev/null 2>&1 && ok "terminal-notifier installed" || bad "terminal-notifier" "missing"
+# A stub records the argv mac-notify would hand terminal-notifier, one per line.
+NS="$T/tn-stub"; NL="$T/tn.log"
+printf '#!/bin/bash\nprintf "%%s\\n" "$@" >"%s"\n' "$NL" >"$NS"; chmod +x "$NS"
+N() { MAC_NOTIFY_BIN="$NS" ~/.local/bin/mac-notify "$@"; }
+touch "$T/shot.png"; N "Transcode complete" "shot.png" "$T/shot.png"
+grep -qx -- '-execute' "$NL" && ok "clicking a file notification runs a command" || bad "mac-notify" "no -execute for a file"
+grep -qx -- '-contentImage' "$NL" && ok "image results attach a thumbnail" || bad "mac-notify" "no thumbnail for a .png"
+N "Copied URL" "https://example.com"
+grep -qx -- '-execute' "$NL" && bad "mac-notify" "click action without a file" || ok "no click action when there is no file"
+N "Title" "-looks-like-a-flag"
+grep -qxF -- '\-looks-like-a-flag' "$NL" && ok "a message starting with - is escaped" || bad "mac-notify" "leading - not escaped"
+# The click command goes through sh -c: a path with a quote and spaces must
+# reach `open -R` intact (stub `open` prints its last argument).
+f="$T/it's a clip.mp4"; touch "$f"; N "Download complete" "x" "$f"
+cmd=$(grep -A1 -x -- '-execute' "$NL" | tail -1)
+mkdir -p "$T/ostub"; printf '#!/bin/sh\nfor a; do last=$a; done; printf "%%s\\n" "$last"\n' >"$T/ostub/open"; chmod +x "$T/ostub/open"
+[ "$(PATH="$T/ostub:$PATH" sh -c "$cmd")" = "$f" ] && ok "click reveals the exact file (quotes/spaces survive)" || bad "mac-notify" "click command mangles the path"
+# osascript notifications open Script Editor when clicked; none may remain.
+left=$(grep -l 'display notification' ~/.local/bin/webdl ~/.local/bin/weburl ~/.local/bin/transcode-pick ~/.local/bin/chromium-native-host 2>/dev/null)
+[ -z "$left" ] && ok "no script posts osascript notifications" || bad "notifications" "still osascript: $left"
+fi
+
 # ── 19. repo ───────────────────────────────────────────────────────────────
 if want repo; then
 sec "Repo integrity"

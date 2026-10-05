@@ -1,0 +1,36 @@
+#!/bin/bash
+# mac-notify — post a notification; clicking it reveals FILE in Finder.
+#
+#   mac-notify <title> <message> [file]
+#
+# osascript's `display notification` is posted as Script Editor and cannot
+# carry a click action, so clicking one just opens Script Editor's file
+# dialog. terminal-notifier runs its -execute command on click instead.
+# Upstream Omarchy gets the same thing from notify-send actions.
+
+title=${1:?usage: mac-notify <title> <message> [file]} msg=${2:-} file=${3:-}
+tn=${MAC_NOTIFY_BIN:-/opt/homebrew/bin/terminal-notifier}   # override: tests
+
+if [ -x "$tn" ]; then
+  # terminal-notifier reads a message that starts with - or [ as an option.
+  case $msg in -*|\[*) msg="\\$msg" ;; esac
+  args=(-title "$title" -message "$msg")
+  # Same group = the new notification replaces the old one (webdl's
+  # "Downloading…" is replaced by "Download complete" instead of stacking).
+  [ -n "${MAC_NOTIFY_GROUP:-}" ] && args+=(-group "$MAC_NOTIFY_GROUP")
+  if [ -n "$file" ] && [ -e "$file" ]; then
+    # The command runs through sh -c, so quote the path for the shell.
+    args+=(-execute "open -R $(printf '%q' "$file")")
+    case $file in
+      *.[jJ][pP][gG]|*.[jJ][pP][eE][gG]|*.[pP][nN][gG]|*.[gG][iI][fF]|*.[hH][eE][iI][cC])
+        args+=(-contentImage "$file") ;;   # thumbnail in the notification
+    esac
+  fi
+  exec "$tn" "${args[@]}"
+fi
+
+# Fallback: no click action, but at least the notification shows. Strings go
+# in as argv, never into AppleScript source, so quotes in a URL can't break it.
+exec osascript -e 'on run argv' \
+  -e 'display notification (item 2 of argv) with title (item 1 of argv)' \
+  -e 'end run' "$title" "$msg"

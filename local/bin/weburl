@@ -5,9 +5,5 @@ set -e
 
 url=$(browser-url) || exit 1
 printf '%s' "$url" | pbcopy
-osascript \
-  -e 'on run argv' \
-  -e 'display notification (item 1 of argv) with title "Copied URL"' \
-  -e 'end run' \
-  "$url" || echo "notify failed (rc=$?)" >&2
+"$HOME/.local/bin/mac-notify" "Copied URL" "$url" || echo "notify failed (rc=$?)" >&2
 echo "$url"
