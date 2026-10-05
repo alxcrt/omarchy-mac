@@ -321,6 +321,19 @@ mac usage 2>/dev/null | grep -q CLAUDE && ok "mac usage reads Claude data" || ba
 mac usage 2>/dev/null | grep -q CODEX && ok "mac usage reads Codex data" || bad "mac usage" "no codex data"
 mac bogus >/dev/null 2>&1 && bad "mac bogus" "should exit nonzero" || ok "mac rejects unknown subcommand"
 mac edit bogus 2>&1 | grep -qi 'mac edit' && ok "mac edit validates target" || bad "mac edit" "no validation"
+# ghostty-run: a real window via Ghostty's AppleScript, in the caller's cwd,
+# running the command through the shell. Closed again by its name (the cwd).
+if [ "$(osascript -e 'application "Ghostty" is running' 2>/dev/null)" = true ] &&
+   osascript -e 'tell application "Ghostty" to count windows' >/dev/null 2>&1; then
+  G="$T/ghostty-run-test-$$"; mkdir -p "$G"; ( cd "$G" && ghostty-run 'pwd > marker' ) >/dev/null 2>&1
+  for i in $(seq 40); do [ -s "$G/marker" ] && break; sleep 0.1; done
+  [ "$(cat "$G/marker" 2>/dev/null)" = "$(cd "$G" && pwd -P)" ] || [ "$(cat "$G/marker" 2>/dev/null)" = "$G" ] \
+    && ok "ghostty-run opens a window in the cwd and runs the command" || bad "ghostty-run" "marker: '$(cat "$G/marker" 2>/dev/null)'"
+  osascript -e 'on run a' -e 'tell application "Ghostty"' -e 'repeat with w in (every window whose name contains (item 1 of a))' \
+    -e 'close window w' -e 'end repeat' -e 'end tell' -e 'end run' "ghostty-run-test-$$" >/dev/null 2>&1
+else
+  skip "ghostty-run" "Ghostty not running, or this runner may not control it (Automation)"
+fi
 fi
 
 # ── 12. helper scripts ─────────────────────────────────────────────────────

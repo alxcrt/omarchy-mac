@@ -2,8 +2,7 @@
 # Omarchy's Ghostty config (basecamp/omarchy config/ghostty/config), adapted
 # for macOS. Upstream deliberately ships NO split-navigation binds — Omarchy
 # uses multiplexer panes for that (herdr here: Alt+Enter / Alt+Shift+Enter,
-# Ctrl+Alt+arrows), so
-# ⌥J and ⌥L stay free for AeroSpace's SUPER+J / SUPER+L.
+# Ctrl+Alt+arrows).
 
 # ── Font ──
 # Upstream uses size 9, which is a Linux/HiDPI value; 15 is the macOS equivalent.
