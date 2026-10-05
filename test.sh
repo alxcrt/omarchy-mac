@@ -67,6 +67,22 @@ for a in ls lsa lt lta ff eff cx up macup; do check_alias "$a" ""; done
 zsh -ic 'alias cx' 2>/dev/null | grep -q 'permission-mode auto' \
   && ok "cx uses --permission-mode auto (upstream)" || bad "cx" "wrong permission mode"
 zsh -ic 'alias open' >/dev/null 2>&1 && bad "open" "must NOT be overridden on macOS" || ok "open left native (not overridden)"
+# a: launches $OMARCHY_AGENT with its "don't stop to ask" flag, from the work
+# dir when started in $HOME, without moving the calling shell.
+AS="$T/agent-stub"; mkdir -p "$AS"
+for t in claude grok; do printf '#!/bin/sh\necho "$PWD|$*"\n' >"$AS/$t"; chmod +x "$AS/$t"; done
+# The stub dir goes on PATH inside -c, after .zshrc: mise activate prepends
+# its tool paths, which would otherwise run the REAL agents.
+out=$(cd "$T" && AS="$AS" OMARCHY_AGENT=claude zsh -ic 'PATH="$AS:$PATH"; a hello' 2>/dev/null | tail -1)
+[ "$out" = "$T|--permission-mode auto hello" ] || [ "$out" = "$(cd "$T" && pwd -P)|--permission-mode auto hello" ] \
+  && ok "a passes claude --permission-mode auto plus args" || bad "a" "claude got '$out'"
+out=$(cd "$T" && AS="$AS" OMARCHY_AGENT=grok zsh -ic 'PATH="$AS:$PATH"; a' 2>/dev/null | tail -1)
+case $out in *"|--permission-mode bypassPermissions") ok "a passes grok its own flag" ;; *) bad "a" "grok got '$out'" ;; esac
+if [ -d "$HOME/Developer" ]; then
+  out=$(cd "$HOME" && AS="$AS" OMARCHY_AGENT=claude zsh -ic 'PATH="$AS:$PATH"; a; pwd' 2>/dev/null | tail -2 | tr '\n' ' ')
+  [ "$out" = "$HOME/Developer|--permission-mode auto $HOME " ] \
+    && ok "a from \$HOME runs in ~/Developer and leaves the shell in \$HOME" || bad "a" "from \$HOME: '$out'"
+fi
 fi
 
 # ── 3. shell functions ─────────────────────────────────────────────────────

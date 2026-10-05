@@ -31,29 +31,28 @@ file current whenever a request arrives mid-task.
 
 ## Queued
 
-1. **`a` agent flags**: upstream `omarchy-agent` passes each agent's
-   auto-approve flag (claude `--permission-mode auto`, codex
-   `--approve-for-me`, opencode `--auto`, …); the port's `a` passes none.
-2. **Agent usage collectors**: re-copy upstream `omarchy-agent-usage-{claude,codex}`
+1. **Agent usage collectors**: re-copy upstream `omarchy-agent-usage-{claude,codex}`
    (7 fixes since Aug, incl. Codex 0.149 limits) and add the new `-grok` one.
-3. **`mac keys` × herdr defaults**: merge `herdr --default-config` so built-in
+2. **`mac keys` × herdr defaults**: merge `herdr --default-config` so built-in
    binds (prefix+s settings, prefix+w picker, prefix+g goto, …) show too.
-4. **opencode config**: track `config/opencode/opencode.json` with
+3. **opencode config**: track `config/opencode/opencode.json` with
    `"autoupdate": false` (mise owns opencode).
-5. **Replace-with-existing-tool candidates** (decide per item):
+4. **Replace-with-existing-tool candidates** (decide per item):
    `macup` → topgrade; `install.sh` symlinks → GNU stow; `test.sh` → bats
    (likely not worth it); `webdl` → cobalt (rejected: hosted service, yt-dlp
    is the local engine).
-6. **More AI CLIs upstream installs** (pick): ghui, crush, agy, copilot,
+5. **More AI CLIs upstream installs** (pick): ghui, crush, agy, copilot,
    playwright, ori, muse, hey, basecamp, cf.
-7. **Agent account switching** (`omarchy-agent-account-*`): several
+6. **Agent account switching** (`omarchy-agent-account-*`): several
    Claude/Codex/Grok subscriptions, auto-switch near limits. Bash-4 code;
    bigger port.
-8. **Smaller**: `macup` update lock + `caffeinate`, `fns/drives`
+7. **Smaller**: `macup` update lock + `caffeinate`, `fns/drives`
    (`diskutil` rewrite), XCompose-style text snippets via Raycast.
 
 ## Done (Oct 2026, newest first)
 
+- `a` passes each agent upstream's "don't stop to ask" flag and starts in
+  ~/Developer when launched from $HOME.
 - `rsw`/`lsw`/`dsw` (fswatch + perl setsid) and the `ssh` reconnect wrapper,
   ported from upstream.
 - `ghostty-run` on Ghostty's AppleScript (no keystrokes, no AeroSpace wait).

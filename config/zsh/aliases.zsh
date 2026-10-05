@@ -74,10 +74,30 @@ alias macup='$HOME/.local/bin/macup'
 alias up='macup'
 
 # Upstream's `a='omarchy-agent --inline'` launches the *configured default*
-# coding agent. There's no omarchy-agent here, so `a` reads the same idea from
-# an env var — set OMARCHY_AGENT to claude|codex|opencode|grok|omp.
+# coding agent, each with its own spelling of "don't stop to ask"
+# (bin/omarchy-agent). There's no omarchy-agent here, so `a` reads the choice
+# from OMARCHY_AGENT: claude|codex|opencode|grok|omp|hermes|pi.
+# Like upstream, a launch from $HOME starts in the work dir (~/Developer here,
+# ~/Work upstream): agents won't remember trust for $HOME and re-ask every
+# session. A subshell, so the calling shell stays where it was, as it does
+# when upstream's separate omarchy-agent process changes directory.
 export OMARCHY_AGENT="${OMARCHY_AGENT:-claude}"
-a() { command "${OMARCHY_AGENT:-claude}" "$@"; }
+a() {
+  local -a cmd
+  case ${OMARCHY_AGENT:-claude} in
+    claude)   cmd=(claude --permission-mode auto) ;;
+    codex)    cmd=(codex --approve-for-me) ;;
+    opencode) cmd=(opencode --auto) ;;
+    grok)     cmd=(grok --permission-mode bypassPermissions) ;;
+    omp)      cmd=(omp --auto-approve) ;;
+    hermes)   cmd=(hermes --yolo) ;;
+    *)        cmd=("$OMARCHY_AGENT") ;;   # pi and others have nothing to skip
+  esac
+  (
+    [[ $PWD == "$HOME" && -d $HOME/Developer ]] && builtin cd "$HOME/Developer"
+    command "${cmd[@]}" "$@"
+  )
+}
 
 # ── Git ────────────────────────────────────────────────────────────────────
 alias g='git'
