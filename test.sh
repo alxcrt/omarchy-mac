@@ -523,13 +523,18 @@ brew list --cask 2>/dev/null | grep -q karabiner && bad "karabiner" "cask still 
   || ok "Karabiner-Elements.app removed"
 [ -e "$HOME/.config/karabiner" ] && bad "karabiner" "~/.config/karabiner still present" \
   || ok "~/.config/karabiner removed"
-# The DriverKit extension can only be reaped by macOS at reboot (SIP blocks
-# systemextensionsctl uninstall), so a leftover is a pending reboot, not a fail.
+# Its DriverKit extension does NOT go away at reboot once the app is gone (it
+# survived three, Sep–Oct 2026): SIP blocks `systemextensionsctl uninstall`,
+# and only an app signed by the same team can ask macOS to deactivate it. The
+# fix (in SKILL.md): reinstall Karabiner-DriverKit-VirtualHIDDevice's pkg and
+# run its deactivate_driver.sh + remove_files.sh.
 if systemextensionsctl list 2>/dev/null | grep -qi 'karabiner.*activated'; then
-  skip "Karabiner DriverKit extension still registered" "reboot — macOS reaps it once the app is gone"
+  bad "karabiner driver" "DriverKit extension still loaded; see SKILL.md 'orphaned system extension'"
 else
   ok "Karabiner DriverKit extension gone"
 fi
+ls -d "$HOME/Library/Containers/org.pqrs."* >/dev/null 2>&1 && bad "karabiner" "sandbox container left in ~/Library/Containers" \
+  || ok "no Karabiner sandbox container left"
 # No synthetic-keypress check here: System Events injects CGEvents above the
 # HID layer, so hidutil never sees them and such a test proves nothing about
 # the remap. The HID-state assertions above are the real check.

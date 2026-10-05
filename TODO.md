@@ -1,82 +1,70 @@
-# Gaps vs upstream Omarchy
+# Tracker
 
-From an audit against upstream `4.0.0.alpha` (HEAD `dd9dee4`). Everything here
-is **genuinely portable** — Linux-only things (Hyprland groups, mouse binds,
-`XF86*` media keys, the bar/theme/menu system) are deliberately excluded.
+The running list of what is queued, what only Alex can do, and what landed.
+Last full upstream audit: basecamp/omarchy `81145eb` (2026-10-05). Keep this
+file current whenever a request arrives mid-task.
 
-Note: upstream moved Hyprland config from `bindings.conf` to Lua
-(`default/hypr/bindings.lua` + `bindings/*.lua`).
+## Needs Alex (cannot be scripted)
 
-## Ranked by value per effort
+- **Empty the Trash.** ~375 GB of the Oct 2026 declutter sits there
+  (Downloads ISOs/ROMs/firmware/movies, Xcode device data, Ollama and LM Studio
+  models, caches, removed apps).
+- **Delete Hue Sync and Fits** in Finder: root-owned, `trash` can't.
+- **Two LM Studio PATH lines** in `~/.zshrc.local` (harmless, point at nothing).
+- **Karabiner's orphaned driver** is still loaded (`test.sh keyremap` fails on
+  it). Reinstall its driver pkg so its own uninstaller can deactivate it:
+  ```sh
+  curl -fsSLo /tmp/kvhd.pkg https://github.com/pqrs-org/Karabiner-DriverKit-VirtualHIDDevice/releases/download/v8.6.0/Karabiner-DriverKit-VirtualHIDDevice-8.6.0.pkg
+  sudo installer -pkg /tmp/kvhd.pkg -target /
+  bash '/Library/Application Support/org.pqrs/Karabiner-DriverKit-VirtualHIDDevice/scripts/uninstall/deactivate_driver.sh'
+  sudo bash '/Library/Application Support/org.pqrs/Karabiner-DriverKit-VirtualHIDDevice/scripts/uninstall/remove_files.sh'
+  sudo killall Karabiner-VirtualHIDDevice-Daemon
+  ```
+  Then delete `~/Library/Containers/org.pqrs.Karabiner-VirtualHIDDevice-Manager`
+  in Finder.
+- **Raycast hotkeys** for the SUPER launchers (macOS has no scriptable global
+  launch-hotkey system). Mind the ⌥ clash: SUPER = ⌥ = herdr's `alt` layer
+  (`alt+enter`, `alt+1..9`, `alt+arrows`), so pick other chords or Raycast's
+  Hyper key. Candidates: `ghostty-run herdr`, `ghostty-run nvim`,
+  `ghostty-run btop`, `ghostty-run cliamp`, `ghostty-run lazydocker`,
+  `mac keys`, `transcode-pick`, plus upstream's 11 web apps as Quicklinks.
 
-1. **11 web-app launcher bindings** (`applications.lua`) — the largest single
-   omission. Each is one `open -na "Google Chrome" --args --app=<url>` line:
-   `SUPER+SHIFT+` C Calendar, E Email, ALT+E new email, Y YouTube, ALT+A Grok,
-   ALT+G WhatsApp, CTRL+G Google Messages, P Photos, S Maps, X X, ALT+X X post.
-   Requires moving `alt-shift-c` (currently reload-config) — it collides with
-   upstream's Calendar bind.
-2. **`fns/herdr`** — `hdl` / `hds` / `hdlm` / `hsl`. 100% portable; herdr, jq
-   and gum are all installed and the port already aliases + key-binds herdr.
-3. **`fns/ssh-reconnect`** — `ssh()` wrapper + helpers. Pure shell; prevents a
-   dropped SSH session leaving mouse-tracking/alt-screen armed in Ghostty.
-4. **Two env exports**: `SUDO_EDITOR="$EDITOR"` and `BROWSER` (`export
-   BROWSER=open` on macOS). Also restore the `${EDITOR:-…}` guard so a pre-set
-   `EDITOR` isn't clobbered.
-5. **AeroSpace commands that exist but were never bound**:
-   `move-workspace-to-monitor` (SUPER+SHIFT+ALT+arrows), `focus-monitor
-   next/prev` (CTRL+ALT+TAB), window cycling (`focus dfs-next/dfs-prev` — ⌥Tab
-   is spent on *workspace* next, so there is no window-cycling bind at all),
-   and **workspace 10** (upstream loops 1..10, the port stops at 9).
-6. **Bind tools the port already ships**: `mac-keys` on `SUPER+K` (upstream's
-   keybindings cheat sheet — the script and KEYBINDINGS.md exist but nothing
-   launches them), `transcode` on `SUPER+CTRL+PERIOD`.
-7. **`window-theme = ghostty`** in `config/ghostty/config` — one line, supported
-   on macOS, currently leaves window chrome on the system default.
-8. **Bug: `lip()` uses `pgrep -af`.** On macOS `-a` means "include ancestors",
-   not "print command line", so `lip` prints bare PIDs and never shows
-   host/port. Use `pgrep -fl`.
-9. **Shell hygiene** from `default/bash/shell` / `init`: `HISTSIZE=32768` +
-   dup-ignore (`setopt hist_ignore_all_dups hist_ignore_space`), `unsetopt
-   hash_cmds` (the zsh equivalent of upstream's `set +h` — stops stale mise
-   shim paths), and `source <(fzf --zsh)` for Ctrl-R/Ctrl-T (fzf is installed).
-10. **`SUPER+SHIFT+B`** as a second browser bind. (Upstream's
-    `SUPER+ALT+RETURN` tmux launcher is moot: tmux was removed for herdr.)
+## Queued
 
-## Known latent defect
+1. **`rsw` / `lsw` / `dsw`**: upstream `fns/rsyncing`, rsync-on-change sync
+   to a remote. Port with `fswatch -o -r` for `inotifywait`, no `setsid`.
+2. **`ssh()` reconnect wrapper**: upstream `fns/ssh-reconnect`. Rename its
+   `local argv` (a special array in zsh).
+3. **`a` agent flags**: upstream `omarchy-agent` passes each agent's
+   auto-approve flag (claude `--permission-mode auto`, codex
+   `--approve-for-me`, opencode `--auto`, …); the port's `a` passes none.
+4. **Agent usage collectors**: re-copy upstream `omarchy-agent-usage-{claude,codex}`
+   (7 fixes since Aug, incl. Codex 0.149 limits) and add the new `-grok` one.
+5. **`mac keys` × herdr defaults**: merge `herdr --default-config` so built-in
+   binds (prefix+s settings, prefix+w picker, prefix+g goto, …) show too.
+6. **opencode config**: track `config/opencode/opencode.json` with
+   `"autoupdate": false` (mise owns opencode).
+7. **Replace-with-existing-tool candidates** (decide per item):
+   `macup` → topgrade; `install.sh` symlinks → GNU stow; `test.sh` → bats
+   (likely not worth it); `webdl` → cobalt (rejected: hosted service, yt-dlp
+   is the local engine).
+8. **More AI CLIs upstream installs** (pick): ghui, crush, agy, copilot,
+   playwright, ori, muse, hey, basecamp, cf.
+9. **Agent account switching** (`omarchy-agent-account-*`): several
+   Claude/Codex/Grok subscriptions, auto-switch near limits. Bash-4 code;
+   bigger port.
+10. **Smaller**: `macup` update lock + `caffeinate`, `fns/drives`
+    (`diskutil` rewrite), XCompose-style text snippets via Raycast.
 
-`alt-shift-enter` (Chrome) has the same race `ghostty-run` was fixed for:
-`make new window` runs *before* `activate`, so the window can be created while
-Chrome's key window is still on another display. The fix is the same pattern —
-record the focused workspace, diff window ids for the bundle id, move the new
-window back — so `ghostty-run` is worth generalising to take a bundle id.
+## Done (Oct 2026, newest first)
 
-## Smaller notes
-
-- `alt-ctrl-l` runs `pmset displaysleepnow`, which only *locks* if "require
-  password immediately" is set; otherwise it just sleeps the display.
-- Spotify has no binding: upstream has `SUPER+SHIFT+M` = Spotify and
-  `SUPER+SHIFT+ALT+M` = cliamp; the port collapsed both into cliamp.
-- `CTRL+ALT+DELETE` (close all) is `alt-shift-w` here *and* means
-  "close all **but current**" — different key and different semantics.
-- Resize steps are smaller than upstream (±50/±10 vs ±100/±25), and upstream's
-  ±300 "resize a lot" pair is missing.
-- Upstream ships git config as a managed `~/.config/git/config` so `~/.gitconfig`
-  can override it; the port bakes values into `~/.gitconfig`, so there's no
-  override layer and upstream changes can't be pulled in cleanly.
-- `fns/rsyncing` (`rsw`/`lsw`/`dsw`) needs `fswatch` instead of `inotifywait`.
-- `fns/drives` (`iso2sd`, `format-drive`) needs a `diskutil` rewrite, not a copy.
-- Clipboard `SUPER+C/V/X` and all `XF86*` media binds are correctly omitted —
-  macOS already handles both natively.
-
-## Fidelity scorecard
-
-| Area | Fidelity |
-|---|---|
-| starship.toml | 100% (byte-identical) |
-| herdr config | mapped from upstream tmux.conf (tmux removed) |
-| git config | 16/17 settings |
-| aliases | 13/14 |
-| ghostty config | ~85% |
-| envs | ~60% |
-| shell functions | ~50% (4 of 8 upstream fns files absent) |
-| AeroSpace bindings | ~45% of portable upstream binds |
+- `ghostty-run` on Ghostty's AppleScript (no keystrokes, no AeroSpace wait).
+- mise: official `grok` (was stuck on 1.0.5), `hunk` for `hds`, release
+  cooldown and auto-prune policy in config; `macup` prunes unused versions.
+- Notifications: terminal-notifier with Show / Copy buttons; Copy makes an
+  H.264/AAC `-share.mp4` (hardware encode) and puts the file on the
+  clipboard; `webdl` titles, thumbnails and failure handling.
+- zsh without oh-my-zsh: ~65 ms startup (was ~132), cached starship/zoxide
+  init, `try`, brew git.
+- tmux removed (herdr); declutter; Brewfile declares every installed tool;
+  `mac-defaults`; Caps Lock = Escape; `macup` App Store dialogs; Helium.

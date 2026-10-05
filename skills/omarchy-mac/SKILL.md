@@ -156,11 +156,16 @@ extensions.
   `~/Library/LaunchAgents/com.omarchy.keyremap.plist`. That plist is **copied,
   not symlinked** (launchd is fussy about plist ownership) — so `install.sh`
   must re-copy it, and the test asserts it matches the repo.
-- **A removed system extension survives until reboot.** `systemextensionsctl
-  uninstall` refuses to run while SIP is on, so after zapping a driver-based
-  app the dext stays `activated enabled` and its processes keep running. macOS
-  reaps it at the next boot once the owning app is gone — report it as pending,
-  don't claim the removal is complete.
+- **An orphaned system extension survives reboots.** Removing a driver-based
+  app (Karabiner) leaves its dext `activated enabled` and loaded; it outlived
+  three reboots here, so "macOS reaps it at boot" is false.
+  `systemextensionsctl uninstall` refuses while SIP is on, and only an app
+  signed by the same team can request deactivation. For Karabiner: install
+  the Karabiner-DriverKit-VirtualHIDDevice pkg from pqrs-org's GitHub
+  releases, then run `deactivate_driver.sh` and `sudo remove_files.sh` from
+  `/Library/Application Support/org.pqrs/Karabiner-DriverKit-VirtualHIDDevice/scripts/uninstall/`
+  and `sudo killall Karabiner-VirtualHIDDevice-Daemon`. Remove a driver app
+  with its own uninstaller first, never by deleting the .app.
 - **Live configs drift out of symlink into real files.** `--zap` (and manual
   edits) replaced `~/.config/karabiner/karabiner.json`,
   `~/.config/aerospace/aerospace.toml` and `~/.claude/skills/omarchy-mac/SKILL.md`
