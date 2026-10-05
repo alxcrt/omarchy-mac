@@ -146,11 +146,10 @@ sudo -k && sudo true      # test — should prompt for fingerprint
 ## The SUPER key (hidutil)
 
 Omarchy's binds are all `SUPER+…`. On macOS ⌘ is unusable for that (it owns
-⌘W/⌘Q/⌘1-9), so **SUPER is ⌥**. Two more keys are remapped onto ⌥ so it is
-reachable without contorting your left hand:
+⌘W/⌘Q/⌘1-9), so **SUPER is ⌥**. Two keys are remapped:
 
-- **Caps Lock** → ⌥
-- **Right ⌘** → ⌥
+- **Caps Lock** → Escape
+- **Right ⌘** → ⌥, so SUPER is under the right thumb too
 
 This used to be Karabiner-Elements. It is now `~/.local/bin/mac-keyremap`,
 which drives **`hidutil`** — Apple's own HID remapper, built into macOS. No
@@ -168,8 +167,8 @@ on reboot; `config/launchd/com.omarchy.keyremap.plist` is installed to
 `~/Library/LaunchAgents` and reapplies the mapping at login.
 
 **The trade-off, stated plainly:** `hidutil` is strictly key → key. It cannot
-do dual-role keys, so **tap-Caps-Lock-for-Escape is gone** — Caps Lock is now
-purely a second ⌥. It also cannot emit a multi-modifier Hyper (⌘⌃⌥⇧) from one
+do dual-role keys, so Caps Lock is a plain Escape rather than tap-Escape /
+hold-modifier. It also cannot emit a multi-modifier Hyper (⌘⌃⌥⇧) from one
 key; if you want Hyper chords for Raycast, use Raycast → Settings → Advanced →
 **Hyper Key** rather than reinstalling a driver.
 

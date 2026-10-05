@@ -33,6 +33,7 @@ case "$cmd" in
     done ;;
 
   wm)          exec mac-wm "$@" ;;
+  defaults)    exec mac-defaults "$@" ;;
 
   doctor)
     echo "== mise ==";  mise doctor 2>&1 | tail -3
@@ -40,6 +41,7 @@ case "$cmd" in
     echo "== window mgmt =="; mac-wm --status | sed -n "2,6p"
     echo "== keyremap ==";  mac-keyremap --show 2>/dev/null | grep -q 30064771298 \
       && echo "modifier remap loaded" || echo "modifier remap MISSING (run: mac-keyremap)"
+    echo "== macOS defaults =="; mac-defaults --status || echo "drift (run: mac defaults --apply)"
     ;;
 
   edit)
@@ -61,7 +63,7 @@ mac — Omarchy-style flows on macOS
   mac install <pkg>       create a self-updating mise-backed wrapper
   mac usage [claude|codex]  AI agent token usage + rate limits
   mac keys                every keybinding, read from the live configs
-  mac keyremap [--show|--clear]   Caps Lock + right ⌘ -> ⌥, via hidutil
+  mac keyremap [--show|--clear]   Caps Lock -> Escape, right ⌘ -> ⌥, via hidutil
 
   mac dl [url]            download video on the current Chrome page -> ~/Movies
   mac url                 copy the current Chrome tab URL
@@ -69,6 +71,7 @@ mac — Omarchy-style flows on macOS
 
   mac term <cmd>          open a new Ghostty window running <cmd>
   mac wm [--status|--apply|--keys]  native tiling + Spaces settings
+  mac defaults [--apply]  key repeat, hidden files, instant Dock, ~/Developer
   mac doctor              health check across mise, brew, window mgmt
   mac edit <what>         open a config: aliases functions mise brew tmux
 

@@ -433,22 +433,22 @@ fi
 if want keyremap; then
 sec "Modifier remap (hidutil, ex-Karabiner)"
 LO=30064771298   # 0x7000000E2 left_option   CAPS=0x700000039  RCMD=0x7000000E7
-CAPS=30064771129; RCMD=30064771303
+CAPS=30064771129; RCMD=30064771303; ESC=30064771113   # ESC=0x700000029
 
 # The assertion is the HID system's own state, not anything mac-keyremap prints.
 _map() { hidutil property --get "UserKeyMapping" 2>/dev/null | tr -d ' \n'; }
-_has() { _map | grep -q "MappingDst=$LO;HIDKeyboardModifierMappingSrc=$1;"; }
+_has() { _map | grep -q "MappingDst=$2;HIDKeyboardModifierMappingSrc=$1;"; }
 
 mac-keyremap --apply >/dev/null 2>&1
-_has $CAPS && ok "Caps Lock is remapped to ⌥ in the HID system" || bad "keyremap" "caps lock not mapped to ⌥"
-_has $RCMD && ok "Right ⌘ is remapped to ⌥ in the HID system"  || bad "keyremap" "right ⌘ not mapped to ⌥"
+_has $CAPS $ESC && ok "Caps Lock is remapped to Escape in the HID system" || bad "keyremap" "caps lock not mapped to Escape"
+_has $RCMD $LO  && ok "Right ⌘ is remapped to ⌥ in the HID system"  || bad "keyremap" "right ⌘ not mapped to ⌥"
 
 # Prove --clear/--apply actually mutate HID state (a print-only script passes
 # every "does it exist" check and still does nothing).
 mac-keyremap --clear >/dev/null 2>&1
-_has $CAPS && bad "keyremap --clear" "mapping survived a clear" || ok "--clear really removes the mapping"
+_has $CAPS $ESC && bad "keyremap --clear" "mapping survived a clear" || ok "--clear really removes the mapping"
 mac-keyremap --apply >/dev/null 2>&1
-_has $CAPS && ok "--apply restores it (round-trip works)" || bad "keyremap --apply" "did not restore mapping"
+_has $CAPS $ESC && ok "--apply restores it (round-trip works)" || bad "keyremap --apply" "did not restore mapping"
 mac-keyremap --show 2>/dev/null | grep -q "$LO" && ok "--show reports the live mapping" || bad "keyremap --show" "no mapping reported"
 
 # The mapping is HID-system state and dies on reboot; the login agent is what
@@ -476,12 +476,9 @@ if systemextensionsctl list 2>/dev/null | grep -qi 'karabiner.*activated'; then
 else
   ok "Karabiner DriverKit extension gone"
 fi
-
-# End-to-end: the remap only matters if a remapped key really produces ⌥. Ask
-# the HID system what modifiers a synthetic Caps Lock press carries.
-_probe=$(osascript -e 'tell application "System Events" to key code 57' 2>&1)
-[ -z "$_probe" ] && ok "a Caps Lock keypress is accepted (no caps-lock toggle)" \
-                 || skip "could not synthesize Caps Lock" "grant Accessibility to the terminal"
+# No synthetic-keypress check here: System Events injects CGEvents above the
+# HID layer, so hidutil never sees them and such a test proves nothing about
+# the remap. The HID-state assertions above are the real check.
 fi
 
 # ── 16. Touch ID ───────────────────────────────────────────────────────────
@@ -549,6 +546,38 @@ ok "no tool installed by both brew and mise"
 env -i HOME="$HOME" TERM=xterm /bin/zsh -l -i -c 'mise doctor' 2>/dev/null | grep -q 'warnings found' \
   && bad "mise doctor" "warnings in a clean login shell (PATH order?)" \
   || ok "mise doctor clean in a fresh login shell"
+fi
+
+# ── macOS defaults ─────────────────────────────────────────────────────────
+if want defaults; then
+sec "macOS defaults (key repeat, Finder, Dock)"
+# Sandboxed first: a stub `defaults` backed by a temp file and a stub `killall`
+# that logs, so drift detection and --apply are exercised for real without
+# touching this Mac's preferences.
+DS="$T/defaults-stub"; mkdir -p "$DS" "$T/dhome"; DB="$T/defaults.db"; KL="$T/killall.log"; : >"$DB"; : >"$KL"
+cat >"$DS/defaults" <<EOF
+#!/bin/bash
+op=\$1 dom=\$2 key=\$3 val=\$5
+case \$op in
+  read)  v=\$(grep "^\$dom \$key=" "$DB" | tail -1 | cut -d= -f2); [ -n "\$v" ] && echo "\$v" || exit 1 ;;
+  write) [ "\$val" = true ] && val=1; [ "\$val" = false ] && val=0; echo "\$dom \$key=\$val" >>"$DB" ;;
+esac
+EOF
+printf '#!/bin/bash\necho "$*" >>"%s"\n' "$KL" >"$DS/killall"; chmod +x "$DS/defaults" "$DS/killall"
+MD() { HOME="$T/dhome" PATH="$DS:/usr/bin:/bin" ~/.local/bin/mac-defaults "$@"; }
+MD --status >/dev/null 2>&1 && bad "mac-defaults" "unset prefs reported as fine" || ok "--status flags unset prefs (exit 1)"
+MD --apply >/dev/null 2>&1
+MD --status >/dev/null 2>&1 && ok "--apply makes --status clean" || bad "mac-defaults --apply" "drift remains after apply"
+grep -q Dock "$KL" && grep -q Finder "$KL" && ok "--apply restarts Dock and Finder after changing them" || bad "mac-defaults" "did not restart Dock/Finder"
+[ -d "$T/dhome/Developer" ] && ok "--apply creates ~/Developer" || bad "mac-defaults" "no ~/Developer"
+: >"$KL"; MD --apply >/dev/null 2>&1
+[ -s "$KL" ] && bad "mac-defaults" "restarts Dock/Finder with nothing to change" || ok "a second --apply changes nothing and restarts nothing"
+# Then the real Mac, read straight from cfprefs rather than through the script.
+for kv in "-g InitialKeyRepeat 15" "-g KeyRepeat 1" "com.apple.finder AppleShowAllFiles 1" \
+          "com.apple.dock autohide 1" "com.apple.dock autohide-delay 0" "com.apple.dock autohide-time-modifier 0"; do
+  set -- $kv
+  [ "$(defaults read "$1" "$2" 2>/dev/null)" = "$3" ] && ok "live: $2 = $3" || bad "live default" "$2 is $(defaults read "$1" "$2" 2>&1), want $3"
+done
 fi
 
 # ── 19. repo ───────────────────────────────────────────────────────────────

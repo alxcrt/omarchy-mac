@@ -60,6 +60,10 @@ section "Configuring native window management"
 # (AeroSpace was dropped). This only flips on what Apple ships disabled.
 "$HOME/.local/bin/mac-wm" --apply
 
+section "Applying macOS defaults"
+# Key repeat, hidden files in Finder, instant Dock autohide, ~/Developer.
+"$HOME/.local/bin/mac-defaults" --apply
+
 section "Ensuring Homebrew"
 if ! command -v brew >/dev/null 2>&1; then
   /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"

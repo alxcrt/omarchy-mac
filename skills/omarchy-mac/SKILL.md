@@ -39,9 +39,10 @@ into `~/.config` + `~/.local/bin`.
 | `~/.config/zsh/functions.zsh` | `tdl`/`tds`/`tdlm`/`tsl`, `ga`/`gd`, transcode wrappers |
 | `~/.local/bin/mac-wm` | window management: native tiling + Spaces settings, and the only place the native shortcuts are written down |
 | `config/launchd/com.omarchy.keyremap.plist` | login agent that reapplies the hidutil remap |
+| `~/.local/bin/mac-defaults` | the macOS preferences (key repeat, Finder hidden files, instant Dock autohide, `~/Developer`) as one list; `--status` / `--apply` |
 | `~/.config/tmux/tmux.conf` | upstream Omarchy verbatim |
 | `~/.config/ghostty/config` | upstream Omarchy, macOS-adjusted |
-| `~/.local/bin/` | `mac`, `macup`, `mac-keys`, `mac-keyremap`, `mac-hook`, `ghostty-run`, `transcode`, `webdl`, `weburl`, `browser-url`, `chrome-extensions`, `chromium-native-host`, `mise-install`, `agent-usage-*` |
+| `~/.local/bin/` | `mac`, `macup`, `mac-keys`, `mac-keyremap`, `mac-defaults`, `mac-hook`, `ghostty-run`, `transcode`, `webdl`, `weburl`, `browser-url`, `chrome-extensions`, `chromium-native-host`, `mise-install`, `agent-usage-*` |
 
 ## Commands
 
@@ -58,7 +59,7 @@ workspaces, `⌥W` close, `⌥⇧1..9` send window. Full generated list:
 `~/omarchy-mac/test.sh` is ~265 real functional tests (it executes things and
 checks effects; it does not assert files exist). Run a section with
 `./test.sh <name>`: `layering aliases functions cd transcode compress tmux git
-browser extensions mac scripts hooks wm keyremap touchid shell brew repo`.
+browser extensions mac scripts hooks wm keyremap defaults touchid shell brew repo`.
 
 **Run the relevant section after any change, and the full suite before
 committing.** Two skips are expected only if the user hasn't loaded the Chrome
@@ -131,8 +132,9 @@ extensions.
   signature invalid", error 8) and needed re-approval after every macOS bump.
   `hidutil` is Apple's own HID remapper: no driver, no extension, no Input
   Monitoring grant. The price is that it is strictly **key → key** — no
-  dual-role (tap Caps = Escape is gone) and no multi-modifier Hyper. Route
-  Hyper chords through Raycast's own Hyper Key setting instead.
+  dual-role keys and no multi-modifier Hyper. Caps Lock is a plain Escape
+  (Oct 2026; it was a second ⌥ before) and right ⌘ is ⌥. Route Hyper chords
+  through Raycast's own Hyper Key setting instead.
 - **hidutil mappings are HID-system state, not files.** They vanish on reboot
   and can drop when a keyboard re-enumerates, so the mapping only persists via
   `~/Library/LaunchAgents/com.omarchy.keyremap.plist`. That plist is **copied,

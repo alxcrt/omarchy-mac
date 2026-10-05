@@ -1,0 +1,59 @@
+#!/bin/bash
+# mac-defaults — the macOS preferences this setup sets, in one list.
+#
+#   mac-defaults [--status]   each setting: wanted vs. current (exit 1 on drift)
+#   mac-defaults --apply      write them; restart Finder/Dock only if they changed
+#
+# Key repeat is read at login: apps opened before a logout keep the old rate.
+set -e
+
+# domain|key|type|value|what it does
+#   InitialKeyRepeat 15 is the shortest delay the Settings slider allows;
+#   KeyRepeat 1 is faster than its fastest stop (2).
+#   autohide is on so the two Dock timings have something to speed up.
+SETTINGS='-g|InitialKeyRepeat|int|15|short delay before key repeat
+-g|KeyRepeat|int|1|fastest key repeat
+com.apple.finder|AppleShowAllFiles|bool|true|Finder shows hidden files
+com.apple.dock|autohide|bool|true|Dock hides itself
+com.apple.dock|autohide-delay|float|0|Dock shows with no delay
+com.apple.dock|autohide-time-modifier|int|0|Dock hides/shows with no animation'
+
+# `defaults read` prints booleans as 1/0
+readback() { case "$1|$2" in bool\|true) echo 1 ;; bool\|false) echo 0 ;; *) echo "$2" ;; esac; }
+current()  { defaults read "$1" "$2" 2>/dev/null || echo "(unset)"; }
+
+status() {
+  local drift=0 domain key type value desc now want
+  while IFS='|' read -r domain key type value desc; do
+    now=$(current "$domain" "$key"); want=$(readback "$type" "$value")
+    if [ "$now" = "$want" ]; then
+      printf '  ✓ %-24s %s\n' "$key" "$desc"
+    else
+      printf '  ✗ %-24s %s (is %s, want %s)\n' "$key" "$desc" "$now" "$want"; drift=1
+    fi
+  done <<<"$SETTINGS"
+  [ -d "$HOME/Developer" ] && echo "  ✓ ~/Developer exists" || { echo "  ✗ ~/Developer missing"; drift=1; }
+  return $drift
+}
+
+apply() {
+  local domain key type value desc restart=()
+  while IFS='|' read -r domain key type value desc; do
+    [ "$(current "$domain" "$key")" = "$(readback "$type" "$value")" ] && continue
+    defaults write "$domain" "$key" "-$type" "$value"
+    echo "set $key = $value ($desc)"
+    case "$domain" in com.apple.finder) restart+=(Finder) ;; com.apple.dock) restart+=(Dock) ;; esac
+  done <<<"$SETTINGS"
+  # Finder gives ~/Developer its own folder icon.
+  mkdir -p "$HOME/Developer"
+  if [ ${#restart[@]} -gt 0 ]; then
+    killall $(printf '%s\n' "${restart[@]}" | sort -u) 2>/dev/null || true
+  fi
+  echo "macOS defaults applied"
+}
+
+case "${1:---status}" in
+  --status) status ;;
+  --apply)  apply ;;
+  *) echo "usage: mac-defaults [--status|--apply]" >&2; exit 1 ;;
+esac
