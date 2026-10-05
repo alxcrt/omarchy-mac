@@ -109,6 +109,20 @@ extensions.
   only a stale leftover here). `agent-usage-claude` reads it read-only via
   `/usr/bin/security`; the collectors are upstream copies with "macOS port"
   markers, so re-sync by re-copying and re-applying those.
+- **Clipboard writes from a short-lived process.** `NSPasteboard writeObjects`
+  from `osascript` lost the data 4 times in 5 once the process exited, while
+  still reporting success ("Copied" with an empty clipboard). `mac-clip` and
+  `mac-pbsnap` use `declareTypes` + `setString`/`setData` (synchronous, like
+  `pbcopy`). Verify clipboard work on the REAL general pasteboard after the
+  writer exits; a named pasteboard read in-process hides the bug.
+- **terminal-notifier: click commands, not buttons.** An `-action` button
+  needs a waiting process per notification, and with two pending macOS hands
+  the click to the wrong one (Copy on one download copied another). Use
+  `-execute` (stored in the notification). Its argument parser treats a value
+  starting with `( { < " ' - [` as a plist/option and exits 2 with no
+  notification; `mac-notify` backslash-escapes both title and message.
+  `-execute` runs under launchd's bare PATH. Tests must never post real
+  notifications (test.sh exports a silent `MAC_NOTIFY_BIN`).
 - **`/usr/bin/git` is an xcrun stub** that adds ~10ms per call (every prompt in
   a repo pays it via starship). The Brewfile installs git so /opt/homebrew/bin
   wins on PATH.

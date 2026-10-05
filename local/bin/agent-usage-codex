@@ -1,5 +1,7 @@
-#!/usr/bin/env python3
-# macOS port: copied verbatim from upstream bin/omarchy-agent-usage-codex (basecamp/omarchy
+#!/opt/homebrew/bin/python3
+# macOS port: brew's python3 (3.11+ for tomllib/match); /usr/bin/python3 is
+# Xcode's 3.9, which a bare env shebang reaches from Raycast or launchd.
+# Copied verbatim from upstream bin/omarchy-agent-usage-codex (basecamp/omarchy
 # 81145eb); changes are marked "macOS port". Re-sync by re-copying and re-applying them.
 # omarchy:summary=Print the Codex usage record as JSON
 # omarchy:args=[--force] [--limits-only]

@@ -55,8 +55,13 @@ case "$format" in
                -c:v h264_videotoolbox -q:v 60 -profile:v high -pix_fmt yuv420p)
       fi
       if [[ -z $acodec || $acodec == aac ]]; then aargs=(-c:a copy); else aargs=(-c:a aac -b:a 160k); fi
+      # Encode beside the target and rename only on success: a failed or
+      # interrupted encode must not leave a partial -share.mp4 that a later
+      # Copy would take as finished. (.mp4 suffix: ffmpeg picks the muxer by it.)
+      tmp="$dir/.${base}-share.$$.mp4"
+      trap 'rm -f "$tmp"' EXIT
       ffmpeg -hide_banner -loglevel error -y -i "$file" -map 0:v:0 -map '0:a:0?' \
-        "${vargs[@]}" "${aargs[@]}" -movflags +faststart "$out"
+        "${vargs[@]}" "${aargs[@]}" -movflags +faststart "$tmp" && mv -f "$tmp" "$out"
       echo "$out"; exit 0
     fi
     case "$quality" in

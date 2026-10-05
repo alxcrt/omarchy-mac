@@ -14,17 +14,10 @@ file current whenever a request arrives mid-task.
   `mac usage` shows the plan (Max 5x) but no limits. `grok login` too, if
   Grok is in use.
 - **Two LM Studio PATH lines** in `~/.zshrc.local` (harmless, point at nothing).
-- **Karabiner's orphaned driver** is still loaded (`test.sh keyremap` fails on
-  it). Reinstall its driver pkg so its own uninstaller can deactivate it:
-  ```sh
-  curl -fsSLo /tmp/kvhd.pkg https://github.com/pqrs-org/Karabiner-DriverKit-VirtualHIDDevice/releases/download/v8.6.0/Karabiner-DriverKit-VirtualHIDDevice-8.6.0.pkg
-  sudo installer -pkg /tmp/kvhd.pkg -target /
-  bash '/Library/Application Support/org.pqrs/Karabiner-DriverKit-VirtualHIDDevice/scripts/uninstall/deactivate_driver.sh'
-  sudo bash '/Library/Application Support/org.pqrs/Karabiner-DriverKit-VirtualHIDDevice/scripts/uninstall/remove_files.sh'
-  sudo killall Karabiner-VirtualHIDDevice-Daemon
-  ```
-  Then delete `~/Library/Containers/org.pqrs.Karabiner-VirtualHIDDevice-Manager`
-  in Finder.
+- **Karabiner's last trace**: drag
+  `~/Library/Containers/org.pqrs.Karabiner-VirtualHIDDevice-Manager` to the
+  Trash in Finder (macOS protects it from scripts). The driver itself was
+  deactivated and its files removed on Oct 6; it drops out at the next reboot.
 - **Raycast hotkeys** for the SUPER launchers (macOS has no scriptable global
   launch-hotkey system). Mind the ⌥ clash: SUPER = ⌥ = herdr's `alt` layer
   (`alt+enter`, `alt+1..9`, `alt+arrows`), so pick other chords or Raycast's
@@ -52,6 +45,12 @@ file current whenever a request arrives mid-task.
 
 ## Done (Oct 2026, newest first)
 
+- Codex review (gpt-6.1-sol, xhigh) of the day's work: fixed the clipboard
+  write that silently vanished, notification text starting with ( { < " '
+  being rejected, macup pruning with no process list, partial share files,
+  slow webdl kills, compinit re-auditing forever, racy shell caches, Python
+  3.9 under a bare PATH, and test-isolation gaps. Buttons replaced by click
+  commands. Karabiner's orphaned driver removed.
 - Usage collectors re-synced from upstream (Codex limits work again; new
   Grok collector in `mac usage`); Claude's reads the macOS Keychain, where
   Claude Code keeps its live login.

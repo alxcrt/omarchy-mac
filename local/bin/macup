@@ -108,12 +108,20 @@ step brew autoremove
 # here, keeping any version a running process has open. lsof reports real
 # paths, so a session started through installs/<tool>/latest still counts.
 prune_mise() {
-  local inuse tool ver path
-  inuse=$(lsof -n -Fn -d txt 2>/dev/null | grep -o '/[^ ]*/mise/installs/[^/]*/[^/]*' | sort -u)
+  local opened tool ver path
+  # Every executable mapped by a running process, as full paths (lsof's n
+  # records; spaces in a path survive). An empty list means "unknown", not
+  # "nothing in use": pruning then would delete live sessions' binaries.
+  opened=$(lsof -n -Fn -d txt 2>/dev/null | sed -n 's/^n//p')
+  if [ -z "$opened" ]; then
+    echo "skipping prune: could not list running executables (lsof)"
+    return
+  fi
   mise ls --prunable --json 2>/dev/null |
     jq -r 'to_entries[] | .key as $t | .value[] | select(.installed) | [$t, .version, .install_path] | @tsv' |
     while IFS=$'\t' read -r tool ver path; do
-      if grep -qxF "$path" <<<"$inuse"; then
+      [ -n "$path" ] || continue
+      if grep -qF -- "$path/" <<<"$opened"; then
         echo "keeping $tool@$ver (in use)"
       else
         mise uninstall "$tool@$ver" >/dev/null 2>&1 && echo "pruned $tool@$ver"

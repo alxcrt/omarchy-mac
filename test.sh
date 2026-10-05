@@ -122,17 +122,20 @@ sleep 0.5; echo two >"$T/rs/src/b"
 for i in $(seq 50); do [ -f "$T/rs/dst/b" ] && break; sleep 0.1; done
 [ -f "$T/rs/dst/b" ] && ok "rsw re-syncs on change (fswatch)" || bad "rsw" "change not synced"
 ZRUN lsw | grep -qF "$T/rs/src -> $T/rs/dst" && ok "lsw lists the watch" || bad "lsw" "watch not listed"
-if [ "$others" = 0 ]; then
-  ZRUN dsw >/dev/null; sleep 0.3
-  if pgrep -f "rsw-watch $T/rs" >/dev/null || pgrep -f "fswatch -o -r $T/rs" >/dev/null; then
-    bad "dsw" "watcher or its fswatch survived"
-  else
-    ok "dsw stops the watcher and its fswatch"
-  fi
-else
+# dsw stops EVERY watch. Run it against a stand-in pgrep that reports only
+# this test's watch, so a real one (even one started mid-test) is never hit.
+mine=$(pgrep -f "rsw-watch $T/rs" | tr '\n' ' ')
+mkdir -p "$T/pgstub"; printf '#!/bin/sh\necho %s\n' "$mine" >"$T/pgstub/pgrep"; chmod +x "$T/pgstub/pgrep"
+ZRUN "PATH='$T/pgstub':\$PATH; dsw" >/dev/null
+# fswatch notices the signal at its batch interval (-l 0.2), so allow it a beat.
+for i in $(seq 30); do pgrep -f "rsw-watch $T/rs" >/dev/null || pgrep -f "fswatch .*$T/rs" >/dev/null || break; sleep 0.1; done
+if pgrep -f "rsw-watch $T/rs" >/dev/null || pgrep -f "fswatch .*$T/rs" >/dev/null; then
+  bad "dsw" "watcher or its fswatch survived"
   for p in $(pgrep -f "rsw-watch $T/rs"); do kill -- -"$p" 2>/dev/null; done
-  skip "dsw" "$others real watch(es) running; dsw would stop them"
+else
+  ok "dsw stops the watcher and its fswatch (whole process group)"
 fi
+[ "$(pgrep -f 'rsw-watch ' | wc -l | tr -d ' ')" = "$others" ] && ok "dsw test left real watches alone" || bad "dsw test" "real watch count changed"
 # ssh reconnect: only a dropped INTERACTIVE session may be replayed.
 ZRUN '_ssh_interactive host' && ok "ssh: plain host is interactive" || bad "_ssh_interactive" "host"
 ZRUN '_ssh_interactive host uptime' && bad "_ssh_interactive" "remote command treated as interactive" || ok "ssh: a remote command is never replayed"
@@ -191,6 +194,12 @@ out=$(transcode "$T/s-wide.mp4" mp4 share 2>/dev/null | tail -1)
 [ "$(ffp "$out" v:0 width,height)" = 1920,1080 ] && ok "share: 1440p is scaled to 1080p" || bad "share" "1440p became $(ffp "$out" v:0 width,height)"
 out=$(transcode "$T/s-tall.mp4" mp4 share 2>/dev/null | tail -1)
 [ "$(ffp "$out" v:0 width,height)" = 1080,1920 ] && ok "share: portrait keeps its 1080 short side" || bad "share" "portrait became $(ffp "$out" v:0 width,height)"
+# A failed encode must publish nothing: no -share.mp4 a later Copy would
+# reuse as finished, and no temp file left beside it.
+head -c 4096 /dev/urandom >"$T/broken.mp4"
+transcode "$T/broken.mp4" mp4 share >/dev/null 2>&1
+[ ! -e "$T/broken-share.mp4" ] && [ -z "$(ls -A "$T" | grep -- '-share\.[0-9]*\.mp4$')" ] \
+  && ok "share: a failed encode leaves no partial or temp file" || bad "share" "failed encode left a file behind"
 transcode "$T/a.png" bogus high >/dev/null 2>&1 && bad "bogus format" "should fail" || ok "rejects unknown format"
 # wrapper functions call through
 cp "$T/a.png" "$T/w.png"; ZRUN "img2jpg '$T/w.png'" >/dev/null 2>&1
@@ -254,10 +263,13 @@ if [ -n "$u" ]; then
   # Snapshot the real clipboard with every type (pbpaste only sees text, so a
   # copied file came back as an empty string). Restore it only if it still
   # holds what this test wrote: anything copied meanwhile is Alex's and stays.
-  mac-pbsnap save "$T/clip.json"
-  weburl >/dev/null 2>&1
-  [ "$(pbpaste)" = "$u" ] && ok "weburl copied URL to clipboard" || bad "weburl" "clipboard mismatch"
-  [ "$(pbpaste)" = "$u" ] && mac-pbsnap restore "$T/clip.json"
+  if mac-pbsnap save "$T/clip.json"; then
+    w=$(weburl 2>/dev/null | tail -1)   # the URL weburl actually wrote (the tab may change)
+    [ -n "$w" ] && [ "$(pbpaste)" = "$w" ] && ok "weburl copied URL to clipboard" || bad "weburl" "clipboard mismatch"
+    [ -n "$w" ] && [ "$(pbpaste)" = "$w" ] && mac-pbsnap restore "$T/clip.json"
+  else
+    skip "weburl" "could not snapshot the clipboard, so it was left alone"
+  fi
 else
   skip "browser-url" "no Chromium-family browser with an open tab"
 fi
@@ -306,7 +318,8 @@ def frame(o):
 # Full snapshot (files too), restored only if the clipboard still holds the
 # test's URL; see the weburl test above.
 snap=os.path.join(os.environ["T"],"clip-host.json")
-subprocess.run([os.path.expanduser("~/.local/bin/mac-pbsnap"),"save",snap])
+if subprocess.run([os.path.expanduser("~/.local/bin/mac-pbsnap"),"save",snap]).returncode != 0:
+    sys.exit(1)   # no snapshot, no clipboard change
 r=subprocess.run([h,"chrome-extension://bgpiichlckmfanooecilcjemknkcpngb/"],
     input=frame({"url":"https://example.com/native-test"}),capture_output=True)
 clip=subprocess.run(["pbpaste"],capture_output=True).stdout.decode()
@@ -409,6 +422,9 @@ done
 for t in claude codex grok; do
   agent-usage-$t --limits-only 2>/dev/null | /usr/bin/jq -e '.id' >/dev/null 2>&1 \
     && ok "agent-usage-$t prints a JSON record" || bad "agent-usage-$t" "no JSON record"
+  # As Raycast or launchd would run it: bare PATH, where python3 is Xcode's 3.9.
+  env -i HOME="$HOME" PATH=/usr/bin:/bin ~/.local/bin/agent-usage-$t --limits-only 2>/dev/null | /usr/bin/jq -e '.id' >/dev/null 2>&1 \
+    && ok "agent-usage-$t works with a bare PATH" || bad "agent-usage-$t" "fails with a bare PATH"
 done
 mise-install 2>&1 | grep -qi usage && ok "mise-install shows usage" || bad "mise-install" "no usage"
 mise-install jq _ttjq >/dev/null 2>&1
@@ -441,14 +457,20 @@ done
 cat >"$STUB/mise" <<EOF
 #!/bin/bash
 echo "mise \$*" >>"$LOG"
-[ "\$1 \$2" = "ls --prunable" ] && printf '%s' '{"claude":[{"version":"1.0.0","install_path":"/x/mise/installs/claude/1.0.0","installed":true},{"version":"1.1.0","install_path":"/x/mise/installs/claude/1.1.0","installed":true}]}'
+[ "\$1 \$2" = "ls --prunable" ] && printf '%s' '{"claude":[{"version":"1.0.0","install_path":"/x y/mise/installs/claude/1.0.0","installed":true},{"version":"1.1.0","install_path":"/x y/mise/installs/claude/1.1.0","installed":true}]}'
 exit 0
 EOF
-printf '#!/bin/bash\nprintf "p42\\nn/x/mise/installs/claude/1.1.0/bin/claude\\n"\n' >"$STUB/lsof"
+# (paths with a space: lsof's n records carry them whole)
+printf '#!/bin/bash\nprintf "p42\\nn/x y/mise/installs/claude/1.1.0/bin/claude\\n"\n' >"$STUB/lsof"
 chmod +x "$STUB/mise" "$STUB/lsof"
 PATH="$STUB:/usr/bin:/bin" ~/.local/bin/macup </dev/null >/dev/null 2>&1; rc=$?
 grep -q '^mise uninstall claude@1.0.0' "$LOG" && ok "macup prunes an old tool version nothing is using" || bad "macup" "did not prune claude@1.0.0"
-grep -q '^mise uninstall claude@1.1.0' "$LOG" && bad "macup" "pruned a version a running process has open" || ok "macup keeps a version a running session has open"
+grep -q '^mise uninstall claude@1.1.0' "$LOG" && bad "macup" "pruned a version a running process has open" || ok "macup keeps a version a running session has open (path with a space)"
+# If lsof yields nothing, "in use" is unknown: nothing may be pruned.
+printf '#!/bin/bash\nexit 1\n' >"$STUB/lsof"; : >"$LOG"
+out=$(PATH="$STUB:/usr/bin:/bin" ~/.local/bin/macup </dev/null 2>&1)
+grep -q '^mise uninstall' "$LOG" && bad "macup" "pruned with no process inventory" || ok "macup skips pruning when lsof can't list running executables"
+printf '#!/bin/bash\nprintf "p42\\nn/x y/mise/installs/claude/1.1.0/bin/claude\\n"\n' >"$STUB/lsof"
 grep -q '^brew upgrade .*--yes' "$LOG" && ok "macup upgrades with --yes (never stalls at y/n)" || bad "macup" "brew upgrade without --yes"
 grep -q '^mise up' "$LOG" && ok "macup still updates mise after a brew failure" || bad "macup" "brew failure skipped mise"
 [ "$rc" -ne 0 ] && ok "macup exits non-zero when a step failed" || bad "macup" "hid a failed step"
@@ -634,6 +656,15 @@ grep -q '^RPROMPT=' "$SC" && bad "starship cache" "keeps an RPROMPT (a starship 
 grep -q '^PROMPT2=.*%{' "$SC" && ok "PROMPT2 baked with zsh %{ %} escapes" || bad "starship cache" "PROMPT2 missing or unescaped"
 [ "$(zsh -ic 'whence -w try' 2>/dev/null | tail -1)" = "try: function" ] && ok "try is a lazy shell function" || bad "try" "not defined"
 zsh -ic 'bindkey "^[[A"' 2>/dev/null | grep -q history-beginning-search-backward && ok "↑ searches history by prefix (inputrc parity)" || bad "↑ binding" "not prefix search"
+# An over-a-day-old dump gets the full compinit audit once, then is fresh
+# again (compinit alone leaves an unchanged dump's mtime alone, which made
+# every later shell re-audit). No half-written cache temp files may linger.
+ZD="$HOME/.cache/zsh/zcompdump"
+if [ -f "$ZD" ]; then
+  touch -t "$(date -v-2d +%Y%m%d%H%M)" "$ZD"; zsh -i -c exit >/dev/null 2>&1
+  [ -z "$(find "$ZD" -mtime +1)" ] && ok "zshrc: a stale completion dump is audited once, then fresh" || bad "zshrc" "dump stays stale, so every shell re-audits"
+fi
+[ -z "$(ls "$HOME/.cache/zsh/" 2>/dev/null | grep -E '\.zsh\.[0-9]+$')" ] && ok "zshrc: no half-written cache files" || bad "zshrc" "temp cache files left"
 [ "$(zsh -ic 'whence -p git' 2>/dev/null | tail -1)" = /opt/homebrew/bin/git ] && ok "git is brew's (no xcrun stub)" || bad "git" "resolves to $(zsh -ic 'whence -p git' 2>/dev/null | tail -1)"
 [ "$(zsh -ic 'echo $EDITOR' 2>/dev/null | tail -1)" = nvim ] && ok "EDITOR=nvim" || bad "EDITOR" "not nvim"
 [ "$(zsh -ic 'echo $BAT_THEME' 2>/dev/null | tail -1)" = ansi ] && ok "BAT_THEME=ansi" || bad "BAT_THEME" "not ansi"
@@ -774,6 +805,21 @@ pbfile() { osascript -l JavaScript -e 'ObjC.import("AppKit"); function run(a){ c
 MAC_CLIP_PASTEBOARD=$PB ~/.local/bin/mac-clip "$T/shot.png" && [ "$(pbfile)" = "$T/shot.png" ] \
   && ok "mac-clip puts the file itself on the pasteboard" || bad "mac-clip" "pasteboard holds '$(pbfile)'"
 MAC_CLIP_PASTEBOARD=$PB ~/.local/bin/mac-clip "$T/nope.mp4" 2>/dev/null && bad "mac-clip" "accepted a missing file" || ok "mac-clip rejects a missing file"
+# On the REAL clipboard, where the bug was: writeObjects from a process that
+# exits at once lost the file 4 times in 5. Snapshot first, restore after,
+# and only touch the clipboard if the snapshot worked.
+if mac-pbsnap save "$T/clip-real.json"; then
+  kept=0
+  for i in 1 2 3 4 5; do
+    ~/.local/bin/mac-clip "$T/shot.png" >/dev/null && sleep 0.3
+    osascript -l JavaScript -e 'ObjC.import("AppKit"); function run(){ const u=$.NSPasteboard.generalPasteboard.readObjectsForClassesOptions($.NSArray.arrayWithObject($.NSURL),$.NSDictionary.dictionary); return (u && u.count > 0) ? ObjC.unwrap(u.objectAtIndex(0).path) : ""; }' 2>/dev/null | grep -qxF "$T/shot.png" && kept=$((kept+1))
+  done
+  [ "$kept" = 5 ] && ok "mac-clip's copy survives on the real clipboard (5/5)" || bad "mac-clip" "copy survived only $kept/5 times"
+  osascript -l JavaScript -e 'ObjC.import("AppKit"); function run(){ const u=$.NSPasteboard.generalPasteboard.readObjectsForClassesOptions($.NSArray.arrayWithObject($.NSURL),$.NSDictionary.dictionary); return (u && u.count > 0) ? ObjC.unwrap(u.objectAtIndex(0).path) : ""; }' 2>/dev/null | grep -qxF "$T/shot.png" \
+    && mac-pbsnap restore "$T/clip-real.json"
+else
+  skip "mac-clip (real clipboard)" "could not snapshot the clipboard, so it was left alone"
+fi
 # End to end: webdl against a fake yt-dlp. Clicking the finished download's
 # notification puts a share-ready copy on the pasteboard; clicking the
 # confirmation reveals that copy.
@@ -792,7 +838,7 @@ for a; do
     [ "\${YTMODE:-ok}" = none ] || printf 'abc\tTest clip\n'; exit 0
   fi
 done
-case "\${YTMODE:-ok}" in fail) exit 1 ;; hang) sleep 30 & wait ;; esac
+case "\${YTMODE:-ok}" in fail) exit 1 ;; hang) exec sleep 30 ;; esac
 p="$T/dl/Test_clip [abc].mp4"; cp "$T/fixture.mp4" "\$p"; echo "\$p"
 EOF
 chmod +x "$YS/yt-dlp"
@@ -821,7 +867,10 @@ grep -qx 'No video found for download' "$NL" && [ -z "$(ls "$T/dl")" ] \
 YTMODE=fail W "https://example.com/v" >/dev/null 2>&1
 grep -qx 'Download failed' "$NL" && ok "a failing download says so (pipefail no longer exits early)" || bad "webdl" "no failure notification: $(tr '\n' ' ' <"$NL")"
 ( YTMODE=hang W "https://example.com/v" >/dev/null 2>&1 ) & wpid=$!
-sleep 2; pkill -TERM -f "$HOME/.local/bin/webdl https://example.com/v" 2>/dev/null; wait $wpid 2>/dev/null
+sleep 2; k0=$(date +%s); pkill -TERM -f "$HOME/.local/bin/webdl https://example.com/v" 2>/dev/null; wait $wpid 2>/dev/null
+kt=$(( $(date +%s) - k0 )); stray=$(pgrep -f "^sleep 30$" 2>/dev/null | tr '\n' ' ')
+[ "$kt" -le 2 ] && [ -z "$stray" ] \
+  && ok "a killed webdl stops at once and takes its download with it" || bad "webdl" "kill took ${kt}s; stray download pids: [$stray]"
 grep -qx -- '-remove' "$NL" && ok "a killed run removes its \"Downloading…\" notification" || bad "webdl" "killed run left: $(tr '\n' ' ' <"$NL")"
 pkill -f "$YS/yt-dlp" 2>/dev/null
 osascript -l JavaScript -e 'ObjC.import("AppKit"); function run(a){ $.NSPasteboard.pasteboardWithName(a[0]).releaseGlobally; }' "$PB" 2>/dev/null

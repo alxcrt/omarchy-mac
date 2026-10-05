@@ -99,7 +99,8 @@ lip() {
 # ── Rsync-on-change watchers (upstream fns/rsyncing) ──────────────────────
 # rsw <source> <destination> — sync once, then again on every change, in the
 # background. lsw lists the watches, dsw stops them all.
-# macOS: fswatch replaces inotifywait (-o: one line per batch of events), and
+# macOS: fswatch replaces inotifywait (-o: one line per batch of events; -l 0.2:
+# batch every 0.2s instead of 1s, so a change syncs, and dsw stops it, sooner), and
 # perl's POSIX::setsid replaces `setsid --fork`: the watcher leads its own
 # session, so it survives the terminal and dsw can kill its whole group.
 rsw() {
@@ -110,7 +111,7 @@ rsw() {
   mkdir -p "$sockets"
   local rsh="ssh -o ControlMaster=auto -o ControlPath=$sockets/rsw-%r@%h:%p -o ControlPersist=yes"
   RSYNC_RSH="$rsh" perl -MPOSIX -e 'fork and exit; POSIX::setsid(); exec @ARGV' \
-    bash -c 'rsync -a "$1/" "$2"; fswatch -o -r "$1" | while read -r _; do rsync -a "$1/" "$2"; done' \
+    bash -c 'rsync -a "$1/" "$2"; fswatch -o -r -l 0.2 "$1" | while read -r _; do rsync -a "$1/" "$2"; done' \
     rsw-watch "$src" "$dest" >/dev/null 2>&1 </dev/null
   echo "Watching $src -> $dest"
 }

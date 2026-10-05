@@ -51,9 +51,12 @@ if [ ! -x "$tn" ]; then
     -e 'end run' "$title" "$msg"
 fi
 
-# terminal-notifier reads a message that starts with - or [ as an option.
-case $msg in -*|\[*) msg="\\$msg" ;; esac
-args=(-title "$title" -message "$msg")
+# terminal-notifier reads its options through NSUserDefaults, which parses a
+# value that starts like a plist ( ( { < " ' ) or an option ( - [ ) as such and
+# exits 2 with no notification: a title like "(Live) …" would silently post
+# nothing. A leading backslash makes it plain text again.
+tn_escape() { case $1 in [-\[\(\{\<\"\']*) printf '\\%s' "$1" ;; *) printf '%s' "$1" ;; esac; }
+args=(-title "$(tn_escape "$title")" -message "$(tn_escape "$msg")")
 # Same group = the new notification replaces the old one (webdl's
 # "Downloading…" is replaced by "Download complete" instead of stacking).
 [ -n "${MAC_NOTIFY_GROUP:-}" ] && args+=(-group "$MAC_NOTIFY_GROUP")

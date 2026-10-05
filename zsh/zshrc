@@ -26,6 +26,9 @@ autoload -Uz compinit
 _zstale=( $_zcache/zcompdump(N.mh+24) )
 if (( $#_zstale )) || [[ ! -s $_zcache/zcompdump ]]; then
   compinit -d $_zcache/zcompdump
+  # compinit leaves an unchanged dump untouched, so without this every shell
+  # after the first day would run the full audit again.
+  touch $_zcache/zcompdump
 else
   compinit -C -d $_zcache/zcompdump
 fi
@@ -65,8 +68,10 @@ source ~/.config/zsh/functions.zsh
 # Absolute paths: with hash_cmds off, every $commands lookup searches PATH.
 _zoxide=/opt/homebrew/bin/zoxide
 if [[ -x $_zoxide ]]; then
+  # Write to a per-shell temp file and rename: two shells starting together
+  # must never source a half-written cache.
   [[ -s $_zcache/zoxide.zsh && $_zcache/zoxide.zsh -nt $_zoxide ]] ||
-    $_zoxide init zsh >| $_zcache/zoxide.zsh
+    { $_zoxide init zsh >| $_zcache/zoxide.zsh.$$ && mv -f $_zcache/zoxide.zsh.$$ $_zcache/zoxide.zsh; }
   # `cd` is aliased to the zd() wrapper in aliases.zsh (matching Omarchy) —
   # do not re-alias it to plain `z` here, that would shadow the wrapper.
   source $_zcache/zoxide.zsh
@@ -88,7 +93,7 @@ if [[ -x $_starship ]]; then
       print -r -- "PROMPT2=${(qq)$(STARSHIP_SHELL=zsh $_starship prompt --continuation)}"
       [[ -n $(STARSHIP_SHELL=zsh $_starship prompt --right) ]] &&
         $_starship init zsh --print-full-init | grep '^RPROMPT='
-    } >| $_f
+    } >| $_f.$$ && mv -f $_f.$$ $_f   # atomic, as for zoxide above
   fi
   source $_f
 fi

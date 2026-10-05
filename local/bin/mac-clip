@@ -29,13 +29,19 @@ if [ $share = 1 ]; then
   esac
 fi
 
-osascript -l JavaScript - "$abs" "${MAC_CLIP_PASTEBOARD:-}" >/dev/null <<'JXA'
+# declareTypes + setString/setPropertyList, NOT writeObjects: data handed over
+# by writeObjects from a process that exits straight away was dropped 4 times
+# in 5 (Oct 2026) — "Copied" was announced and the clipboard was empty. These
+# setters are synchronous, like pbcopy's. Both the modern file URL and the
+# legacy filename list are written, as Finder's ⌘C provides both.
+osascript -l JavaScript - "$abs" "${MAC_CLIP_PASTEBOARD:-}" >/dev/null <<'JXA' || exit 1
 ObjC.import("AppKit");
 function run(argv) {
   const pb = argv[1] ? $.NSPasteboard.pasteboardWithName(argv[1])
                      : $.NSPasteboard.generalPasteboard;
-  pb.clearContents;
-  const ok = pb.writeObjects($.NSArray.arrayWithObject($.NSURL.fileURLWithPath(argv[0])));
+  pb.declareTypesOwner($(["public.file-url", "NSFilenamesPboardType"]), null);
+  const ok = pb.setStringForType($.NSURL.fileURLWithPath(argv[0]).absoluteString, "public.file-url")
+          && pb.setPropertyListForType($([argv[0]]), "NSFilenamesPboardType");
   if (!ok) throw new Error("pasteboard write failed");
 }
 JXA

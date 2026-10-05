@@ -24,16 +24,31 @@ function run(argv) {
       }
       out.push(entry);
     }
-    $(JSON.stringify(out)).writeToFileAtomicallyEncodingError(file, true, $.NSUTF8StringEncoding, null);
+    // writeToFile returns false rather than throwing; a snapshot that was not
+    // written must fail loudly, or a test would clobber the real clipboard.
+    if (!$(JSON.stringify(out)).writeToFileAtomicallyEncodingError(file, true, $.NSUTF8StringEncoding, null))
+      throw new Error("could not write snapshot " + file);
   } else {
     const saved = JSON.parse(ObjC.unwrap($.NSString.stringWithContentsOfFileEncodingError(file, $.NSUTF8StringEncoding, null)));
-    pb.clearContents;
-    const items = saved.map(entry => {
-      const item = $.NSPasteboardItem.alloc.init;
-      for (const type in entry) item.setDataForType($.NSData.alloc.initWithBase64EncodedStringOptions(entry[type], 0), type);
-      return item;
-    });
-    if (items.length) pb.writeObjects($(items));
+    const data = b64 => $.NSData.alloc.initWithBase64EncodedStringOptions(b64, 0);
+    if (saved.length === 1) {
+      // declareTypes + setData: synchronous. writeObjects from a process that
+      // exits at once was dropped 4 times in 5 (see mac-clip).
+      const types = Object.keys(saved[0]);
+      pb.declareTypesOwner($(types), null);
+      for (const t of types) if (!pb.setDataForType(data(saved[0][t]), t)) throw new Error("restore failed: " + t);
+    } else {
+      pb.clearContents;
+      const items = saved.map(entry => {
+        const item = $.NSPasteboardItem.alloc.init;
+        for (const type in entry) item.setDataForType(data(entry[type]), type);
+        return item;
+      });
+      if (items.length && !pb.writeObjects($(items))) throw new Error("restore failed");
+      // Several items need writeObjects; stay alive long enough for the
+      // pasteboard server to take the data before this process exits.
+      $.NSRunLoop.currentRunLoop.runUntilDate($.NSDate.dateWithTimeIntervalSinceNow(0.5));
+    }
   }
 }
 JXA
