@@ -12,6 +12,7 @@ tap "blacktop/tap"
 tap "mateussiqueira/unleash"
 
 # --- CLI: Omarchy's pacman set, ported ---
+brew "git"          # direct binary: /usr/bin/git is an xcrun stub that adds ~10ms per call
 brew "bat"          # cat with syntax highlighting; used as MANPAGER
 brew "eza"          # ls replacement, aliased over ls
 brew "fd"
@@ -20,6 +21,7 @@ brew "ripgrep"
 brew "zoxide"       # aliased over cd
 brew "jq"
 brew "gum"          # confirm prompt in gd (functions.zsh)
+brew "try"          # tobi/try experiment dirs (upstream init; lazy-loaded in zshrc)
 brew "bjarneo/cliamp/cliamp"  # Omarchy's music TUI (upstream base package)
 brew "btop"
 brew "fastfetch"

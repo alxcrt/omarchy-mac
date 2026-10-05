@@ -3,9 +3,9 @@
 # NOTE: zsh arrays are 1-indexed, so bash's ${panes[0]} becomes ${panes[1]}.
 # Sourced from ~/.zshrc.
 #
-# oh-my-zsh's git plugin claims `ga`/`gd` (and friends) as ALIASES. In zsh you
-# cannot define a function whose name is an existing alias — it's a parse error
-# that aborts sourcing the rest of this file. So drop those aliases first.
+# In zsh you cannot define a function whose name is an existing alias — it's a
+# parse error that aborts sourcing the rest of this file. oh-my-zsh's git
+# plugin used to alias `ga`/`gd`; it is gone, but drop them defensively.
 unalias ga gd 2>/dev/null || true
 
 # ── Compression ────────────────────────────────────────────────────────────

@@ -96,13 +96,3 @@ export BAT_THEME=ansi
 export MANPAGER="sh -c 'col -bx | bat -l man -p'"
 export MANROFFOPT="-c"
 alias decompress="tar -xzf"
-
-# ── Shell hygiene (upstream default/bash/shell + init) ─────────────────────
-# HISTSIZE is left alone — the live value (50000) already exceeds upstream's
-# 32768. These are the parts that were genuinely missing:
-setopt hist_ignore_all_dups   # upstream HISTCONTROL=ignoreboth
-setopt hist_ignore_space
-unsetopt hash_cmds            # upstream `set +h` — stops stale mise shim paths
-unsetopt hash_dirs
-# fzf's Ctrl-R / Ctrl-T / Alt-C widgets (upstream sources fzf's completion+keybindings)
-command -v fzf >/dev/null && source <(fzf --zsh) 2>/dev/null

@@ -33,7 +33,7 @@ for f in "$REPO"/local/bin/*; do
   link "local/bin/$s" ".local/bin/$s"
   chmod +x "$f"
 done
-# .zshrc is linked separately so you can opt out (it assumes oh-my-zsh).
+# .zshrc is linked separately so you can opt out (it is a self-contained zsh config).
 link zsh/zshrc                 .zshrc
 # Claude Code skill: teaches future sessions how this setup works.
 link skills/omarchy-mac/SKILL.md .claude/skills/omarchy-mac/SKILL.md

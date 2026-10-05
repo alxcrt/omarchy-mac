@@ -88,9 +88,20 @@ extensions.
   that already exist; adding them is Mission Control (`⌃↑`, then `+`) by hand.
 - **zsh arrays are 1-indexed.** Ports of Omarchy's bash functions must use
   `${arr[1]}`, not `${arr[0]}`.
-- **oh-my-zsh's git plugin aliases `ga`/`gd`.** A function can't share a name
-  with an alias in zsh — it's a parse error that silently aborts the rest of the
-  file. `functions.zsh` unaliases them first.
+- **A function can't share a name with an alias in zsh** — it's a parse error
+  that silently aborts the rest of the file. oh-my-zsh's git plugin used to
+  alias `ga`/`gd`; it is gone, but `functions.zsh` still unaliases them first.
+- **No oh-my-zsh (removed Oct 2026).** `~/.zshrc` is self-contained and must
+  stay under the 100ms startup budget `test.sh shell` enforces. Do not cache
+  `mise activate` output: it hard-codes the PATH of the moment it ran. starship
+  and zoxide init ARE cached in `~/.cache/zsh/`; starship's RPROMPT is dropped
+  (Omarchy's config has no right side, and it cost a process per prompt) and
+  PROMPT2 is baked once with `STARSHIP_SHELL=zsh` so its escapes get `%{ %}`.
+  `[[ ]]` never expands globs: `[[ -n f(N.mh+24) ]]` is always true. Profile
+  with `zmodload zsh/zprof`, not by guessing.
+- **`/usr/bin/git` is an xcrun stub** that adds ~10ms per call (every prompt in
+  a repo pays it via starship). The Brewfile installs git so /opt/homebrew/bin
+  wins on PATH.
 - **`cp -f` writes *through* a symlink** to its target instead of replacing it.
   Upstream's `copy-url/icon.png` is a symlink out of the repo; `rm` then copy.
 - **Apple-claimed file types** (`.mp4`, `.mp3`) ignore `duti` silently; macOS

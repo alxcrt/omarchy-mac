@@ -27,7 +27,7 @@ config/herdr/config.toml     → ~/.config/herdr/config.toml    # herdr: workspa
 config/launchd/com.omarchy.keyremap.plist → ~/Library/LaunchAgents/  # hidutil modifier remap at login
 local/bin/macup              → ~/.local/bin/macup             # update-everything command
 local/bin/mise-install       → ~/.local/bin/mise-install      # self-updating mise wrapper generator
-zsh/zshrc                    → ~/.zshrc                       # oh-my-zsh + starship + mise
+zsh/zshrc                    → ~/.zshrc                       # minimal zsh: starship + mise + zoxide + fzf keys
 ```
 
 ## Install
@@ -57,7 +57,7 @@ live configs with `mac keys`).
 `~/.claude/skills/`). It teaches a Claude session the layering rules, the flow
 commands, how to run `test.sh`, and the gotchas that have already cost time —
 cursor-warp focus jumps, `open -na` spawning duplicate app instances, zsh
-1-indexed arrays, oh-my-zsh's `ga`/`gd` alias clash, and why tests must assert
+1-indexed arrays, why aliases and functions can't share a name, and why tests must assert
 on behaviour rather than prose.
 
 ## Flows (the point of this repo)
@@ -178,8 +178,10 @@ binding works with the mapping cleared.
 
 ## Notes
 
-- Prompt is **starship** (Omarchy's config); oh-my-zsh is kept for plugins/completion
-  with its own theme disabled.
+- Prompt is **starship** (Omarchy's config). There is no oh-my-zsh: `~/.zshrc`
+  mirrors upstream's bash layer (history, inputrc-style keys, mise, zoxide, fzf
+  key bindings, lazy `try`) and caches the starship/zoxide init scripts, so an
+  interactive shell starts in ~70ms (was ~132ms with oh-my-zsh).
 - Reports available macOS updates but never auto-installs them.
 - **Docker Desktop** is in the Brewfile; its install/upgrade prompts for an admin
   password (`brew install --cask docker-desktop`).
