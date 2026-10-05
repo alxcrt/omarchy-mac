@@ -13,8 +13,8 @@ the operating philosophy and the userland, not the tiling WM.
    mise + cleanup in sequence. `mup` is the fast, mise-only half.
 3. **AI CLIs are versioned tools, not blessed globals.** `claude`, `codex`, `grok`,
    `gh` live in mise pinned to `latest`, bumped by the same command as everything
-   else — with `MISE_MINIMUM_RELEASE_AGE=0` so they track today's release, not the
-   cooldown-delayed one.
+   else — mise's config sets `minimum_release_age = "0"` so they track today's
+   release, not the cooldown-delayed one.
 
 ## Layout
 

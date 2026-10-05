@@ -1,6 +1,15 @@
 [settings]
 # pipx-backend tools install through mise's own uv (no standalone pipx/uv)
 pipx.uvx = true
+# Track today's releases. mise's release-age cooldown otherwise holds the AI
+# CLIs days behind. This used to be MISE_MINIMUM_RELEASE_AGE=0 in every update
+# path (mup, macup, mac, mise-install); one setting now covers them all,
+# including a plain `mise up` typed by hand.
+minimum_release_age = "0"
+# Upstream Omarchy: an upgrade must not delete the version a running claude or
+# codex session executes from. mise's auto-prune did, 24h after each upgrade.
+# macup prunes instead, skipping any version a live process has open.
+upgrade.auto_prune = false
 
 [tools]
 # Runtimes
@@ -17,8 +26,8 @@ uv = "latest"
 "pipx:hermes-agent" = "latest"
 
 # AI CLIs + gh — migrated off Homebrew into mise so `mup`/`macup` bump them.
-# All floated at "latest"; MISE_MINIMUM_RELEASE_AGE=0 in the update path
-# overrides mise's cooldown so these track today's release, not last week's.
+# All floated at "latest"; minimum_release_age = "0" (above) makes every
+# update track today's release, not last week's.
 claude = "latest"
 # codex via npm, NOT the registry shortname (aqua:openai/codex): aqua's version
 # list for this repo is broken — it enumerates alphas but no stable 0.153.x, so
@@ -29,7 +38,11 @@ opencode = "latest"
 gh = "latest"
 
 # From your Linux config
-"npm:@xai-official/grok" = "latest"
+# grok: the official x.ai binary (mise registry `grok` = http:grok), as
+# upstream switched to. The npm package only launches whatever sits in
+# ~/.grok/bin, and mise skips its postinstall, so it stayed on 1.0.5 while
+# mise reported 1.0.46.
+grok = "latest"
 "github:can1357/oh-my-pi" = "latest"
 # pi as Omarchy ships it (badlogic/pi-mono, Mario Zechner) — NOT mise's
 # registry `pi` shortname, which resolves to the unrelated earendil-works/pi.
@@ -44,3 +57,6 @@ gh = "latest"
 # Terminal workspace manager (herdr.dev = github.com/herdrdev/herdr).
 # Ships a herdr-macos-aarch64 release binary, so it stays in the update path.
 "github:herdrdev/herdr" = "latest"
+
+# hunk: the diff viewer hds runs in its diff pane (`hunk diff --watch`).
+hunk = "latest"

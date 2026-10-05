@@ -97,12 +97,30 @@ section "mise tools"
 # available" while brew saturates the network.
 # `mise up` only upgrades what is already installed, so install anything newly
 # declared in config.toml first (a no-op when nothing is missing).
-step env MISE_MINIMUM_RELEASE_AGE=0 mise install
-step env MISE_MINIMUM_RELEASE_AGE=0 mise up
+step mise install
+step mise up
 
 section "Cleanup"
 step brew cleanup -s --prune=all
 step brew autoremove
+# Old mise tool versions. mise's own auto-prune is off (upgrade.auto_prune):
+# it deleted versions out from under day-old claude/codex sessions. Prune
+# here, keeping any version a running process has open. lsof reports real
+# paths, so a session started through installs/<tool>/latest still counts.
+prune_mise() {
+  local inuse tool ver path
+  inuse=$(lsof -n -Fn -d txt 2>/dev/null | grep -o '/[^ ]*/mise/installs/[^/]*/[^/]*' | sort -u)
+  mise ls --prunable --json 2>/dev/null |
+    jq -r 'to_entries[] | .key as $t | .value[] | select(.installed) | [$t, .version, .install_path] | @tsv' |
+    while IFS=$'\t' read -r tool ver path; do
+      if grep -qxF "$path" <<<"$inuse"; then
+        echo "keeping $tool@$ver (in use)"
+      else
+        mise uninstall "$tool@$ver" >/dev/null 2>&1 && echo "pruned $tool@$ver"
+      fi
+    done
+}
+prune_mise
 
 section "Status"
 # brew doctor is slow and its warnings rarely actionable after an update;

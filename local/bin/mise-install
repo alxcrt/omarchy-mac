@@ -6,12 +6,18 @@
 [[ -z $1 ]] && { echo "Usage: mise-install <package> [command-name [bin-name]]"; exit 1; }
 
 package=$1; command=${2:-$1}; bin=${3:-$command}
+# The command name becomes a file in ~/.local/bin: refuse anything that could
+# escape it or hide (upstream rejects the same patterns).
+case $command in */*|.*|-*|"") echo "mise-install: bad command name: $command" >&2; exit 1 ;; esac
+
 mkdir -p "$HOME/.local/bin"
 rm -f "$HOME/.local/bin/$command"
+# --quiet: otherwise `mise use` prints "tools: pkg@version" before the tool's
+# own output, which breaks --version parsing and stdio protocols. The release
+# cooldown is off in mise's config (minimum_release_age), not here.
 cat >"$HOME/.local/bin/$command" <<EOF
 #!/bin/bash
-export MISE_MINIMUM_RELEASE_AGE=0
-mise use -g "$package" || exit 1
-exec mise x "$package" -- "$bin" "\$@"
+mise use -g --quiet $(printf '%q' "$package") || exit 1
+exec mise x $(printf '%q' "$package") -- $(printf '%q' "$bin") "\$@"
 EOF
 chmod +x "$HOME/.local/bin/$command"

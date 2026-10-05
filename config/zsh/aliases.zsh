@@ -66,7 +66,7 @@ alias h='herdr'
 alias ic='hdl c'
 alias ix='hdl cx'
 alias icx='hdl c cx'
-alias mup='MISE_MINIMUM_RELEASE_AGE=0 mise up'
+alias mup='mise up'   # minimum_release_age=0 lives in mise's config
 n() { if [ "$#" -eq 0 ]; then command nvim . ; else command nvim "$@"; fi; }
 
 # macOS additions: `omarchy update` equivalent (no upstream counterpart).

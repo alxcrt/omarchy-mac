@@ -8,7 +8,7 @@ cmd=${1:-help}; shift || true
 case "$cmd" in
   update)     exec macup "$@" ;;
   up)         exec macup "$@" ;;
-  mise|tools) exec env MISE_MINIMUM_RELEASE_AGE=0 mise up "$@" ;;
+  mise|tools) exec mise up "$@" ;;
 
   dl|download) exec webdl "$@" ;;
   url)         exec weburl "$@" ;;

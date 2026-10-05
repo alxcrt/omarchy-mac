@@ -60,7 +60,7 @@ check_alias gcad 'git commit -a --amend'
 check_alias ic 'hdl c'
 check_alias ix 'hdl cx'
 check_alias icx 'hdl c cx'
-check_alias mup 'MISE_MINIMUM_RELEASE_AGE=0 mise up'
+check_alias mup 'mise up'
 check_alias cd 'zd'
 check_alias decompress 'tar -xzf'
 for a in ls lsa lt lta ff eff cx up macup; do check_alias "$a" ""; done
@@ -337,11 +337,18 @@ for s in mac macup mise-install mac-keyremap mac-wm ghostty-run transcode webdl 
 done
 mise-install 2>&1 | grep -qi usage && ok "mise-install shows usage" || bad "mise-install" "no usage"
 mise-install jq _ttjq >/dev/null 2>&1
-[ -x ~/.local/bin/_ttjq ] && grep -q 'MISE_MINIMUM_RELEASE_AGE=0' ~/.local/bin/_ttjq \
-  && ok "mise-install generates wrapper with age override" || bad "mise-install" "bad wrapper"
+# (The wrapper is not run here: `mise use -g` would write jq into the global
+# mise config, which is this repo's config.toml.)
+[ -x ~/.local/bin/_ttjq ] && grep -q 'mise use -g --quiet jq' ~/.local/bin/_ttjq \
+  && ok "mise-install wrapper is quiet (no 'tools:' line before the tool's output)" || bad "mise-install" "bad wrapper"
 rm -f ~/.local/bin/_ttjq
-for s in macup mac; do grep -q 'MISE_MINIMUM_RELEASE_AGE=0' "$HOME/.local/bin/$s" \
-  && ok "$s forces MISE_MINIMUM_RELEASE_AGE=0" || bad "$s" "missing age override"; done
+for n in ../evil .hidden -x; do
+  mise-install jq "$n" >/dev/null 2>&1 && bad "mise-install" "accepted command name '$n'" || ok "mise-install rejects command name '$n'"
+done
+# The release cooldown and prune policy live in mise's own config now, so a
+# plain `mise up` behaves like mup/macup.
+[ "$(mise settings get minimum_release_age 2>/dev/null)" = 0 ] && ok "mise config: minimum_release_age = 0" || bad "mise config" "release cooldown still on"
+[ "$(mise settings get upgrade.auto_prune 2>/dev/null)" = false ] && ok "mise config: auto_prune off (live sessions keep their binary)" || bad "mise config" "auto_prune on"
 grep -q 'softwareupdate --list' ~/.local/bin/macup && ok "macup only lists macOS updates (never installs)" || bad "macup" "may auto-install OS updates"
 for s in "brew update" "brew upgrade" "mas update" "mise install" "mise up" "brew cleanup"; do
   grep -q "$s" ~/.local/bin/macup && ok "macup runs '$s'" || bad "macup" "missing '$s'"
@@ -354,7 +361,19 @@ for c in brew mas mise softwareupdate mac-hook; do
   printf '#!/bin/bash\necho "%s $*" >>"%s"\n[ "%s $1" = "brew upgrade" ] && exit 1\nexit 0\n' "$c" "$LOG" "$c" >"$STUB/$c"
   chmod +x "$STUB/$c"
 done
+# mise reports two old claude versions; lsof says 1.1.0 is open by a running
+# process (as a session started via installs/claude/latest would show).
+cat >"$STUB/mise" <<EOF
+#!/bin/bash
+echo "mise \$*" >>"$LOG"
+[ "\$1 \$2" = "ls --prunable" ] && printf '%s' '{"claude":[{"version":"1.0.0","install_path":"/x/mise/installs/claude/1.0.0","installed":true},{"version":"1.1.0","install_path":"/x/mise/installs/claude/1.1.0","installed":true}]}'
+exit 0
+EOF
+printf '#!/bin/bash\nprintf "p42\\nn/x/mise/installs/claude/1.1.0/bin/claude\\n"\n' >"$STUB/lsof"
+chmod +x "$STUB/mise" "$STUB/lsof"
 PATH="$STUB:/usr/bin:/bin" ~/.local/bin/macup </dev/null >/dev/null 2>&1; rc=$?
+grep -q '^mise uninstall claude@1.0.0' "$LOG" && ok "macup prunes an old tool version nothing is using" || bad "macup" "did not prune claude@1.0.0"
+grep -q '^mise uninstall claude@1.1.0' "$LOG" && bad "macup" "pruned a version a running process has open" || ok "macup keeps a version a running session has open"
 grep -q '^brew upgrade .*--yes' "$LOG" && ok "macup upgrades with --yes (never stalls at y/n)" || bad "macup" "brew upgrade without --yes"
 grep -q '^mise up' "$LOG" && ok "macup still updates mise after a brew failure" || bad "macup" "brew failure skipped mise"
 [ "$rc" -ne 0 ] && ok "macup exits non-zero when a step failed" || bad "macup" "hid a failed step"

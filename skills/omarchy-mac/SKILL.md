@@ -25,9 +25,14 @@ into `~/.config` + `~/.local/bin`.
 2. **One command updates everything.** `macup` = brew + casks + mas + mise +
    cleanup. `mup` = the fast mise-only half.
 3. **AI CLIs are versioned tools.** `claude`, `codex`, `opencode`, `grok`,
-   `gh` live in `~/.config/mise/config.toml` at `latest`. Every update path
-   **must** set `MISE_MINIMUM_RELEASE_AGE=0`, or mise's cooldown withholds
-   today's releases and the CLIs silently lag days behind.
+   `gh` live in `~/.config/mise/config.toml` at `latest`. Its `[settings]`
+   hold `minimum_release_age = "0"` (without it mise's cooldown withholds
+   today's releases and the CLIs silently lag days behind) and
+   `upgrade.auto_prune = false` (auto-prune deleted versions under live
+   claude/codex sessions; `macup` prunes instead, skipping versions `lsof`
+   shows open). Don't reintroduce `MISE_MINIMUM_RELEASE_AGE=0` env hacks.
+   grok is the registry `grok` (official binary), not `npm:@xai-official/grok`,
+   whose launcher ran a stale ~/.grok/bin copy.
 
 ## Layout
 

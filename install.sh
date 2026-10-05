@@ -81,7 +81,7 @@ brew bundle --file="$HOME/.config/homebrew/Brewfile" || true
 
 section "Reconciling mise layer"
 mise trust "$HOME/.config/mise/config.toml"
-MISE_MINIMUM_RELEASE_AGE=0 mise install
+mise install
 
 section "Done"
 echo "Open a new terminal (or 'exec zsh -l') to load the prompt and aliases."
