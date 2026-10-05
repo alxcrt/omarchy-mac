@@ -409,6 +409,13 @@ for base in "$E" ~/omarchy-mac/config/chromium/extensions; do
   [ "$n" = 0 ] && ok "no symlinks under $(basename "$(dirname "$base")")/$(basename "$base")" \
                 || bad "extensions" "$n symlink(s) under $base"
 done
+# The staged copies Chrome loads must match the repo (they drifted for weeks
+# when nothing synced them); `chrome-extensions sync` refreshes them.
+for x in yt-dlp copy-url whatsapp-slim; do
+  diff -rq ~/omarchy-mac/config/chromium/extensions/$x "$E/$x" >/dev/null 2>&1 \
+    && ok "staged $x matches the repo" || bad "extensions" "$x drifted from the repo (run: chrome-extensions sync)"
+done
+chrome-extensions sync 2>&1 | grep -q 'already up to date' && ok "chrome-extensions sync is idempotent" || bad "chrome-extensions sync" "changed files on a clean tree"
 for base in "$E" ~/omarchy-mac/config/chromium/extensions; do
   i="$base/copy-url/icon.png"
   [ -f "$i" ] && [ ! -L "$i" ] && file "$i" | grep -q PNG \

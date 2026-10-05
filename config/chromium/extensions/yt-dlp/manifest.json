@@ -27,6 +27,6 @@
     }
   },
   "background": {
-    "service_worker": "background-2.js"
+    "service_worker": "background-3.js"
   }
 }

@@ -43,6 +43,11 @@ link skills/omarchy-mac/SKILL.md .claude/skills/omarchy-mac/SKILL.md
 # --zap, installers appending to .zshrc, or editors that write via rename).
 [ "${1:-}" = "--links" ] && exit 0
 
+section "Staging the browser extensions"
+# Real copies (Chrome resolves icons relative to the folder), refreshed from
+# the repo every run; Chrome picks them up on its next reload or restart.
+"$HOME/.local/bin/chrome-extensions" sync
+
 section "Installing the modifier-remap login agent"
 # Replaces Karabiner-Elements: hidutil is Apple's own HID remapper, so there is
 # no driver or system extension to approve. The plist is COPIED, not symlinked —

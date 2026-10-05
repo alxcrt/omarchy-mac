@@ -91,6 +91,18 @@ extensions.
   config is **not scriptable** — that's a human step, report it as pending.
 - **macOS will not let a script create Spaces.** `⌃1-9` only reaches Desktops
   that already exist; adding them is Mission Control (`⌃↑`, then `+`) by hand.
+  **Desktops are per display** (separate Spaces is the default): `⌃N` reaches
+  Desktop N of the focused screen only. `com.apple.spaces` also keeps entries
+  for displays no longer connected, so count `type == 0` Spaces per Monitor
+  (as `mac wm --status` does), never a total — a total of "11" once hid that
+  the MacBook screen had a single Desktop.
+- **Tiling shortcuts** (`fn⌃` arrows, `fn⌃F/C/R`) are Apple's documented
+  macOS 27 keys (support.apple.com "Tile app windows"); they live in each
+  app's Window → Move & Resize menu. Alex reports they work but "not
+  perfectly" in some apps (Oct 2026, cause unconfirmed). Ghostty's
+  performKeyEquivalent only claims ⌘ chords, so don't blame Ghostty for
+  swallowing ⌃ without proof; reading menus needs Accessibility, which this
+  setup's agent does not have.
 - **zsh arrays are 1-indexed.** Ports of Omarchy's bash functions must use
   `${arr[1]}`, not `${arr[0]}`.
 - **A function can't share a name with an alias in zsh** — it's a parse error
@@ -123,6 +135,20 @@ extensions.
   notification; `mac-notify` backslash-escapes both title and message.
   `-execute` runs under launchd's bare PATH. Tests must never post real
   notifications (test.sh exports a silent `MAC_NOTIFY_BIN`).
+- **Chrome extensions are staged copies** in `~/.config/omarchy-mac/extensions`
+  (never symlinks). Edit them in `config/chromium/extensions`, run
+  `chrome-extensions sync` (install.sh does), then reload them in
+  chrome://extensions. Rename the service-worker file when its code changes:
+  Chrome caches workers by URL. Nothing synced them before Oct 2026, so the
+  yt-dlp extension ran an August copy for weeks; `test.sh extensions` now
+  fails on drift. Download outcomes are webdl's notifications; the extension
+  only shows progress.
+- **mise's supply-chain guard** refuses npm packages under 1000 weekly
+  downloads. Check the publisher and repo, then approve that one package with
+  `{ version = "latest", allow_low_downloads = true }` (ghui is). Never
+  disable the guard globally.
+- **opencode's config schema has no `theme` key** any more (upstream still
+  sets one); verify settings with `opencode debug config`, not the file.
 - **`/usr/bin/git` is an xcrun stub** that adds ~10ms per call (every prompt in
   a repo pays it via starship). The Brewfile installs git so /opt/homebrew/bin
   wins on PATH.
