@@ -181,15 +181,19 @@ extensions.
   reverse, an app installed outside brew (Claude.app), makes `brew bundle`
   fail on "already an App at"; `brew install --cask --adopt <c>` takes it
   over in place without replacing the app, which matters when it's running.
-- **Locks: use `lockf`, never a hand-rolled one.** `macup` holds the lock
-  in its own shell with lockf's descriptor mode (`exec 9>>file; lockf -s -t 0
-  9`, ships with macOS): a kernel lock the kernel drops when macup exits or
-  dies, so no stale locks, pid reuse or takeover races. An mkdir/owner-record
+- **Locks: use `lockf`, never a hand-rolled one.** `macup` takes it as
+  `lockf -s -k -t 0 file caffeinate -i -w $$`, started from a process
+  substitution that reports "locked" (or lockf's error and status) back. The
+  kernel lock lives in that lockf process alone (lockf closes it for its
+  child), and caffeinate exits when macup does, so the lock lasts exactly as
+  long as macup and no child of macup can inherit it. An mkdir/owner-record
   lock went through three Codex review rounds (Oct 2026) and every fix opened
-  a narrower race. Don't re-exec the script under `lockf file "$0"`: `kill`
-  then hits only the wrapper and the real updater keeps going. Close the fd
-  for children (`cmd 9>&-`) or anything they leave running holds the lock.
-  Exit status 75 means "already held".
+  a narrower race; then re-exec under `lockf file "$0"` made `kill` hit only
+  the wrapper, and an fd held in macup's own shell leaked into every child.
+  Exit status 75 means "already held"; anything else is a real setup error.
+- **No EXIT trap in a script that must die on `kill`.** bash 3.2 with an
+  EXIT trap defers SIGTERM until a running `$(...)` finishes (measured: 5s
+  versus 0.5s). Clean up temp files explicitly instead.
 - **`/usr/bin/python3` is Xcode's launcher, not a Python.** Without the
   Command Line Tools it fails (or pops an install dialog), and with them it
   is 3.9 (no `tomllib`). Scripts here call `/opt/homebrew/bin/python3`.

@@ -8,27 +8,30 @@
 section() { echo -e "\n\033[0;32m$1\033[0m"; }
 FAILED=()
 NEEDS_YOU=()   # not failures: things only a human can fix, reported at the end
-step() { "$@" 9>&- || FAILED+=("$*"); }   # 9: the lock (see below)
+step() { "$@" || FAILED+=("$*"); }
 
 # One macup at a time (upstream: "An Omarchy update is already running").
 # Two at once collide on brew's download locks and both fail spuriously.
-# lockf(1), which ships with macOS, takes a kernel lock on a descriptor this
-# shell holds open (its man page's way "to lock inside a shell script"): the
-# kernel drops it the moment macup exits or dies, so there are no stale locks,
-# no pid reuse and no takeover races, and macup stays one process, so killing
-# it stops the update. Commands get the descriptor closed (`9>&-` in step, the
-# background helpers and the hook), so nothing they leave running can hold it.
+# The lock is lockf(1)'s (ships with macOS), held by a helper that lives
+# exactly as long as macup: `lockf file caffeinate -w $$`. caffeinate keeps
+# the Mac awake (upstream does the same) and exits the moment macup exits or
+# dies, and lockf then drops the lock. Only that lockf process holds it (it
+# closes the lock for its own child), so nothing macup starts can inherit it:
+# a step left running after a kill can't wedge the next run. macup itself
+# stays one process with no traps, so `kill` ends it at once (bash 3.2 with
+# an EXIT trap waits out a running $(...) first) and Ctrl-C ends the lot.
 # A hand-rolled mkdir lock went through three review rounds and still raced.
 LOCKFILE="${XDG_STATE_HOME:-$HOME/.local/state}/macup/macup.lock"   # (the old mkdir lock was a dir named "lock")
-mkdir -p "${LOCKFILE%/*}"
-exec 9>>"$LOCKFILE"
-if ! lockf -s -t 0 9; then
-  echo "macup is already running." >&2
-  exit 75   # EX_TEMPFAIL, as lockf itself reports a held lock
-fi
-
-# Stay awake while updating (upstream does the same); ends with this process.
-caffeinate -i -w $$ >/dev/null 2>&1 9>&- &
+mkdir -p "${LOCKFILE%/*}" 2>/dev/null   # if this fails, lockf says why below
+# The helper prints "locked" once it holds the lock; if lockf fails instead,
+# the line is lockf's own error, then its status (-s: none for a held lock).
+exec 8< <(lockf -s -k -t 0 "$LOCKFILE" /bin/sh -c 'echo locked; exec caffeinate -i -w "$1" >/dev/null 2>&1' sh $$ 2>&1; echo "$?")
+read -r got <&8; exec 8<&-
+case $got in
+  locked) ;;
+  75) echo "macup is already running." >&2; exit 75 ;;   # EX_TEMPFAIL: held
+  *)  echo "macup: could not take its lock: ${got:-lockf did not start}" >&2; exit 1 ;;
+esac
 
 # Stale symlinks mean you're running old copies of these scripts/configs
 # (that's how an old macup without --yes kept prompting). Warn; don't auto-fix,
@@ -38,9 +41,10 @@ if [ ! -L "$HOME/.local/bin/macup" ] || [ ! -L "$HOME/.config/mise/config.toml" 
 fi
 
 # softwareupdate --list takes 10-30s of network round-trips; start it now and
-# read the result at the end instead of waiting on it serially.
-SWU=$(mktemp); trap 'rm -f "$SWU"' EXIT
-softwareupdate --list >"$SWU" 2>&1 9>&- &
+# read the result at the end instead of waiting on it serially. (Removed after
+# reading, not by an EXIT trap: the trap is what made `kill` wait, see above.)
+SWU=$(mktemp)
+softwareupdate --list >"$SWU" 2>&1 &
 SWU_PID=$!
 
 section "Homebrew"
@@ -157,9 +161,10 @@ mise doctor >/dev/null 2>&1 || echo "mise doctor reports problems — run: mise 
 # Report available macOS updates — never auto-install them.
 wait "$SWU_PID"
 grep -q 'No new software available' "$SWU" && echo "macOS up to date" || tail -5 "$SWU"
+rm -f "$SWU"
 
 # User hooks (port of omarchy's hook system) — see ~/.config/omarchy-mac/hooks/
-command -v mac-hook >/dev/null && mac-hook post-update 9>&-
+command -v mac-hook >/dev/null && mac-hook post-update
 
 if [ ${#NEEDS_YOU[@]} -gt 0 ]; then
   echo -e "\n\033[0;33mNeeds you:\033[0m"; printf '  %s\n' "${NEEDS_YOU[@]}"

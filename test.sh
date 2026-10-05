@@ -639,6 +639,12 @@ out=$(runlock); rc=$?
 kill $holder 2>/dev/null; wait $holder 2>/dev/null
 runlock >/dev/null
 grep -q '^brew update' "$LOG" && ok "a leftover lock file with no holder never blocks macup" || bad "macup lock" "stale lock file blocked macup"
+# A lock that can't be taken for another reason (state dir is a file here) is
+# reported as itself, not as "already running", and nothing runs.
+: >"$LOG"; : >"$T/statefile"
+out=$(XDG_STATE_HOME="$T/statefile" PATH="$STUB:/usr/bin:/bin" ~/.local/bin/macup </dev/null 2>&1); rc=$?
+[ $rc = 1 ] && grep -q 'could not take its lock: lockf: cannot open' <<<"$out" && ! grep -q 'already running' <<<"$out" && ! grep -q '^brew' "$LOG" \
+  && ok "a lock setup error is reported as itself, not as 'already running'" || bad "macup lock" "setup error: rc=$rc: $out"
 # Two runs that really overlap: the first is held inside `brew update` until
 # the second has tried, so the test can't pass by the runs merely queueing.
 cp "$STUB/brew" "$STUB/brew.real"
@@ -656,12 +662,13 @@ touch "$T/release"; wait $first
   && ok "an overlapping second macup is refused; exactly one updates" || bad "macup lock" "overlap: second rc=$second, updates=$(grep -c '^brew update' "$LOG")"
 # Cancelling: macup must be one process, so killing it ends the update (a
 # re-exec under lockf left the real updater running behind a dead wrapper),
-# and the step it was in must not inherit the lock.
+# and the step it was in must not inherit the lock. (-t 2: the helper notices
+# macup's exit asynchronously; a step holding the lock would keep it ~10s.)
 rm -f "$T/in-update" "$T/release"; : >"$LOG"
 XDG_STATE_HOME="$T/lockstate" PATH="$STUB:/usr/bin:/bin" ~/.local/bin/macup </dev/null >/dev/null 2>&1 & first=$!
 for i in $(seq 100); do [ -e "$T/in-update" ] && break; sleep 0.1; done
 kill $first; wait $first 2>/dev/null
-lockf -s -t 0 "$LK" true; free=$?   # brew update is still running here
+lockf -s -t 2 "$LK" true; free=$?   # brew update is still running here
 touch "$T/release"; sleep 1
 [ -e "$T/in-update" ] && [ $free = 0 ] && ! grep -q '^brew upgrade' "$LOG" \
   && ok "killing macup stops the update and frees the lock at once" || bad "macup lock" "after kill: lock free rc=$free, later steps: $(grep -c '^brew upgrade' "$LOG")"
@@ -693,6 +700,25 @@ for run in 1 2; do
   sed -n '/^.*Failed:/,$p' <<<"$out" | grep -q 'mas update' \
     && bad "macup mas" "run $run: counted as a failure" || ok "run $run: foreign-account app is not a failure"
 done
+# Killed while inside a $(...) (mas outdated hanging): bash 3.2 with an EXIT
+# trap would wait for the substitution to finish before dying. macup must die
+# at once, with the stub still blocked, and free the lock.
+cp "$STUB/mas" "$STUB/mas.real"
+cat >"$STUB/mas" <<EOF
+#!/bin/bash
+if [ "\$1" = outdated ]; then touch "$T/in-mas"; for i in \$(seq 100); do [ -e "$T/release" ] && break; sleep 0.1; done; fi
+exec "$STUB/mas.real" "\$@"
+EOF
+chmod +x "$STUB/mas"; rm -f "$T/in-mas" "$T/release"; : >"$LOG"
+XDG_STATE_HOME="$T/state" PATH="$STUB:/usr/bin:/bin" ~/.local/bin/macup </dev/null >/dev/null 2>&1 & first=$!
+for i in $(seq 100); do [ -e "$T/in-mas" ] && break; sleep 0.1; done
+kill $first; wait $first 2>/dev/null
+pgrep -f "$STUB/mas outdated" >/dev/null; blocked=$?   # 0: macup died first
+lockf -s -t 2 "$T/state/macup/macup.lock" true; free=$?
+touch "$T/release"; sleep 1
+[ -e "$T/in-mas" ] && [ $blocked = 0 ] && [ $free = 0 ] && ! grep -q '^mise ' "$LOG" \
+  && ok "killing macup inside a \$(...) ends it at once and frees the lock" || bad "macup lock" "kill in mas outdated: died-first=$((1-blocked)) lock-free rc=$free, later steps: $(grep -c '^mise ' "$LOG")"
+mv "$STUB/mas.real" "$STUB/mas"
 fi
 
 # ── 13. hooks ──────────────────────────────────────────────────────────────
