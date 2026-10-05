@@ -1,36 +1,67 @@
 #!/bin/bash
-# mac-notify — post a notification; clicking it reveals FILE in Finder.
+# mac-notify — post a notification about a file, with Show / Copy buttons.
 #
 #   mac-notify <title> <message> [file]
 #
+#   MAC_NOTIFY_ACTIONS="Show,Copy"  buttons for the file: Show reveals it in
+#                                   Finder, Copy puts the file itself on the
+#                                   clipboard (mac-clip). Clicking the body = Show.
+#   MAC_NOTIFY_GROUP=<id>           replace the previous notification in <id>
+#   MAC_NOTIFY_IMAGE=<path>         thumbnail (image files get one automatically)
+#
 # osascript's `display notification` is posted as Script Editor and cannot
 # carry a click action, so clicking one just opens Script Editor's file
-# dialog. terminal-notifier runs its -execute command on click instead.
+# dialog. terminal-notifier (3.1) supports click commands and buttons.
 # Upstream Omarchy gets the same thing from notify-send actions.
 
 title=${1:?usage: mac-notify <title> <message> [file]} msg=${2:-} file=${3:-}
 tn=${MAC_NOTIFY_BIN:-/opt/homebrew/bin/terminal-notifier}   # override: tests
 
-if [ -x "$tn" ]; then
-  # terminal-notifier reads a message that starts with - or [ as an option.
-  case $msg in -*|\[*) msg="\\$msg" ;; esac
-  args=(-title "$title" -message "$msg")
-  # Same group = the new notification replaces the old one (webdl's
-  # "Downloading…" is replaced by "Download complete" instead of stacking).
-  [ -n "${MAC_NOTIFY_GROUP:-}" ] && args+=(-group "$MAC_NOTIFY_GROUP")
-  if [ -n "$file" ] && [ -e "$file" ]; then
-    # The command runs through sh -c, so quote the path for the shell.
-    args+=(-execute "open -R $(printf '%q' "$file")")
-    case $file in
-      *.[jJ][pP][gG]|*.[jJ][pP][eE][gG]|*.[pP][nN][gG]|*.[gG][iI][fF]|*.[hH][eE][iI][cC])
-        args+=(-contentImage "$file") ;;   # thumbnail in the notification
-    esac
-  fi
-  exec "$tn" "${args[@]}"
+if [ ! -x "$tn" ]; then
+  # Fallback: no click action, but at least the notification shows. Strings go
+  # in as argv, never into AppleScript source, so quotes in a URL can't break it.
+  exec osascript -e 'on run argv' \
+    -e 'display notification (item 2 of argv) with title (item 1 of argv)' \
+    -e 'end run' "$title" "$msg"
 fi
 
-# Fallback: no click action, but at least the notification shows. Strings go
-# in as argv, never into AppleScript source, so quotes in a URL can't break it.
-exec osascript -e 'on run argv' \
-  -e 'display notification (item 2 of argv) with title (item 1 of argv)' \
-  -e 'end run' "$title" "$msg"
+# terminal-notifier reads a message that starts with - or [ as an option.
+case $msg in -*|\[*) msg="\\$msg" ;; esac
+args=(-title "$title" -message "$msg")
+# Same group = the new notification replaces the old one (webdl's
+# "Downloading…" is replaced by "Download complete" instead of stacking).
+[ -n "${MAC_NOTIFY_GROUP:-}" ] && args+=(-group "$MAC_NOTIFY_GROUP")
+[ -n "${MAC_NOTIFY_IMAGE:-}" ] && [ -f "$MAC_NOTIFY_IMAGE" ] && args+=(-contentImage "$MAC_NOTIFY_IMAGE")
+
+[ -n "$file" ] && [ -e "$file" ] || exec "$tn" "${args[@]}"
+
+case $file in
+  *.[jJ][pP][gG]|*.[jJ][pP][eE][gG]|*.[pP][nN][gG]|*.[gG][iI][fF]|*.[hH][eE][iI][cC])
+    args+=(-contentImage "$file") ;;   # an image result is its own thumbnail
+esac
+
+if [ -z "${MAC_NOTIFY_ACTIONS:-}" ]; then
+  # The click command runs through sh -c, so quote the path for the shell.
+  exec "$tn" "${args[@]}" -execute "open -R $(printf '%q' "$file")"
+fi
+
+# With buttons, terminal-notifier waits for the answer and prints it. Wait in
+# the background so the caller returns at once (webdl runs under the browser's
+# native host, which must not block on a click). Give up after a day.
+(
+  choice=$("$tn" "${args[@]}" -action "$MAC_NOTIFY_ACTIONS" -timeout 86400)
+  case $choice in
+    Copy)
+      # Videos go on the clipboard share-ready (H.264/AAC, `transcode mp4
+      # share`); encoding can take a few seconds, so say so meanwhile.
+      export MAC_NOTIFY_GROUP="mac-clip-$$"; unset MAC_NOTIFY_ACTIONS MAC_NOTIFY_IMAGE
+      "$0" "Preparing to share…" "$(basename "$file")"
+      if shared=$("$HOME/.local/bin/mac-clip" --share "$file"); then
+        "$0" "Copied · ready to paste" "$(basename "$shared")" "$shared"
+      else
+        "$0" "Copy failed" "$(basename "$file")"
+      fi ;;
+    Show|@ACTIONCLICKED) open -R "$file" ;;
+  esac
+) </dev/null >/dev/null 2>&1 &
+disown

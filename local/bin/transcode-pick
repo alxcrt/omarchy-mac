@@ -11,7 +11,8 @@ choice=$(osascript -e 'choose from list {"mp4 1080p","mp4 4k","gif 1080p","jpg h
 
 set -- $choice
 if out=$(transcode "$file" "$1" "$2" 2>&1 | tail -1); then
-  mac-notify "Transcode complete" "$(basename "$out")" "$out" >/dev/null 2>&1
+  # Buttons: Show reveals the result in Finder, Copy puts the file on the clipboard.
+  MAC_NOTIFY_ACTIONS="Show,Copy" mac-notify "Transcode complete" "$(basename "$out")" "$out" >/dev/null 2>&1
   echo "$out"
 else
   mac-notify "Transcode failed" "$out" >/dev/null 2>&1

@@ -4,6 +4,7 @@
 #
 #   transcode clip.mov mp4 1080p
 #   transcode clip.mov mp4 4k
+#   transcode clip.webm mp4 share   (H.264/AAC copy that every chat app plays)
 #   transcode clip.mov gif 1080p
 #   transcode shot.png jpg high|medium|low
 #   transcode shot.jpg png high
@@ -31,6 +32,33 @@ out="$dir/${base}-${quality}.${format}"
 
 case "$format" in
   mp4)
+    if [[ $quality == share ]]; then
+      # share: a copy Messenger, WhatsApp, Teams and Instagram all play inline.
+      # yt-dlp often saves AV1/VP9 video with Opus audio inside the .mp4, which
+      # many of those clients refuse. Target H.264 + AAC, yuv420p, short side
+      # at most 1080 (never upscaled), and the index up front (+faststart) so
+      # previews stream. Streams that already comply are copied untouched;
+      # the rest encode on the Apple Silicon media engine (h264_videotoolbox,
+      # constant quality), which takes seconds, not minutes.
+      # key=value, not csv: ffprobe prints fields in its own order (codec,
+      # width, height, pix_fmt), whatever order -show_entries asks for.
+      while IFS== read -r k v; do
+        case $k in codec_name) vcodec=$v ;; pix_fmt) pixfmt=$v ;; width) w=$v ;; height) h=$v ;; esac
+      done < <(ffprobe -v error -select_streams v:0 \
+        -show_entries stream=codec_name,pix_fmt,width,height -of default=nw=1 "$file")
+      acodec=$(ffprobe -v error -select_streams a:0 -show_entries stream=codec_name -of csv=p=0 "$file")
+      short=$(( w < h ? w : h ))
+      if [[ $vcodec == h264 && $pixfmt == yuv420p && $short -le 1080 ]]; then
+        vargs=(-c:v copy)
+      else
+        vargs=(-vf "scale='if(gte(iw,ih),-2,min(1080,iw))':'if(gte(iw,ih),min(1080,ih),-2)'"
+               -c:v h264_videotoolbox -q:v 60 -profile:v high -pix_fmt yuv420p)
+      fi
+      if [[ -z $acodec || $acodec == aac ]]; then aargs=(-c:a copy); else aargs=(-c:a aac -b:a 160k); fi
+      ffmpeg -hide_banner -loglevel error -y -i "$file" -map 0:v:0 -map '0:a:0?' \
+        "${vargs[@]}" "${aargs[@]}" -movflags +faststart "$out"
+      echo "$out"; exit 0
+    fi
     case "$quality" in
       4k)    scale="3840:-2" ;;
       1080p) scale="1920:-2" ;;

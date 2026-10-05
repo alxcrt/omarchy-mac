@@ -18,6 +18,10 @@ ONLY="$1"
 export PATH="$HOME/.local/bin:/opt/homebrew/bin:$PATH"
 T=$(mktemp -d); trap 'rm -rf "$T"' EXIT
 ZRUN() { zsh -ic "source ~/.config/zsh/functions.zsh 2>/dev/null; $*" 2>/dev/null; }
+# ffp <file> <stream> <fields>: ffprobe one stream's fields as csv. Fields come
+# back in ffprobe's own order (codec_name, width, height, pix_fmt), not the
+# order asked for, so only compare combinations in that order.
+ffp() { ffprobe -v error -select_streams "$2" -show_entries "stream=$3" -of csv=p=0 "$1"; }
 
 # ── 1. package layering ────────────────────────────────────────────────────
 if want layering; then
@@ -110,6 +114,35 @@ out=$(transcode "$T/a.mp4" mp4 720p 2>/dev/null | tail -1); [ -s "$out" ] && ok 
 out=$(transcode "$T/a.mp4" mp4 4k 2>/dev/null | tail -1);   [ -s "$out" ] && ok "mp4/4k -> $(stat -f%z "$out")b"   || bad "mp4 4k" "no output"
 out=$(transcode "$T/a.mp4" gif 720p 2>/dev/null | tail -1); [ -s "$out" ] && ok "gif (gifski) -> $(stat -f%z "$out")b" || bad "gif" "no output"
 transcode "$T/missing.png" jpg high >/dev/null 2>&1 && bad "missing file" "should fail" || ok "rejects missing file"
+# mp4 share: the copy chat apps play inline. Fixtures are real 1s clips.
+mk() { ffmpeg -hide_banner -loglevel error -y -f lavfi -i "testsrc=duration=1:size=$2:rate=24" -f lavfi -i sine=duration=1 "${@:3}" "$T/$1"; }
+vp9=(-c:v libvpx-vp9 -deadline realtime -cpu-used 8 -c:a libopus)
+mk s-vp9.mp4 640x360 "${vp9[@]}"; mk s-h264.mp4 640x360 -c:v libx264 -preset ultrafast -pix_fmt yuv420p -c:a aac
+mk s-wide.mp4 2560x1440 "${vp9[@]}"; mk s-tall.mp4 1080x1920 "${vp9[@]}"
+moovfirst() { /usr/bin/python3 - "$1" <<'PY2'
+import struct, sys
+f = open(sys.argv[1], 'rb'); seen = []
+while True:
+    h = f.read(8)
+    if len(h) < 8: break
+    size, kind = struct.unpack('>I4s', h); seen.append(kind)
+    if size == 1: size = struct.unpack('>Q', f.read(8))[0]; f.seek(size - 16, 1)
+    else: f.seek(size - 8, 1)
+sys.exit(0 if b'moov' in seen and seen.index(b'moov') < seen.index(b'mdat') else 1)
+PY2
+}
+out=$(transcode "$T/s-vp9.mp4" mp4 share 2>/dev/null | tail -1)
+[ "$(ffp "$out" v:0 codec_name,pix_fmt)" = h264,yuv420p ] && [ "$(ffp "$out" a:0 codec_name)" = aac ] \
+  && ok "share: VP9/Opus becomes H.264/AAC yuv420p" || bad "share" "got $(ffp "$out" v:0 codec_name,pix_fmt)/$(ffp "$out" a:0 codec_name)"
+[ "$(ffp "$out" v:0 width,height)" = 640,360 ] && ok "share: small video is not upscaled" || bad "share" "size $(ffp "$out" v:0 width,height)"
+moovfirst "$out" && ok "share: index (moov) before data, so previews stream" || bad "share" "moov after mdat (no faststart)"
+out=$(transcode "$T/s-h264.mp4" mp4 share 2>/dev/null | tail -1)
+[ "$(ffmpeg -v error -i "$out" -map 0:v -c copy -f md5 - 2>/dev/null)" = "$(ffmpeg -v error -i "$T/s-h264.mp4" -map 0:v -c copy -f md5 - 2>/dev/null)" ] \
+  && ok "share: compliant H.264 is copied, not re-encoded" || bad "share" "re-encoded an already-compliant video"
+out=$(transcode "$T/s-wide.mp4" mp4 share 2>/dev/null | tail -1)
+[ "$(ffp "$out" v:0 width,height)" = 1920,1080 ] && ok "share: 1440p is scaled to 1080p" || bad "share" "1440p became $(ffp "$out" v:0 width,height)"
+out=$(transcode "$T/s-tall.mp4" mp4 share 2>/dev/null | tail -1)
+[ "$(ffp "$out" v:0 width,height)" = 1080,1920 ] && ok "share: portrait keeps its 1080 short side" || bad "share" "portrait became $(ffp "$out" v:0 width,height)"
 transcode "$T/a.png" bogus high >/dev/null 2>&1 && bad "bogus format" "should fail" || ok "rejects unknown format"
 # wrapper functions call through
 cp "$T/a.png" "$T/w.png"; ZRUN "img2jpg '$T/w.png'" >/dev/null 2>&1
@@ -587,9 +620,19 @@ fi
 if want notify; then
 sec "Notifications (mac-notify -> terminal-notifier)"
 /opt/homebrew/bin/terminal-notifier -version >/dev/null 2>&1 && ok "terminal-notifier installed" || bad "terminal-notifier" "missing"
-# A stub records the argv mac-notify would hand terminal-notifier, one per line.
-NS="$T/tn-stub"; NL="$T/tn.log"
-printf '#!/bin/bash\nprintf "%%s\\n" "$@" >"%s"\n' "$NL" >"$NS"; chmod +x "$NS"
+# A stub records the argv mac-notify would hand terminal-notifier, one per
+# line; when buttons are offered it "presses" $STUB_CHOICE, as the real one
+# prints the chosen button. A fake `open` logs what it was asked to reveal.
+NS="$T/tn-stub"; NL="$T/tn.log"; OL="$T/open.log"
+cat >"$NS" <<EOF
+#!/bin/bash
+printf '%s\n' "\$@" >"$NL"
+for a; do [ "\$a" = -action ] && { printf '%s\n' "\${STUB_CHOICE:-@CLOSED}"; break; }; done
+EOF
+chmod +x "$NS"
+mkdir -p "$T/openstub"; printf '#!/bin/sh\nprintf "%%s\\n" "$*" >>"%s"\n' "$OL" >"$T/openstub/open"; chmod +x "$T/openstub/open"
+# Buttons are answered in the background; wait (≤3s) for $1 to become true.
+settle() { for i in $(seq 30); do eval "$1" && return 0; sleep 0.1; done; return 1; }
 N() { MAC_NOTIFY_BIN="$NS" ~/.local/bin/mac-notify "$@"; }
 touch "$T/shot.png"; N "Transcode complete" "shot.png" "$T/shot.png"
 grep -qx -- '-execute' "$NL" && ok "clicking a file notification runs a command" || bad "mac-notify" "no -execute for a file"
@@ -607,6 +650,61 @@ mkdir -p "$T/ostub"; printf '#!/bin/sh\nfor a; do last=$a; done; printf "%%s\\n"
 # osascript notifications open Script Editor when clicked; none may remain.
 left=$(grep -l 'display notification' ~/.local/bin/webdl ~/.local/bin/weburl ~/.local/bin/transcode-pick ~/.local/bin/chromium-native-host 2>/dev/null)
 [ -z "$left" ] && ok "no script posts osascript notifications" || bad "notifications" "still osascript: $left"
+# mac-clip puts the FILE on the pasteboard (as Finder's ⌘C does), checked on a
+# private named pasteboard so the real clipboard is never touched.
+PB="omarchy-test-$$"
+pbfile() { osascript -l JavaScript -e 'ObjC.import("AppKit"); function run(a){ const u=$.NSPasteboard.pasteboardWithName(a[0]).readObjectsForClassesOptions($.NSArray.arrayWithObject($.NSURL),$.NSDictionary.dictionary); return u.count ? ObjC.unwrap(u.objectAtIndex(0).path) : ""; }' "$PB" 2>/dev/null; }
+MAC_CLIP_PASTEBOARD=$PB ~/.local/bin/mac-clip "$T/shot.png" && [ "$(pbfile)" = "$T/shot.png" ] \
+  && ok "mac-clip puts the file itself on the pasteboard" || bad "mac-clip" "pasteboard holds '$(pbfile)'"
+MAC_CLIP_PASTEBOARD=$PB ~/.local/bin/mac-clip "$T/nope.mp4" 2>/dev/null && bad "mac-clip" "accepted a missing file" || ok "mac-clip rejects a missing file"
+# End to end: webdl against a fake yt-dlp. A finished download offers Show and
+# Copy buttons: Copy puts the file on the pasteboard, Show reveals it.
+YS="$T/ytdlp-stub"; mkdir -p "$YS" "$T/dl"
+# What yt-dlp often really saves: VP9 + Opus inside .mp4.
+ffmpeg -hide_banner -loglevel error -y -f lavfi -i testsrc=duration=1:size=320x240:rate=24 -f lavfi -i sine=duration=1 \
+  -c:v libvpx-vp9 -deadline realtime -cpu-used 8 -c:a libopus "$T/fixture.mp4"
+pbclear() { osascript -l JavaScript -e 'ObjC.import("AppKit"); function run(a){ $.NSPasteboard.pasteboardWithName(a[0]).clearContents; }' "$PB" >/dev/null 2>&1; }
+# The stub's behaviour comes from YTMODE: ok (a video), none (a page with no
+# video: prints nothing, exits 0, like the YouTube homepage), fail (download
+# errors out), hang (download never finishes).
+cat >"$YS/yt-dlp" <<EOF
+#!/bin/bash
+for a; do
+  if [ "\$a" = --simulate ]; then
+    [ "\${YTMODE:-ok}" = none ] || printf 'abc\tTest clip\n'; exit 0
+  fi
+done
+case "\${YTMODE:-ok}" in fail) exit 1 ;; hang) sleep 30 & wait ;; esac
+p="$T/dl/Test_clip [abc].mp4"; cp "$T/fixture.mp4" "\$p"; echo "\$p"
+EOF
+chmod +x "$YS/yt-dlp"
+W() { PATH="$T/openstub:$YS:$PATH" OMARCHY_YTDLP_DIR="$T/dl" MAC_CLIP_PASTEBOARD=$PB MAC_NOTIFY_BIN="$NS" ~/.local/bin/webdl "$@"; }
+F="$T/dl/Test_clip [abc].mp4"
+pbclear; s0=$(date +%s); STUB_CHOICE=@CLOSED W "https://example.com/v" >/dev/null 2>&1
+[ $(( $(date +%s) - s0 )) -lt 5 ] && ok "webdl returns without waiting for a click" || bad "webdl" "blocked on the notification"
+grep -qx 'Download complete' "$NL" && grep -qx 'Show,Copy' "$NL" \
+  && ok "finished download offers Show and Copy buttons" || bad "webdl" "notification: $(tr '\n' ' ' <"$NL")"
+grep -qx 'Test clip' "$NL" && ok "notification shows the video title, not the filename" || bad "webdl" "no title in: $(tr '\n' ' ' <"$NL")"
+[ -z "$(pbfile)" ] && ok "nothing is copied unless Copy is pressed" || bad "webdl" "copied without asking"
+STUB_CHOICE=Copy W "https://example.com/v" >/dev/null 2>&1
+SF="$T/dl/Test_clip [abc]-share.mp4"
+settle '[ "$(pbfile)" = "$SF" ]' && ok "Copy puts a share-ready copy on the pasteboard" || bad "webdl Copy" "pasteboard holds '$(pbfile)'"
+[ "$(ffp "$SF" v:0 codec_name)" = h264 ] && [ -s "$F" ] && ok "the share copy is H.264 and the original is kept" || bad "webdl Copy" "share copy: $(ffp "$SF" v:0 codec_name)"
+grep -qx 'Copied · ready to paste' "$NL" && ok "Copy confirms with a notification" || bad "webdl Copy" "last notification: $(tr '\n' ' ' <"$NL")"
+: >"$OL"; STUB_CHOICE=Show W "https://example.com/v" >/dev/null 2>&1
+settle 'grep -qxF -- "-R $F" "$OL"' && ok "Show reveals the file in Finder" || bad "webdl Show" "open got: $(cat "$OL")"
+: >"$OL"; STUB_CHOICE=@ACTIONCLICKED W "https://example.com/v" >/dev/null 2>&1
+settle 'grep -qxF -- "-R $F" "$OL"' && ok "clicking the notification body also reveals it" || bad "webdl click" "open got: $(cat "$OL")"
+rm -f "$T/dl/"*; YTMODE=none W "https://www.youtube.com/" >/dev/null 2>&1
+grep -qx 'No video found for download' "$NL" && [ -z "$(ls "$T/dl")" ] \
+  && ok "a page with no video (exit 0, no ID) is rejected" || bad "webdl" "accepted a page with no video"
+YTMODE=fail W "https://example.com/v" >/dev/null 2>&1
+grep -qx 'Download failed' "$NL" && ok "a failing download says so (pipefail no longer exits early)" || bad "webdl" "no failure notification: $(tr '\n' ' ' <"$NL")"
+( YTMODE=hang W "https://example.com/v" >/dev/null 2>&1 ) & wpid=$!
+sleep 2; pkill -TERM -f "$HOME/.local/bin/webdl https://example.com/v" 2>/dev/null; wait $wpid 2>/dev/null
+grep -qx -- '-remove' "$NL" && ok "a killed run removes its \"Downloading…\" notification" || bad "webdl" "killed run left: $(tr '\n' ' ' <"$NL")"
+pkill -f "$YS/yt-dlp" 2>/dev/null
+osascript -l JavaScript -e 'ObjC.import("AppKit"); function run(a){ $.NSPasteboard.pasteboardWithName(a[0]).releaseGlobally; }' "$PB" 2>/dev/null
 fi
 
 # ── 19. repo ───────────────────────────────────────────────────────────────

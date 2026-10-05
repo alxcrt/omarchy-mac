@@ -36,8 +36,19 @@ notify() {
 }
 
 mkdir -p "$DOWNLOAD_DIR"
+out=$(mktemp); thumbdir=$(mktemp -d)
+trap 'rm -rf "$out" "$thumbdir"' EXIT
+# If this run is killed (the browser's native host stops it when the extension
+# disconnects), take its "Downloading…" notification down with it.
+trap '"${MAC_NOTIFY_BIN:-/opt/homebrew/bin/terminal-notifier}" -remove "webdl-$$" >/dev/null 2>&1; exit 130' INT TERM HUP
 
-probe() { yt-dlp --no-playlist --simulate --quiet --no-warnings "$@" "$url" >/dev/null 2>&1; }
+# probe [yt-dlp args] — print "<id><TAB><title>" of the video at $url.
+# Check for an ID, not just the exit code: on a page with no video (the
+# YouTube homepage) yt-dlp finds nothing and still exits 0.
+probe() {
+  yt-dlp --no-playlist --playlist-items 1 --simulate --quiet --no-warnings \
+    --print '%(id)s	%(title)s' "$@" "$url" 2>/dev/null | head -1
+}
 
 # Like Omarchy: don't show anything until yt-dlp confirms there's a video here.
 # Cookies are a bonus, not a requirement: when the browser's cookie store can't
@@ -45,27 +56,30 @@ probe() { yt-dlp --no-playlist --simulate --quiet --no-warnings "$@" "$url" >/de
 # aborts outright — retry without them so public videos still download.
 # (${cookies[@]+...}: bash 3.2 under set -u rejects an empty "${cookies[@]}".)
 cookies=(--cookies-from-browser "$cookie_browser")
-if ! probe "${cookies[@]}"; then
-  if probe; then
-    cookies=()
-  else
-    notify "No video found for download" "$url"
-    echo "No video found for download: $url" >&2
-    exit 0
-  fi
+found=$(probe "${cookies[@]}" || true)
+if [[ -z $found ]]; then
+  found=$(probe || true)
+  [[ -n $found ]] && cookies=()
 fi
+if [[ -z $found ]]; then
+  notify "No video found for download" "$url"
+  echo "No video found for download: $url" >&2
+  exit 0
+fi
+title=${found#*$'\t'}
 
 echo "→ $url"
-notify "Downloading…" "$url"
+notify "Downloading…" "$title"
 
 # --print after_move only fires on a successful download+move, so a captured
 # path means success — same success signal Omarchy uses.
 # PROGRESS lines go to stdout so a caller (the browser native host) can stream
 # them live; --newline keeps them one per line instead of \r-overwriting.
-out=$(mktemp)
-trap 'rm -f "$out"' EXIT
+# --playlist-items 1: a channel or playlist page must not pull dozens of videos.
+# `|| true`: under pipefail a yt-dlp error would exit right here, before the
+# failure notification, leaving "Downloading…" up forever.
 yt-dlp \
-  --no-playlist \
+  --no-playlist --playlist-items 1 \
   --restrict-filenames \
   ${cookies[@]+"${cookies[@]}"} \
   --merge-output-format mp4 \
@@ -74,13 +88,18 @@ yt-dlp \
   --print 'after_move:%(filepath)s' \
   --newline --progress-template 'download:PROGRESS %(progress._percent_str)s' \
   --no-simulate --quiet --no-warnings --progress \
-  "$url" | tee "$out"
-filepath=$(grep -v '^PROGRESS' "$out" | tail -1)
+  "$url" | tee "$out" || true
+filepath=$(grep -v '^PROGRESS' "$out" | tail -1 || true)
 
 if [[ -n ${filepath:-} && -f $filepath ]]; then
-  notify "Download complete" "$(basename "$filepath")" "$filepath"
+  # A frame from the video as the notification's thumbnail.
+  thumb="$thumbdir/thumb.jpg"
+  ffmpeg -loglevel error -y -ss 1 -i "$filepath" -frames:v 1 -vf scale=480:-2 "$thumb" 2>/dev/null || thumb=
+  # Buttons: Show reveals it in Finder, Copy puts the file itself on the
+  # clipboard (Finder's ⌘C) for pasting into a chat or folder.
+  MAC_NOTIFY_ACTIONS="Show,Copy" MAC_NOTIFY_IMAGE=$thumb notify "Download complete" "$title" "$filepath"
   echo "$filepath"
 else
-  notify "Download failed" "$url"
+  notify "Download failed" "$title"
   exit 1
 fi

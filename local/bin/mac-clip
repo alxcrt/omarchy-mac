@@ -1,0 +1,42 @@
+#!/bin/bash
+# mac-clip [--share] <file> — put a file on the clipboard the way Finder's ⌘C
+# does, so ⌘V pastes the file itself (into Finder, Messages, WhatsApp, Slack…),
+# not its path. pbcopy only carries text; this writes a file URL to
+# NSPasteboard through JavaScript for Automation, which ships with macOS.
+# Prints the path that went on the clipboard.
+#
+#   --share  for a video, copy a share-ready version instead: <name>-share.mp4
+#            from `transcode <file> mp4 share` (made once, then reused).
+#
+# MAC_CLIP_PASTEBOARD=<name> writes to a private named pasteboard instead of
+# the general one (tests use it so they never clobber the real clipboard).
+
+share=0; [ "${1:-}" = --share ] && { share=1; shift; }
+f=${1:?usage: mac-clip [--share] <file>}
+[ -e "$f" ] || { echo "mac-clip: no such file: $f" >&2; exit 1; }
+abs="$(cd "$(dirname "$f")" && pwd)/$(basename "$f")"
+
+if [ $share = 1 ]; then
+  case $abs in
+    *-share.mp4) ;;   # already the share copy
+    *.[mM][pP]4|*.[mM][oO][vV]|*.[mM]4[vV]|*.[mM][kK][vV]|*.[wW][eE][bB][mM])
+      s="${abs%.*}-share.mp4"
+      if [ ! -s "$s" ] || [ "$abs" -nt "$s" ]; then
+        s=$("$HOME/.local/bin/transcode" "$abs" mp4 share | tail -1) && [ -s "$s" ] ||
+          { echo "mac-clip: could not make a share copy of $abs" >&2; exit 1; }
+      fi
+      abs=$s ;;
+  esac
+fi
+
+osascript -l JavaScript - "$abs" "${MAC_CLIP_PASTEBOARD:-}" >/dev/null <<'JXA'
+ObjC.import("AppKit");
+function run(argv) {
+  const pb = argv[1] ? $.NSPasteboard.pasteboardWithName(argv[1])
+                     : $.NSPasteboard.generalPasteboard;
+  pb.clearContents;
+  const ok = pb.writeObjects($.NSArray.arrayWithObject($.NSURL.fileURLWithPath(argv[0])));
+  if (!ok) throw new Error("pasteboard write failed");
+}
+JXA
+echo "$abs"
