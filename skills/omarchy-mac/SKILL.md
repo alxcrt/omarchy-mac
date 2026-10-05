@@ -3,7 +3,7 @@ name: omarchy-mac
 description: >-
   Work on Alex's Omarchy-on-macOS setup — the brew/mise package layering, the
   `mac` CLI and flow scripts, native macOS tiling, hidutil key remapping,
-  tmux/Ghostty configs,
+  herdr/Ghostty configs,
   and the omarchy-mac dotfiles repo. Use whenever a request touches package
   installs, updates (`macup`/`mup`), keybindings, window management, terminal
   behaviour, the AI CLIs, or any config under ~/.config that this setup owns.
@@ -36,11 +36,11 @@ into `~/.config` + `~/.local/bin`.
 | `~/.config/mise/config.toml` | dev + AI CLI layer |
 | `~/.config/homebrew/Brewfile` | system + GUI layer (declarative) |
 | `~/.config/zsh/aliases.zsh` | Omarchy aliases, macOS-adjusted |
-| `~/.config/zsh/functions.zsh` | `tdl`/`tds`/`tdlm`/`tsl`, `ga`/`gd`, transcode wrappers |
+| `~/.config/zsh/functions.zsh` | herdr layouts `hdl`/`hds`/`hdlm`/`hsl`, `ga`/`gd`, transcode wrappers |
 | `~/.local/bin/mac-wm` | window management: native tiling + Spaces settings, and the only place the native shortcuts are written down |
 | `config/launchd/com.omarchy.keyremap.plist` | login agent that reapplies the hidutil remap |
 | `~/.local/bin/mac-defaults` | the macOS preferences (key repeat, Finder hidden files, instant Dock autohide, `~/Developer`) as one list; `--status` / `--apply` |
-| `~/.config/tmux/tmux.conf` | upstream Omarchy verbatim |
+| `~/.config/herdr/config.toml` | herdr (the multiplexer), keys mapped from Omarchy's tmux.conf. tmux itself was removed in Oct 2026; don't re-add it |
 | `~/.config/ghostty/config` | upstream Omarchy, macOS-adjusted |
 | `~/.local/bin/` | `mac`, `macup`, `mac-keys`, `mac-keyremap`, `mac-defaults`, `mac-hook`, `ghostty-run`, `transcode`, `webdl`, `weburl`, `browser-url`, `chrome-extensions`, `chromium-native-host`, `mise-install`, `agent-usage-*` |
 
@@ -58,7 +58,7 @@ workspaces, `⌥W` close, `⌥⇧1..9` send window. Full generated list:
 
 `~/omarchy-mac/test.sh` is ~265 real functional tests (it executes things and
 checks effects; it does not assert files exist). Run a section with
-`./test.sh <name>`: `layering aliases functions cd transcode compress tmux git
+`./test.sh <name>`: `layering aliases functions cd transcode compress herdr git
 browser extensions mac scripts hooks wm keyremap defaults touchid shell brew repo`.
 
 **Run the relevant section after any change, and the full suite before

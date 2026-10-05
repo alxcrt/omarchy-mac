@@ -2,10 +2,10 @@
 # test.sh — real functional tests for the omarchy-mac setup.
 # Every test executes something and checks its effect; nothing here just
 # asserts a file exists. Safe to run any time: it works in a temp dir, uses
-# throwaway tmux sessions/git repos, and never runs macup or touches ~/Movies.
+# throwaway git repos, and never runs macup or touches ~/Movies.
 #
 #   ./test.sh            run everything
-#   ./test.sh <section>  run one section (e.g. ./test.sh tmux)
+#   ./test.sh <section>  run one section (e.g. ./test.sh herdr)
 
 PASS=0; FAIL=0; SKIP=0
 ok()   { printf "  \033[0;32mPASS\033[0m %s\n" "$1"; PASS=$((PASS+1)); }
@@ -53,13 +53,13 @@ check_alias g 'git'
 check_alias gcm 'git commit -m'
 check_alias gcam 'git commit -a -m'
 check_alias gcad 'git commit -a --amend'
-check_alias ic 'tdl c'
-check_alias ix 'tdl cx'
-check_alias icx 'tdl c cx'
+check_alias ic 'hdl c'
+check_alias ix 'hdl cx'
+check_alias icx 'hdl c cx'
 check_alias mup 'MISE_MINIMUM_RELEASE_AGE=0 mise up'
 check_alias cd 'zd'
 check_alias decompress 'tar -xzf'
-for a in ls lsa lt lta ff eff t cx up macup; do check_alias "$a" ""; done
+for a in ls lsa lt lta ff eff cx up macup; do check_alias "$a" ""; done
 zsh -ic 'alias cx' 2>/dev/null | grep -q 'permission-mode auto' \
   && ok "cx uses --permission-mode auto (upstream)" || bad "cx" "wrong permission mode"
 zsh -ic 'alias open' >/dev/null 2>&1 && bad "open" "must NOT be overridden on macOS" || ok "open left native (not overridden)"
@@ -68,7 +68,7 @@ fi
 # ── 3. shell functions ─────────────────────────────────────────────────────
 if want functions; then
 sec "Shell functions defined"
-for f in tdl tds tdlm tsl zd sff compress ga gd n fip dip lip \
+for f in zd sff compress ga gd n fip dip lip \
          hdl hds hdlm hsl _herdr_ratio _herdr_split \
          img2jpg img2png img2jpg-small img2jpg-medium img2jpg-large \
          transcode-video-1080p transcode-video-4K transcode-video-gif; do
@@ -126,31 +126,20 @@ mkdir -p "$T/x" && tar -xzf "$T/dir.tar.gz" -C "$T/x" 2>/dev/null
 [ "$(cat "$T/x/dir/f.txt" 2>/dev/null)" = payload ] && ok "round-trip content intact" || bad "decompress" "content mismatch"
 fi
 
-# ── 7. tmux ────────────────────────────────────────────────────────────────
-if want tmux; then
-sec "tmux config + layout functions"
-tmux -f ~/.config/tmux/tmux.conf new-session -d -s _cfg 2>/dev/null && ok "tmux.conf loads" || bad "tmux.conf" "failed to load"
-for opt in "prefix C-Space" "prefix2 C-b" "mouse on" "base-index 1" "renumber-windows on" "history-limit 50000"; do
-  k=${opt%% *}
-  got=$(tmux show-options -g "$k" 2>/dev/null)
-  [ "$got" = "$opt" ] && ok "option $opt" || bad "option $k" "got '$got'"
+# ── 7. herdr (replaced tmux) ──────────────────────────────────────────────
+if want herdr; then
+sec "herdr + layout functions"
+command -v tmux >/dev/null 2>&1 && bad "tmux" "still installed; herdr replaced it" || ok "tmux is gone (herdr replaced it)"
+herdr --version >/dev/null 2>&1 && ok "herdr runs ($(herdr --version 2>/dev/null | head -1))" || bad "herdr" "does not run"
+# Unset HERDR_PANE_ID so these run as "outside herdr" even when the suite is
+# itself launched from a herdr pane; otherwise hdl would really split panes.
+ZRUN 'unset HERDR_PANE_ID; hdl' 2>&1 | grep -qi usage && ok "hdl shows usage with no args" || bad "hdl usage" "no usage text"
+for f in hdl hdlm; do
+  ZRUN "unset HERDR_PANE_ID; $f c" 2>&1 | grep -qi 'must start herdr' && ok "$f refuses outside herdr" || bad "$f guard" "no guard"
 done
-[ "$(tmux show-options -gw mode-keys 2>/dev/null)" = "mode-keys vi" ] && ok "vi copy mode" || bad "mode-keys" "not vi"
-[ "$(tmux show-options -g status-position 2>/dev/null)" = "status-position top" ] && ok "status bar on top" || bad "status-position" "not top"
-tmux list-keys 2>/dev/null | grep -q 'M-Enter' && ok "Alt+Enter pane split bound" || bad "M-Enter" "not bound"
-tmux list-keys -N 2>/dev/null | grep -q 'Split pane vertically' && ok "-N bind descriptions present" || bad "-N descriptions" "missing"
-tmux kill-session -t _cfg 2>/dev/null
-for spec in "tdl 'echo ai'|3" "tsl 5 'echo s'|5" "tds|4"; do
-  cmd=${spec%|*}; expect=${spec#*|}
-  s="_L$$$expect"; tmux kill-session -t "$s" 2>/dev/null
-  tmux new-session -d -s "$s" -x 220 -y 60 2>/dev/null
-  tmux send-keys -t "$s" "source ~/.config/zsh/functions.zsh && $cmd" C-m; sleep 2
-  n=$(tmux list-panes -t "$s" 2>/dev/null | wc -l | tr -d ' ')
-  [ "$n" = "$expect" ] && ok "${cmd%% *} -> $n panes" || bad "${cmd%% *}" "got $n want $expect"
-  tmux kill-session -t "$s" 2>/dev/null
-done
-ZRUN 'tdl' 2>&1 | grep -qi usage && ok "tdl shows usage with no args" || bad "tdl usage" "no usage text"
-ZRUN 'tsl 3 x' 2>&1 | grep -qi 'must start tmux' && ok "tsl refuses outside tmux" || bad "tsl guard" "no guard"
+ZRUN 'unset HERDR_PANE_ID; hsl 3 x' 2>&1 | grep -qi 'must start herdr' && ok "hsl refuses outside herdr" || bad "hsl guard" "no guard"
+ZRUN 'unset HERDR_PANE_ID; hds' 2>&1 | grep -qi 'must start herdr' && ok "hds refuses outside herdr" || bad "hds guard" "no guard"
+mac-keys 2>/dev/null | grep -q 'split horizontal' && ok "mac-keys lists herdr's bindings" || bad "mac-keys" "no herdr section"
 fi
 
 # ── 8. git ─────────────────────────────────────────────────────────────────
@@ -486,7 +475,7 @@ if want touchid; then
 sec "Touch ID for sudo"
 if [ -f /etc/pam.d/sudo_local ]; then
   grep -q pam_tid /etc/pam.d/sudo_local && ok "pam_tid enabled" || bad "pam_tid" "missing"
-  grep -q pam_reattach /etc/pam.d/sudo_local && ok "pam_reattach enabled (tmux support)" || bad "pam_reattach" "missing"
+  grep -q pam_reattach /etc/pam.d/sudo_local && ok "pam_reattach enabled (Touch ID in herdr/detached sessions)" || bad "pam_reattach" "missing"
   awk '/pam_reattach/{r=NR} /pam_tid/{t=NR} END{exit !(r && t && r<t)}' /etc/pam.d/sudo_local \
     && ok "pam_reattach ordered before pam_tid" || bad "PAM order" "reattach must come first"
 else
@@ -518,7 +507,7 @@ fi
 if want brew; then
 sec "Homebrew + mise layers"
 brew list --formula >/dev/null 2>&1 && ok "brew responds" || bad "brew" "not working"
-for f in bat eza fd fzf ripgrep zoxide jq gum cliamp btop fastfetch starship tmux neovim lazygit gifski mas pam-reattach; do
+for f in bat eza fd fzf ripgrep zoxide jq gum cliamp btop fastfetch starship neovim lazygit gifski mas pam-reattach; do
   brew list "$f" >/dev/null 2>&1 && ok "formula $f installed" || bad "formula $f" "missing"
 done
 mise doctor 2>&1 | grep -q 'No problems found' && ok "mise doctor clean" || bad "mise doctor" "problems reported"
@@ -589,7 +578,7 @@ if [ -d "$R/.git" ]; then
   ( cd "$R" && bash -n install.sh ) && ok "install.sh syntax ok" || bad "install.sh" "syntax error"
   n=$( cd "$R" && git ls-files | wc -l | tr -d ' ' ); [ "$n" -ge 20 ] && ok "$n files tracked" || bad "repo" "only $n files"
   for f in config/mise/config.toml config/zsh/aliases.zsh config/zsh/functions.zsh \
-           config/tmux/tmux.conf local/bin/mac-keyremap local/bin/mac-wm \
+           config/herdr/config.toml local/bin/mac-keyremap local/bin/mac-wm \
            config/launchd/com.omarchy.keyremap.plist \
            config/pam/sudo_local local/bin/mac local/bin/macup; do
     [ -f "$R/$f" ] && ok "tracked: $f" || bad "repo" "$f missing"

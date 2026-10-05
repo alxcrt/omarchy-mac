@@ -22,7 +22,6 @@ link config/mise/config.toml   .config/mise/config.toml
 link config/homebrew/Brewfile  .config/homebrew/Brewfile
 link config/zsh/aliases.zsh    .config/zsh/aliases.zsh
 link config/starship.toml      .config/starship.toml
-link config/tmux/tmux.conf     .config/tmux/tmux.conf
 link config/zsh/functions.zsh  .config/zsh/functions.zsh
 link config/btop/btop.conf     .config/btop/btop.conf
 link config/herdr/config.toml  .config/herdr/config.toml

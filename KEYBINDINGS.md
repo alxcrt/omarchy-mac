@@ -40,52 +40,42 @@ Caps Lock is Escape and the right ⌘ is ⌥, remapped by hidutil (`mac-keyremap
 | `Alt+Shift+L` | Copy URL |
 | `Alt+Shift+D` | Download Video |
 
-## tmux (prefix = Ctrl+Space, also Ctrl+B)
+## herdr (prefix = ctrl+space)
 
 | Keys | Action |
 |---|---|
-| `prefix C-Space` | Send prefix |
-| `prefix q` | Reload configuration |
-| `prefix ?` | Show Tmux keybindings |
-| `v (copy-mode-vi mode)` | Begin selection |
-| `y (copy-mode-vi mode)` | Copy selection |
-| `M-Enter (no prefix)` | Split pane vertically |
-| `M-S-Enter (no prefix)` | Split pane horizontally |
-| `M-Escape (no prefix)` | Kill pane |
-| `prefix h` | Split pane vertically |
-| `prefix v` | Split pane horizontally |
-| `prefix x` | Kill pane |
-| `C-M-Left (no prefix)` | Focus pane left |
-| `C-M-Right (no prefix)` | Focus pane right |
-| `C-M-Up (no prefix)` | Focus pane up |
-| `C-M-Down (no prefix)` | Focus pane down |
-| `C-M-S-Left (no prefix)` | Resize pane left |
-| `C-M-S-Down (no prefix)` | Resize pane down |
-| `C-M-S-Up (no prefix)` | Resize pane up |
-| `C-M-S-Right (no prefix)` | Resize pane right |
-| `prefix r` | Rename window |
-| `prefix c` | Create window |
-| `prefix k` | Kill window |
-| `M-1 (no prefix)` | Switch to window 1 |
-| `M-2 (no prefix)` | Switch to window 2 |
-| `M-3 (no prefix)` | Switch to window 3 |
-| `M-4 (no prefix)` | Switch to window 4 |
-| `M-5 (no prefix)` | Switch to window 5 |
-| `M-6 (no prefix)` | Switch to window 6 |
-| `M-7 (no prefix)` | Switch to window 7 |
-| `M-8 (no prefix)` | Switch to window 8 |
-| `M-9 (no prefix)` | Switch to window 9 |
-| `M-Left (no prefix)` | Previous window |
-| `M-Right (no prefix)` | Next window |
-| `M-S-Left (no prefix)` | Move window left |
-| `M-S-Right (no prefix)` | Move window right |
-| `prefix R` | Rename session |
-| `prefix C` | Create session |
-| `prefix K` | Kill session |
-| `prefix P` | Previous session |
-| `prefix N` | Next session |
-| `M-Up (no prefix)` | Previous session |
-| `M-Down (no prefix)` | Next session |
+| `prefix+q` | reload config |
+| `prefix+?` | help |
+| `prefix+d` | detach |
+| `prefix+[` | copy mode |
+| `prefix+h / alt+enter` | split horizontal |
+| `prefix+v / alt+shift+enter` | split vertical |
+| `prefix+x / alt+esc` | close pane |
+| `prefix+z` | zoom |
+| `prefix+;` | last pane |
+| `ctrl+alt+left` | focus pane left |
+| `ctrl+alt+down` | focus pane down |
+| `ctrl+alt+up` | focus pane up |
+| `ctrl+alt+right` | focus pane right |
+| `prefix+ctrl+left / prefix+ctrl+down / prefix+ctrl+up / prefix+ctrl+right` | resize mode |
+| `ctrl+alt+shift+left` | resize pane left |
+| `ctrl+alt+shift+down` | resize pane down |
+| `ctrl+alt+shift+up` | resize pane up |
+| `ctrl+alt+shift+right` | resize pane right |
+| `prefix+shift+o` | rename pane |
+| `prefix+c` | new tab |
+| `prefix+r` | rename tab |
+| `prefix+k` | close tab |
+| `prefix+1..9 / alt+1..9` | switch tab |
+| `prefix+p / alt+left` | previous tab |
+| `prefix+n / alt+right` | next tab |
+| `alt+shift+left` | move tab previous |
+| `alt+shift+right` | move tab next |
+| `prefix+shift+c` | new workspace |
+| `prefix+shift+r` | rename workspace |
+| `prefix+shift+k` | close workspace |
+| `prefix+shift+p / alt+up` | previous workspace |
+| `prefix+shift+n / alt+down` | next workspace |
 
 ## Ghostty (inside the terminal)
 

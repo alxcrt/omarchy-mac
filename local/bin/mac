@@ -50,8 +50,8 @@ case "$cmd" in
       functions) exec "${EDITOR:-nvim}" ~/.config/zsh/functions.zsh ;;
       mise)      exec "${EDITOR:-nvim}" ~/.config/mise/config.toml ;;
       brew)      exec "${EDITOR:-nvim}" ~/.config/homebrew/Brewfile ;;
-      tmux)      exec "${EDITOR:-nvim}" ~/.config/tmux/tmux.conf ;;
-      *)         echo "mac edit <aliases|functions|mise|brew|tmux>"; exit 1 ;;
+      herdr)     exec "${EDITOR:-nvim}" ~/.config/herdr/config.toml ;;
+      *)         echo "mac edit <aliases|functions|mise|brew|herdr>"; exit 1 ;;
     esac ;;
 
   help|--help|-h|"")
@@ -73,12 +73,13 @@ mac — Omarchy-style flows on macOS
   mac wm [--status|--apply|--keys]  native tiling + Spaces settings
   mac defaults [--apply]  key repeat, hidden files, instant Dock, ~/Developer
   mac doctor              health check across mise, brew, window mgmt
-  mac edit <what>         open a config: aliases functions mise brew tmux
+  mac edit <what>         open a config: aliases functions mise brew herdr
 
 Shell flows (from ~/.config/zsh/functions.zsh):
-  tdl <ai> [ai2]          tmux dev layout: editor + AI + terminal
-  tdlm <ai> [ai2]         one dev layout per subdirectory
-  tsl <n> <cmd>           swarm layout: <cmd> in n tiled panes
+  hdl <ai> [ai2]          herdr dev layout: editor + AI + terminal
+  hdlm <ai> [ai2]         one dev layout per subdirectory
+  hsl <n> <cmd>           swarm layout: <cmd> in n tiled panes
+  hds                     editor + diff watch + terminal + opencode
   ga <branch> / gd        git worktree add+cd / remove+delete branch
   compress <dir>          tar.gz a directory
 EOF

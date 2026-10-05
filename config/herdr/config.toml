@@ -1,5 +1,5 @@
 onboarding = false
-# Mirrors the Omarchy tmux config in config/tmux/tmux.conf
+# Mirrors upstream Omarchy's tmux.conf (this setup no longer installs tmux)
 # tmux session -> herdr workspace, tmux window -> herdr tab, tmux pane -> herdr pane
 
 [theme]

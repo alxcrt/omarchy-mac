@@ -39,8 +39,8 @@ Note: upstream moved Hyprland config from `bindings.conf` to Lua
    dup-ignore (`setopt hist_ignore_all_dups hist_ignore_space`), `unsetopt
    hash_cmds` (the zsh equivalent of upstream's `set +h` — stops stale mise
    shim paths), and `source <(fzf --zsh)` for Ctrl-R/Ctrl-T (fzf is installed).
-10. **`SUPER+ALT+RETURN` → `ghostty-run tmux`**, and `SUPER+SHIFT+B` as a
-    second browser bind.
+10. **`SUPER+SHIFT+B`** as a second browser bind. (Upstream's
+    `SUPER+ALT+RETURN` tmux launcher is moot: tmux was removed for herdr.)
 
 ## Known latent defect
 
@@ -73,7 +73,7 @@ window back — so `ghostty-run` is worth generalising to take a bundle id.
 | Area | Fidelity |
 |---|---|
 | starship.toml | 100% (byte-identical) |
-| tmux.conf | 99% (1 justified substitution) |
+| herdr config | mapped from upstream tmux.conf (tmux removed) |
 | git config | 16/17 settings |
 | aliases | 13/14 |
 | ghostty config | ~85% |

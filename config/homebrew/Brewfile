@@ -22,7 +22,6 @@ brew "bjarneo/cliamp/cliamp"  # Omarchy's music TUI (upstream base package)
 brew "btop"
 brew "fastfetch"
 brew "starship"
-brew "tmux"
 brew "neovim"
 brew "lazygit"
 brew "lazydocker"
@@ -34,7 +33,7 @@ brew "ffmpeg"
 brew "gifski"       # high-quality GIF encoder (Omarchy 3.8 gif transcoding)
 brew "wget"
 brew "mise"         # dev-tooling layer manager
-brew "pam-reattach"  # Touch ID for sudo inside tmux
+brew "pam-reattach"  # Touch ID for sudo inside herdr (or any detached session)
 brew "mas"          # Mac App Store CLI — used by `macup`
 brew "coreutils"    # GNU coreutils; some scripts assume GNU flags
 brew "gnu-sed"

@@ -1,7 +1,8 @@
 # ~/.config/ghostty/config
 # Omarchy's Ghostty config (basecamp/omarchy config/ghostty/config), adapted
 # for macOS. Upstream deliberately ships NO split-navigation binds — Omarchy
-# uses tmux panes for that (Alt+Enter / Alt+Shift+Enter, Ctrl+Alt+arrows), so
+# uses multiplexer panes for that (herdr here: Alt+Enter / Alt+Shift+Enter,
+# Ctrl+Alt+arrows), so
 # ⌥J and ⌥L stay free for AeroSpace's SUPER+J / SUPER+L.
 
 # ── Font ──
@@ -20,7 +21,7 @@ background-opacity = 0.95
 background-blur = true
 window-save-state = always
 
-# macOS-only: native tabs, and Option must behave as Alt for tmux/Neovim.
+# macOS-only: native tabs, and Option must behave as Alt for herdr/Neovim.
 macos-titlebar-style = tabs
 macos-option-as-alt = true
 # Dock/app-switcher icon: the ghost drawn as a blueprint.
@@ -39,7 +40,7 @@ keybind = control+insert=copy_to_clipboard
 # Send Shift+Enter as CSI-u so TUIs can distinguish it from Enter.
 keybind = shift+enter=csi:13;2u
 # Legacy encoding sends Alt+Shift+Enter the same as Alt+Enter; send CSI-u so
-# tmux can match M-S-Enter (its horizontal split).
+# herdr can match alt+shift+enter (its vertical split).
 keybind = alt+shift+enter=csi:13;4u
 keybind = super+control+shift+alt+arrow_down=resize_split:down,100
 keybind = super+control+shift+alt+arrow_up=resize_split:up,100

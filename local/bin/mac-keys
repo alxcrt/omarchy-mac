@@ -7,7 +7,7 @@
 set -e
 
 MD=0; [ "$1" = "--md" ] && MD=1
-T=~/.config/tmux/tmux.conf
+H=~/.config/herdr/config.toml
 G=~/.config/ghostty/config
 E=~/.config/omarchy-mac/extensions
 
@@ -61,12 +61,18 @@ for c in (m.get("commands") or {}).values():
 PY
 done | while IFS=$'\t' read -r k d; do row "$k" "$d"; done
 
-section "tmux (prefix = Ctrl+Space, also Ctrl+B)"
-grep -E '^bind ' "$T" | while IFS= read -r l; do
-  desc=$(printf '%s' "$l" | sed -n 's/^bind -N "\([^"]*\)".*/\1/p')
-  keys=$(printf '%s' "$l" | sed 's/^bind -N "[^"]*" *//; s/^bind *//' | awk '{if($1=="-n"){print $2" (no prefix)"} else if($1=="-T"){print $3" ("$2" mode)"} else print "prefix "$1}')
-  [ -n "$desc" ] && row "$keys" "$desc"
-done
+# herdr's [keys] table: action = "keys" or ["keys", "keys"].
+prefix=$(awk -F'"' '/^prefix *=/{print $2; exit}' "$H")
+section "herdr (prefix = ${prefix:-unset})"
+awk '
+  /^\[/ { inkeys = ($0 == "[keys]"); next }
+  inkeys && /^[a-z_]+ *=/ {
+    name = $1; v = $0; sub(/^[^=]*= */, "", v)
+    # strip only an array'"'"'s outer brackets: keys like prefix+[ contain them
+    sub(/^\[/, "", v); sub(/\]$/, "", v)
+    gsub(/"/, "", v); gsub(/, */, " / ", v); gsub(/_/, " ", name)
+    if (name != "prefix") printf "%s\t%s\n", v, name
+  }' "$H" | while IFS=$'\t' read -r k d; do row "$k" "$d"; done
 
 section "Ghostty (inside the terminal)"
 grep -E '^keybind' "$G" | while IFS= read -r l; do

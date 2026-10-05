@@ -8,92 +8,6 @@
 # that aborts sourcing the rest of this file. So drop those aliases first.
 unalias ga gd 2>/dev/null || true
 
-# ── tmux dev layout: editor + AI + terminal ────────────────────────────────
-# tdl <ai> [<second_ai>]   e.g.  tdl cx     |  tdl cx cy
-tdl() {
-  [[ -z $1 ]] && { echo "Usage: tdl <c|cx|codex|other_ai> [<second_ai>]"; return 1; }
-  [[ -z $TMUX ]] && { echo "You must start tmux to use tdl."; return 1; }
-
-  local current_dir="${PWD}"
-  local editor_pane ai_pane ai2_pane
-  local ai="$1"
-  local ai2="$2"
-
-  editor_pane="$TMUX_PANE"
-
-  tmux rename-window -t "$editor_pane" "$(basename "$current_dir")"
-
-  # Bottom terminal strip (15%)
-  tmux split-window -v -l 15% -t "$editor_pane" -c "$current_dir"
-
-  # AI pane on the right (30%)
-  ai_pane=$(tmux split-window -h -l 30% -t "$editor_pane" -c "$current_dir" -P -F '#{pane_id}')
-
-  if [[ -n $ai2 ]]; then
-    ai2_pane=$(tmux split-window -v -t "$ai_pane" -c "$current_dir" -P -F '#{pane_id}')
-    tmux send-keys -t "$ai2_pane" "$ai2" C-m
-  fi
-
-  tmux send-keys -t "$ai_pane" "$ai" C-m
-  tmux send-keys -t "$editor_pane" "${EDITOR:-nvim} ." C-m
-  tmux select-pane -t "$editor_pane"
-}
-
-# tdlm <ai> [<second_ai>] — one tdl layout per subdirectory
-tdlm() {
-  [[ -z $1 ]] && { echo "Usage: tdlm <c|cx|codex|other_ai> [<second_ai>]"; return 1; }
-  [[ -z $TMUX ]] && { echo "You must start tmux to use tdlm."; return 1; }
-
-  local ai="$1"
-  local ai2="$2"
-  local base_dir="$PWD"
-  local first=true
-  local dir dirpath pane_id
-
-  tmux rename-session "$(basename "$base_dir" | tr '.:' '--')"
-
-  for dir in "$base_dir"/*/; do
-    [[ -d $dir ]] || continue
-    dirpath="${dir%/}"
-
-    if $first; then
-      tmux send-keys -t "$TMUX_PANE" "cd '$dirpath' && tdl $ai $ai2" C-m
-      first=false
-    else
-      pane_id=$(tmux new-window -c "$dirpath" -P -F '#{pane_id}')
-      tmux send-keys -t "$pane_id" "tdl $ai $ai2" C-m
-    fi
-  done
-}
-
-# tsl <pane_count> <command> — swarm layout, same command in N tiled panes
-tsl() {
-  [[ -z $1 || -z $2 ]] && { echo "Usage: tsl <pane_count> <command>"; return 1; }
-  [[ -z $TMUX ]] && { echo "You must start tmux to use tsl."; return 1; }
-
-  local count="$1"
-  local cmd="$2"
-  local current_dir="${PWD}"
-  local -a panes
-  local new_pane split_target pane
-
-  tmux rename-window -t "$TMUX_PANE" "$(basename "$current_dir")"
-  panes+=("$TMUX_PANE")
-
-  while (( ${#panes[@]} < count )); do
-    split_target="${panes[-1]}"
-    new_pane=$(tmux split-window -h -t "$split_target" -c "$current_dir" -P -F '#{pane_id}')
-    panes+=("$new_pane")
-    tmux select-layout -t "${panes[1]}" tiled
-  done
-
-  for pane in "${panes[@]}"; do
-    tmux send-keys -t "$pane" "$cmd" C-m
-  done
-
-  tmux select-pane -t "${panes[1]}"
-}
-
 # ── Compression ────────────────────────────────────────────────────────────
 compress() { tar -czf "${1%/}.tar.gz" "${1%/}"; }
 
@@ -156,35 +70,6 @@ img2jpg-small()         { transcode "$1" jpg low; }
 img2jpg-medium()        { transcode "$1" jpg medium; }
 img2jpg-large()         { transcode "$1" jpg high; }
 img2png()               { transcode "$1" png high; }
-
-# ── Dev square layout: editor + diff watch + terminal + opencode ───────────
-# Usage: tds       (upstream fns/tmux)
-# NOTE: the diff pane runs `hunk diff --watch` — a Basecamp tool that may not
-# be installed here; the pane simply shows a "command not found" if missing.
-tds() {
-  [[ -n $1 ]] && { echo "Usage: tds"; return 1; }
-  [[ -z $TMUX ]] && { echo "You must start tmux to use tds."; return 1; }
-
-  local current_dir="${PWD}"
-  local editor_pane diff_pane terminal_pane opencode_pane
-
-  editor_pane="$TMUX_PANE"
-
-  tmux rename-window -t "$editor_pane" "$(basename "$current_dir")"
-
-  terminal_pane=$(tmux split-window -v -l 50% -t "$editor_pane" -c "$current_dir" -P -F '#{pane_id}')
-  diff_pane=$(tmux split-window -h -l 50% -t "$editor_pane" -c "$current_dir" -P -F '#{pane_id}')
-  opencode_pane=$(tmux split-window -h -l 50% -t "$terminal_pane" -c "$current_dir" -P -F '#{pane_id}')
-
-  tmux send-keys -t "$editor_pane" -l "nvim ."
-  tmux send-keys -t "$editor_pane" C-m
-  tmux send-keys -t "$diff_pane" -l "hunk diff --watch"
-  tmux send-keys -t "$diff_pane" C-m
-  tmux send-keys -t "$opencode_pane" -l "opencode"
-  tmux send-keys -t "$opencode_pane" C-m
-
-  tmux select-pane -t "$editor_pane"
-}
 
 # ── SSH port forwarding (upstream fns/ssh-port-forwarding) ─────────────────
 fip() {

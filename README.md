@@ -23,7 +23,7 @@ config/mise/config.toml      → ~/.config/mise/config.toml     # the dev + AI C
 config/homebrew/Brewfile     → ~/.config/homebrew/Brewfile    # the system + GUI layer (declarative)
 config/zsh/aliases.zsh       → ~/.config/zsh/aliases.zsh      # ported Omarchy aliases (macOS-adjusted)
 config/starship.toml         → ~/.config/starship.toml        # Omarchy's prompt
-config/tmux/tmux.conf        → ~/.config/tmux/tmux.conf
+config/herdr/config.toml     → ~/.config/herdr/config.toml    # herdr: workspaces/tabs/panes (replaced tmux)
 config/launchd/com.omarchy.keyremap.plist → ~/Library/LaunchAgents/  # hidutil modifier remap at login
 local/bin/macup              → ~/.local/bin/macup             # update-everything command
 local/bin/mise-install       → ~/.local/bin/mise-install      # self-updating mise wrapper generator
@@ -74,16 +74,17 @@ mac transcode f.mov mp4 1080p     # also gif / jpg / png
 mac wm status|reload    # window manager state
 mac usage               # AI token usage + rate limits (from Omarchy)
 mac doctor              # mise + brew + window mgmt + keyremap health
-mac edit aliases|functions|wm|mise|brew|tmux
+mac edit aliases|functions|wm|mise|brew|herdr
 ```
 
 Shell flows in `config/zsh/functions.zsh` (zsh ports of Omarchy's bash fns):
 
 | Command | Does |
 |---|---|
-| `tdl <ai> [ai2]` | tmux dev layout: editor + AI pane(s) + terminal strip |
-| `tdlm <ai> [ai2]` | one such layout per subdirectory |
-| `tsl <n> <cmd>` | swarm layout — `<cmd>` in n tiled panes |
+| `hdl <ai> [ai2]` | herdr dev layout: editor + AI pane(s) + terminal strip |
+| `hdlm <ai> [ai2]` | one such layout per subdirectory |
+| `hsl <n> <cmd>` | swarm layout — `<cmd>` in n tiled panes |
+| `hds` | editor + diff watch + terminal + opencode |
 | `ga <branch>` / `gd` | git worktree add+cd / remove worktree+branch |
 | `compress <dir>` | tar.gz a directory |
 | `img2jpg`, `transcode-video-1080p`, … | transcoding wrappers |
@@ -132,7 +133,7 @@ by hand in Mission Control) and assigning Raycast hotkeys.
 ## Touch ID in the terminal (Omarchy's fingerprint auth)
 
 `config/pam/sudo_local` makes `sudo` accept Touch ID. `pam_reattach` is listed
-**first** on purpose — without it Touch ID silently fails inside tmux/screen,
+**first** on purpose — without it Touch ID silently fails inside herdr (or tmux/screen),
 because those processes aren't attached to the GUI session. One-time install
 (needs sudo; `/etc/pam.d/sudo_local` survives macOS updates):
 

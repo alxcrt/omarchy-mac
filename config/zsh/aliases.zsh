@@ -61,11 +61,11 @@ alias cx='printf "\033[2J\033[3J\033[H" && claude --permission-mode auto'
 alias cy='codex --approve-for-me'
 alias d='docker'
 alias r='rails'
-alias t='tmux attach || tmux new -s Work'
 alias h='herdr'
-alias ic='tdl c'
-alias ix='tdl cx'
-alias icx='tdl c cx'
+# herdr replaces tmux here, so the dev-layout shortcuts drive hdl, not tdl.
+alias ic='hdl c'
+alias ix='hdl cx'
+alias icx='hdl c cx'
 alias mup='MISE_MINIMUM_RELEASE_AGE=0 mise up'
 n() { if [ "$#" -eq 0 ]; then command nvim . ; else command nvim "$@"; fi; }
 
