@@ -86,6 +86,8 @@ Shell flows in `config/zsh/functions.zsh` (zsh ports of Omarchy's bash fns):
 | `hsl <n> <cmd>` | swarm layout — `<cmd>` in n tiled panes |
 | `hds` | editor + diff watch + terminal + opencode |
 | `ga <branch>` / `gd` | git worktree add+cd / remove worktree+branch |
+| `rsw <src> <dest>` / `lsw` / `dsw` | sync a folder to a host on every change (fswatch + rsync) / list / stop |
+| `ssh …` | wraps ssh: clears stuck mouse/alt-screen modes and reconnects a dropped interactive session |
 | `compress <dir>` | tar.gz a directory |
 | `img2jpg`, `transcode-video-1080p`, … | transcoding wrappers |
 

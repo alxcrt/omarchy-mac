@@ -72,7 +72,7 @@ fi
 # ── 3. shell functions ─────────────────────────────────────────────────────
 if want functions; then
 sec "Shell functions defined"
-for f in zd sff compress ga gd n fip dip lip \
+for f in zd sff compress ga gd n fip dip lip rsw lsw dsw ssh _ssh_disarm _ssh_interactive \
          hdl hds hdlm hsl _herdr_ratio _herdr_split \
          img2jpg img2png img2jpg-small img2jpg-medium img2jpg-large \
          transcode-video-1080p transcode-video-4K transcode-video-gif; do
@@ -90,6 +90,33 @@ for e in SUDO_EDITOR BROWSER; do
 done
 zsh -ic '[[ -o hash_cmds ]]' 2>/dev/null && bad "hash_cmds" "on — stale mise shims possible" || ok "hash_cmds off (mise shim correctness)"
 zsh -ic 'bindkey' 2>/dev/null | grep -q fzf && ok "fzf widgets loaded (Ctrl-R/Ctrl-T)" || bad "fzf" "widgets not loaded"
+# rsw/lsw/dsw: a real watch between two local dirs (rsync works locally too).
+# dsw stops EVERY watch, so it is only exercised when no real one is running.
+others=$(pgrep -f 'rsw-watch ' | wc -l | tr -d ' ')
+mkdir -p "$T/rs/src" "$T/rs/dst"; echo one >"$T/rs/src/a"
+ZRUN "rsw '$T/rs/src' '$T/rs/dst'" >/dev/null
+for i in $(seq 30); do [ -f "$T/rs/dst/a" ] && break; sleep 0.1; done
+[ -f "$T/rs/dst/a" ] && ok "rsw syncs once at start" || bad "rsw" "initial sync missing"
+sleep 0.5; echo two >"$T/rs/src/b"
+for i in $(seq 50); do [ -f "$T/rs/dst/b" ] && break; sleep 0.1; done
+[ -f "$T/rs/dst/b" ] && ok "rsw re-syncs on change (fswatch)" || bad "rsw" "change not synced"
+ZRUN lsw | grep -qF "$T/rs/src -> $T/rs/dst" && ok "lsw lists the watch" || bad "lsw" "watch not listed"
+if [ "$others" = 0 ]; then
+  ZRUN dsw >/dev/null; sleep 0.3
+  if pgrep -f "rsw-watch $T/rs" >/dev/null || pgrep -f "fswatch -o -r $T/rs" >/dev/null; then
+    bad "dsw" "watcher or its fswatch survived"
+  else
+    ok "dsw stops the watcher and its fswatch"
+  fi
+else
+  for p in $(pgrep -f "rsw-watch $T/rs"); do kill -- -"$p" 2>/dev/null; done
+  skip "dsw" "$others real watch(es) running; dsw would stop them"
+fi
+# ssh reconnect: only a dropped INTERACTIVE session may be replayed.
+ZRUN '_ssh_interactive host' && ok "ssh: plain host is interactive" || bad "_ssh_interactive" "host"
+ZRUN '_ssh_interactive host uptime' && bad "_ssh_interactive" "remote command treated as interactive" || ok "ssh: a remote command is never replayed"
+ZRUN '_ssh_interactive -p 2222 host' && ZRUN '_ssh_interactive -p2222 host' && ok "ssh: option values aren't mistaken for the host" || bad "_ssh_interactive" "-p parsing"
+ZRUN '_ssh_interactive -o RemoteCommand=uptime host' && bad "_ssh_interactive" "RemoteCommand treated as interactive" || ok "ssh: a RemoteCommand (via ssh -G) is never replayed"
 fi
 
 # ── 4. zoxide / cd wrapper ─────────────────────────────────────────────────

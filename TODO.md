@@ -31,33 +31,31 @@ file current whenever a request arrives mid-task.
 
 ## Queued
 
-1. **`rsw` / `lsw` / `dsw`**: upstream `fns/rsyncing`, rsync-on-change sync
-   to a remote. Port with `fswatch -o -r` for `inotifywait`, no `setsid`.
-2. **`ssh()` reconnect wrapper**: upstream `fns/ssh-reconnect`. Rename its
-   `local argv` (a special array in zsh).
-3. **`a` agent flags**: upstream `omarchy-agent` passes each agent's
+1. **`a` agent flags**: upstream `omarchy-agent` passes each agent's
    auto-approve flag (claude `--permission-mode auto`, codex
    `--approve-for-me`, opencode `--auto`, …); the port's `a` passes none.
-4. **Agent usage collectors**: re-copy upstream `omarchy-agent-usage-{claude,codex}`
+2. **Agent usage collectors**: re-copy upstream `omarchy-agent-usage-{claude,codex}`
    (7 fixes since Aug, incl. Codex 0.149 limits) and add the new `-grok` one.
-5. **`mac keys` × herdr defaults**: merge `herdr --default-config` so built-in
+3. **`mac keys` × herdr defaults**: merge `herdr --default-config` so built-in
    binds (prefix+s settings, prefix+w picker, prefix+g goto, …) show too.
-6. **opencode config**: track `config/opencode/opencode.json` with
+4. **opencode config**: track `config/opencode/opencode.json` with
    `"autoupdate": false` (mise owns opencode).
-7. **Replace-with-existing-tool candidates** (decide per item):
+5. **Replace-with-existing-tool candidates** (decide per item):
    `macup` → topgrade; `install.sh` symlinks → GNU stow; `test.sh` → bats
    (likely not worth it); `webdl` → cobalt (rejected: hosted service, yt-dlp
    is the local engine).
-8. **More AI CLIs upstream installs** (pick): ghui, crush, agy, copilot,
+6. **More AI CLIs upstream installs** (pick): ghui, crush, agy, copilot,
    playwright, ori, muse, hey, basecamp, cf.
-9. **Agent account switching** (`omarchy-agent-account-*`): several
+7. **Agent account switching** (`omarchy-agent-account-*`): several
    Claude/Codex/Grok subscriptions, auto-switch near limits. Bash-4 code;
    bigger port.
-10. **Smaller**: `macup` update lock + `caffeinate`, `fns/drives`
-    (`diskutil` rewrite), XCompose-style text snippets via Raycast.
+8. **Smaller**: `macup` update lock + `caffeinate`, `fns/drives`
+   (`diskutil` rewrite), XCompose-style text snippets via Raycast.
 
 ## Done (Oct 2026, newest first)
 
+- `rsw`/`lsw`/`dsw` (fswatch + perl setsid) and the `ssh` reconnect wrapper,
+  ported from upstream.
 - `ghostty-run` on Ghostty's AppleScript (no keystrokes, no AeroSpace wait).
 - mise: official `grok` (was stuck on 1.0.5), `hunk` for `hds`, release
   cooldown and auto-prune policy in config; `macup` prunes unused versions.

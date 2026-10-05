@@ -81,6 +81,7 @@ Shell flows (from ~/.config/zsh/functions.zsh):
   hsl <n> <cmd>           swarm layout: <cmd> in n tiled panes
   hds                     editor + diff watch + terminal + opencode
   ga <branch> / gd        git worktree add+cd / remove+delete branch
+  rsw <src> <dest>        sync a folder on every change (lsw lists, dsw stops)
   compress <dir>          tar.gz a directory
 EOF
     ;;

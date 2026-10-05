@@ -96,6 +96,137 @@ lip() {
     || echo "No active forwards"
 }
 
+# ── Rsync-on-change watchers (upstream fns/rsyncing) ──────────────────────
+# rsw <source> <destination> — sync once, then again on every change, in the
+# background. lsw lists the watches, dsw stops them all.
+# macOS: fswatch replaces inotifywait (-o: one line per batch of events), and
+# perl's POSIX::setsid replaces `setsid --fork`: the watcher leads its own
+# session, so it survives the terminal and dsw can kill its whole group.
+rsw() {
+  (( $# != 2 )) && echo "Usage: rsw <source> <destination>" && return 1
+  local src="${1%/}" dest="$2"
+  # Reuse one SSH connection per login, so 1Password only prompts once.
+  local sockets="${XDG_RUNTIME_DIR:-$HOME/.ssh/sockets}"
+  mkdir -p "$sockets"
+  local rsh="ssh -o ControlMaster=auto -o ControlPath=$sockets/rsw-%r@%h:%p -o ControlPersist=yes"
+  RSYNC_RSH="$rsh" perl -MPOSIX -e 'fork and exit; POSIX::setsid(); exec @ARGV' \
+    bash -c 'rsync -a "$1/" "$2"; fswatch -o -r "$1" | while read -r _; do rsync -a "$1/" "$2"; done' \
+    rsw-watch "$src" "$dest" >/dev/null 2>&1 </dev/null
+  echo "Watching $src -> $dest"
+}
+
+lsw() {
+  local pid cmd rest found=0
+  # pgrep -fl, not upstream's -af: on macOS -a means "include ancestors".
+  while read -r pid cmd; do
+    rest="${cmd##*rsw-watch }"
+    echo "$pid: ${rest% *} -> ${rest##* }"
+    found=1
+  done < <(pgrep -fl 'rsw-watch ')
+  (( found )) || echo "No active watches"
+}
+
+dsw() {
+  local pid found=0
+  for pid in $(pgrep -f 'rsw-watch '); do
+    kill -- -"$pid" 2>/dev/null && echo "Stopped watch (pid $pid)" && found=1
+  done
+  (( found )) || echo "No active watches"
+}
+
+# ── SSH reconnect (upstream fns/ssh-reconnect) ─────────────────────────────
+# Wrap ssh to clean up the terminal and reconnect when a connection drops.
+#
+# A remote herdr, tmux, or editor arms terminal modes over the SSH pipe (mouse
+# tracking, focus reporting, the alternate screen) that only it can disarm. If
+# the connection dies instead of exiting cleanly, those modes stay armed on the
+# local terminal, and every mouse move floods the prompt with escape junk.
+ssh() {
+  local rc started
+
+  started=$SECONDS
+  command ssh "$@"
+  rc=$?
+
+  [[ -t 1 ]] || return $rc
+  _ssh_disarm
+
+  # Reconnect only when an interactive session drops: ssh exits 255 for
+  # transport failures, but a fast 255 with no established session is a
+  # connect/auth failure, a remote command's own 255 passes through
+  # indistinguishably and must not replay its side effects, and redirected
+  # stdin would feed the remaining piped input to a fresh remote shell.
+  if (( rc != 255 )) || [[ ! -t 0 ]] || ! _ssh_interactive "$@" ||
+    (( SECONDS - started < 30 )); then
+    return $rc
+  fi
+
+  # Retry in a subshell: Ctrl-C reaches the whole foreground process group,
+  # so it cancels both the in-flight attempt and the loop itself. Keep
+  # retrying fast failures, since a rebooting server refuses connections too.
+  (
+    while true; do
+      echo "Connection lost. Reconnecting (Ctrl-C to stop)..."
+      sleep 2
+      command ssh "$@"
+      rc=$?
+      _ssh_disarm
+      (( rc != 255 )) && exit $rc
+    done
+  )
+}
+
+# Disarm mouse tracking (1000/1002/1003, 1006 encoding), focus reporting
+# (1004), and the alternate screen (1049), and show the cursor again.
+_ssh_disarm() {
+  printf '\e[?1000l\e[?1002l\e[?1003l\e[?1006l\e[?1004l\e[?1049l\e[?25h'
+}
+
+# True for an interactive session: a destination and no remote command. The
+# letters are the ssh(1) options that consume a value, so their arguments are
+# not mistaken for the destination.
+# zsh: upstream's `local argv=("$@")` would clobber the positional parameters
+# (argv IS "$@" in zsh), so the copy is called args here.
+_ssh_interactive() {
+  local value_opts="BbcDEeFIiJLlmOoPpQRSWw"
+  local -a args=("$@")
+  local arg letters i dest="" opts_done=""
+
+  while (($#)); do
+    arg="$1"
+    shift
+
+    if [[ -z $opts_done && $arg == "--" ]]; then
+      opts_done=1
+    elif [[ -z $opts_done && $arg == -?* ]]; then
+      letters="${arg#-}"
+      for ((i = 0; i < ${#letters}; i++)); do
+        if [[ $value_opts == *"${letters:$i:1}"* ]]; then
+          # The value is glued to the letter (-p2222) unless the letter ends
+          # the argument, in which case it consumes the next one (-p 2222).
+          (( i == ${#letters} - 1 )) && shift
+          break
+        fi
+      done
+    elif [[ -z $dest ]]; then
+      dest="$arg"
+    else
+      return 1
+    fi
+  done
+
+  [[ -n $dest ]] || return 1
+
+  # A RemoteCommand from ssh_config or -o replays on reconnect just like a
+  # positional command; ssh -G resolves the effective configuration for this
+  # exact invocation without connecting. Fail closed when it cannot resolve,
+  # since an undetected RemoteCommand must not replay. The explicit "none"
+  # cancels a configured command, and some versions emit it when unset.
+  local resolved
+  resolved=$(command ssh -G "${args[@]}" 2>/dev/null) || return 1
+  ! grep -i '^remotecommand ' <<<"$resolved" | grep -qvi '^remotecommand none$'
+}
+
 # ── Herdr layouts (upstream fns/herdr) ─────────────────────────────────────
 # zsh note: upstream indexes arrays from 0 (`${columns[index]}`); zsh arrays are
 # 1-indexed, so every index below is +1 relative to upstream.
