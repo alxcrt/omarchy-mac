@@ -383,13 +383,20 @@ fi
 if want scripts; then
 sec "Helper scripts"
 for s in mac macup mise-install mac-keyremap mac-wm ghostty-run transcode webdl weburl browser-url \
-         chromium-native-host chrome-extensions mac-hook agent-usage-claude agent-usage-codex; do
+         chromium-native-host chrome-extensions mac-hook agent-usage-claude agent-usage-codex agent-usage-grok mac-notify mac-clip mac-defaults; do
   p="$HOME/.local/bin/$s"
   if [ ! -x "$p" ]; then bad "$s" "missing or not executable"; continue; fi
   case "$(head -1 "$p")" in
-    *python3*) python3 -m py_compile "$p" 2>/dev/null && ok "$s (python) compiles" || bad "$s" "python syntax error";;
+    # compile() in memory: py_compile always writes __pycache__ next to $p.
+    *python3*) python3 -c 'import sys; compile(open(sys.argv[1]).read(), sys.argv[1], "exec")' "$p" 2>/dev/null \
+                 && ok "$s (python) compiles" || bad "$s" "python syntax error";;
     *)         bash -n "$p" 2>/dev/null && ok "$s (bash) syntax ok" || bad "$s" "bash syntax error";;
   esac
+done
+# Usage collectors print one JSON record (mac usage parses it with jq).
+for t in claude codex grok; do
+  agent-usage-$t --limits-only 2>/dev/null | /usr/bin/jq -e '.id' >/dev/null 2>&1 \
+    && ok "agent-usage-$t prints a JSON record" || bad "agent-usage-$t" "no JSON record"
 done
 mise-install 2>&1 | grep -qi usage && ok "mise-install shows usage" || bad "mise-install" "no usage"
 mise-install jq _ttjq >/dev/null 2>&1

@@ -104,6 +104,11 @@ extensions.
   PROMPT2 is baked once with `STARSHIP_SHELL=zsh` so its escapes get `%{ %}`.
   `[[ ]]` never expands globs: `[[ -n f(N.mh+24) ]]` is always true. Profile
   with `zmodload zsh/zprof`, not by guessing.
+- **Claude Code on macOS keeps its login in the Keychain** ("Claude
+  Code-credentials", same JSON as `~/.claude/.credentials.json`, which is
+  only a stale leftover here). `agent-usage-claude` reads it read-only via
+  `/usr/bin/security`; the collectors are upstream copies with "macOS port"
+  markers, so re-sync by re-copying and re-applying those.
 - **`/usr/bin/git` is an xcrun stub** that adds ~10ms per call (every prompt in
   a repo pays it via starship). The Brewfile installs git so /opt/homebrew/bin
   wins on PATH.

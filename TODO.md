@@ -10,6 +10,9 @@ file current whenever a request arrives mid-task.
   (Downloads ISOs/ROMs/firmware/movies, Xcode device data, Ollama and LM Studio
   models, caches, removed apps).
 - **Delete Hue Sync and Fits** in Finder: root-owned, `trash` can't.
+- **`claude auth login`**: the Claude CLI's saved sign-in has expired, so
+  `mac usage` shows the plan (Max 5x) but no limits. `grok login` too, if
+  Grok is in use.
 - **Two LM Studio PATH lines** in `~/.zshrc.local` (harmless, point at nothing).
 - **Karabiner's orphaned driver** is still loaded (`test.sh keyremap` fails on
   it). Reinstall its driver pkg so its own uninstaller can deactivate it:
@@ -31,26 +34,27 @@ file current whenever a request arrives mid-task.
 
 ## Queued
 
-1. **Agent usage collectors**: re-copy upstream `omarchy-agent-usage-{claude,codex}`
-   (7 fixes since Aug, incl. Codex 0.149 limits) and add the new `-grok` one.
-2. **`mac keys` × herdr defaults**: merge `herdr --default-config` so built-in
+1. **`mac keys` × herdr defaults**: merge `herdr --default-config` so built-in
    binds (prefix+s settings, prefix+w picker, prefix+g goto, …) show too.
-3. **opencode config**: track `config/opencode/opencode.json` with
+2. **opencode config**: track `config/opencode/opencode.json` with
    `"autoupdate": false` (mise owns opencode).
-4. **Replace-with-existing-tool candidates** (decide per item):
+3. **Replace-with-existing-tool candidates** (decide per item):
    `macup` → topgrade; `install.sh` symlinks → GNU stow; `test.sh` → bats
    (likely not worth it); `webdl` → cobalt (rejected: hosted service, yt-dlp
    is the local engine).
-5. **More AI CLIs upstream installs** (pick): ghui, crush, agy, copilot,
+4. **More AI CLIs upstream installs** (pick): ghui, crush, agy, copilot,
    playwright, ori, muse, hey, basecamp, cf.
-6. **Agent account switching** (`omarchy-agent-account-*`): several
+5. **Agent account switching** (`omarchy-agent-account-*`): several
    Claude/Codex/Grok subscriptions, auto-switch near limits. Bash-4 code;
    bigger port.
-7. **Smaller**: `macup` update lock + `caffeinate`, `fns/drives`
+6. **Smaller**: `macup` update lock + `caffeinate`, `fns/drives`
    (`diskutil` rewrite), XCompose-style text snippets via Raycast.
 
 ## Done (Oct 2026, newest first)
 
+- Usage collectors re-synced from upstream (Codex limits work again; new
+  Grok collector in `mac usage`); Claude's reads the macOS Keychain, where
+  Claude Code keeps its live login.
 - `a` passes each agent upstream's "don't stop to ask" flag and starts in
   ~/Developer when launched from $HOME.
 - `rsw`/`lsw`/`dsw` (fswatch + perl setsid) and the `ssh` reconnect wrapper,
