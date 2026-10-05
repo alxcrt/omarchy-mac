@@ -46,7 +46,10 @@ function run(argv) {
   const ok = pb.setStringForType($.NSURL.fileURLWithPath(argv[0]).absoluteString, "public.file-url")
           && pb.setPropertyListForType($([argv[0]]), "NSFilenamesPboardType");
   if (!ok) throw new Error("pasteboard write failed");
-  if (argv[2]) $(String(count)).writeToFileAtomicallyEncodingError(argv[2], true, $.NSUTF8StringEncoding, null);
+  // writeToFile returns false instead of throwing: a count that wasn't
+  // recorded must fail the run, so a caller never reads a stale one.
+  if (argv[2] && !$(String(count)).writeToFileAtomicallyEncodingError(argv[2], true, $.NSUTF8StringEncoding, null))
+    throw new Error("could not record the change count in " + argv[2]);
 }
 JXA
 echo "$abs"

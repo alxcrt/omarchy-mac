@@ -181,6 +181,12 @@ extensions.
   reverse, an app installed outside brew (Claude.app), makes `brew bundle`
   fail on "already an App at"; `brew install --cask --adopt <c>` takes it
   over in place without replacing the app, which matters when it's running.
+- **Locks: use `lockf`, never a hand-rolled one.** `macup` runs under
+  `lockf -k -t 0` (ships with macOS): a kernel lock the kernel drops when the
+  process exits or dies, so no stale locks, pid reuse or takeover races. An
+  mkdir/owner-record lock went through three Codex review rounds (Oct 2026)
+  and every fix opened a narrower race. `-k` keeps the file (unlinking it is
+  racy); exit status 75 means "already held".
 - **Never run two brew bundles at once.** A second run collides with the
   first's download locks and both report spurious failures. Check
   `pgrep -fl brew` before assuming a bundle died.

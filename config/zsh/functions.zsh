@@ -177,15 +177,29 @@ _drive_confirm() {
 # attach, so even an identical card swapped into the same reader differs;
 # size, media name and device path back it up. Fails (and so refuses) when
 # the identity can't be read.
+# Parsed with plistlib, not `plutil -convert json`: that rejects <data> values,
+# and an inserted CD's IOMedia carries one (its TOC), which made every disk
+# unidentifiable.
 _drive_regid() {
-  ioreg -r -c IOMedia -a 2>/dev/null | plutil -convert json -o - - 2>/dev/null |
-    jq -r --arg d "$1" '[.. | objects | select(."BSD Name"? == $d) | .IORegistryEntryID] | first // empty'
+  ioreg -r -c IOMedia -a 2>/dev/null | /usr/bin/python3 -c '
+import plistlib, sys
+def walk(o):
+    if isinstance(o, dict):
+        if o.get("BSD Name") == sys.argv[1] and "IORegistryEntryID" in o:
+            print(o["IORegistryEntryID"]); sys.exit(0)
+        for v in o.values(): walk(v)
+    elif isinstance(o, list):
+        for v in o: walk(v)
+walk(plistlib.loads(sys.stdin.buffer.read()))
+sys.exit(1)' "$1" 2>/dev/null
 }
 _drive_identity() {
   local reg info
   reg=$(_drive_regid "$1") && [[ -n $reg ]] || return 1
-  info=$(diskutil info -plist "/dev/$1" 2>/dev/null | plutil -convert json -o - - 2>/dev/null |
-    jq -r '[.TotalSize, .MediaName, .IORegistryEntryName, .DeviceTreePath] | map(tostring) | join("|")') &&
+  info=$(diskutil info -plist "/dev/$1" 2>/dev/null | /usr/bin/python3 -c '
+import plistlib, sys
+d = plistlib.loads(sys.stdin.buffer.read())
+print("|".join(str(d.get(k, "")) for k in ("TotalSize", "MediaName", "IORegistryEntryName", "DeviceTreePath")))' 2>/dev/null) &&
     [[ -n $info ]] || return 1
   print -r -- "$reg|$info"
 }

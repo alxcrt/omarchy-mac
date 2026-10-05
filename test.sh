@@ -188,7 +188,8 @@ echo 100 >"$T/io-id"
 cat >"$DU/ioreg" <<EOF
 #!/bin/bash
 [ -s "$T/io-id" ] || exit 0
-printf '<?xml version="1.0"?><plist version="1.0"><array><dict><key>BSD Name</key><string>disk9</string><key>IORegistryEntryID</key><integer>%s</integer></dict></array></plist>' "\$(cat "$T/io-id")"
+# also an inserted CD, whose TOC is <data>: \`plutil -convert json\` chokes on it
+printf '<?xml version="1.0"?><plist version="1.0"><array><dict><key>BSD Name</key><string>disk5</string><key>IORegistryEntryID</key><integer>55</integer><key>TOC</key><data>AAEC</data></dict><dict><key>BSD Name</key><string>disk9</string><key>IORegistryEntryID</key><integer>%s</integer></dict></array></plist>' "\$(cat "$T/io-id")"
 EOF
 chmod +x "$DU/ioreg"
 cat >"$YES/sudo" <<EOF
@@ -434,8 +435,9 @@ CHROME_EXT_SRC="$SX" CHROME_EXT_DIR="$SD" chrome-extensions sync >/dev/null 2>&1
 diff -rq "$SX/copy-url" "$SD/copy-url" >/dev/null && ok "chrome-extensions sync stages a copy" || bad "chrome-extensions sync" "copy differs"
 CHROME_EXT_SRC="$SX" CHROME_EXT_DIR="$SD" chrome-extensions sync 2>&1 | grep -q 'already up to date' && ok "chrome-extensions sync is idempotent" || bad "chrome-extensions sync" "changed files on a clean tree"
 echo changed >>"$SX/copy-url/manifest.json"; chmod 000 "$SX/copy-url/manifest.json"
+cp -R "$SD/copy-url" "$T/ext-before"   # the staged copy as it was, to compare whole
 CHROME_EXT_SRC="$SX" CHROME_EXT_DIR="$SD" chrome-extensions sync >/dev/null 2>&1 && bad "chrome-extensions sync" "a failed copy exited 0" \
-  || { ! grep -q changed "$SD/copy-url/manifest.json" && ok "a failed copy fails and keeps the old staged copy" || bad "chrome-extensions sync" "half-updated staging"; }
+  || { [ -d "$SD/copy-url" ] && diff -r "$T/ext-before" "$SD/copy-url" >/dev/null && ok "a failed copy fails and keeps the old staged copy intact" || bad "chrome-extensions sync" "staged copy damaged or gone"; }
 chmod 644 "$SX/copy-url/manifest.json"
 for base in "$E" ~/omarchy-mac/config/chromium/extensions; do
   i="$base/copy-url/icon.png"
@@ -626,36 +628,33 @@ printf '#!/bin/bash\nprintf "p42\\nn/x y/mise/installs/claude/1.1.0/bin/claude\\
 grep -q '^brew upgrade .*--yes' "$LOG" && ok "macup upgrades with --yes (never stalls at y/n)" || bad "macup" "brew upgrade without --yes"
 grep -q '^mise up' "$LOG" && ok "macup still updates mise after a brew failure" || bad "macup" "brew failure skipped mise"
 [ "$rc" -ne 0 ] && ok "macup exits non-zero when a step failed" || bad "macup" "hid a failed step"
-# One macup at a time. The lock records pid + process start time.
-LK="$T/lockstate/macup/lock"; pst() { ps -o lstart= -p "$1" | tr -s ' ' | sed 's/^ //; s/ $//'; }
-mklock() { rm -rf "$LK"; mkdir -p "$LK"; [ -n "$1" ] && echo "$1" >"$LK/owner"; touch -t "$2" "$LK" 2>/dev/null; }
+# One macup at a time, via lockf(1): a kernel lock held for the run's
+# lifetime, gone the moment it exits or dies.
+LK="$T/lockstate/macup/macup.lock"; mkdir -p "${LK%/*}"
 runlock() { : >"$LOG"; XDG_STATE_HOME="$T/lockstate" PATH="$STUB:/usr/bin:/bin" ~/.local/bin/macup </dev/null 2>&1; }
-mklock "$$ $(pst $$)"; out=$(runlock)
-grep -q 'already running' <<<"$out" && ! grep -q '^brew' "$LOG" && ok "a second macup refuses while one is running" || bad "macup lock" "live owner: $out"
-mklock "" "$(date +%Y%m%d%H%M)"; out=$(runlock)
-grep -q 'already starting' <<<"$out" && ! grep -q '^brew' "$LOG" && ok "a just-created lock with no owner yet counts as live" || bad "macup lock" "starting run: $out"
-mklock "$$ Thu Jan 1 00:00:00 1970"; runlock >/dev/null
-grep -q '^brew update' "$LOG" && ok "a reused pid (different start time) is not mistaken for a live run" || bad "macup lock" "pid reuse blocked macup"
-mklock "999999 x"; runlock >/dev/null
-grep -q '^brew update' "$LOG" && [ ! -e "$LK" ] && ok "a stale lock is taken over, and released at exit" || bad "macup lock" "stale lock not handled"
-# A run must not release a lock that is no longer its own: a fake brew swaps
-# in another owner mid-run, and that lock must survive the run's exit.
+lockf -k "$LK" sleep 30 & holder=$!; sleep 0.5
+out=$(runlock); rc=$?
+[ $rc = 75 ] && grep -q 'already running' <<<"$out" && ! grep -q '^brew' "$LOG" \
+  && ok "a second macup refuses while one holds the lock" || bad "macup lock" "rc=$rc: $out"
+kill $holder 2>/dev/null; wait $holder 2>/dev/null
+runlock >/dev/null
+grep -q '^brew update' "$LOG" && ok "a leftover lock file with no holder never blocks macup" || bad "macup lock" "stale lock file blocked macup"
+# Two runs that really overlap: the first is held inside `brew update` until
+# the second has tried, so the test can't pass by the runs merely queueing.
 cp "$STUB/brew" "$STUB/brew.real"
-printf '#!/bin/bash\n[ "$1" = update ] && echo "4242 someone else" >"%s/owner"\nexec "%s/brew.real" "$@"\n' "$LK" "$STUB" >"$STUB/brew"; chmod +x "$STUB/brew"
-rm -rf "$LK"; runlock >/dev/null
-[ "$(cat "$LK/owner" 2>/dev/null)" = "4242 someone else" ] && ok "macup never removes a lock it no longer owns" || bad "macup lock" "released someone else's lock"
-mv "$STUB/brew.real" "$STUB/brew"; rm -rf "$LK"
-mklock ""; : >"$LK/owner"; out=$(runlock)
-grep -q 'already starting' <<<"$out" && ok "a fresh lock with an empty owner record counts as starting" || bad "macup lock" "empty owner: $out"
-mklock "999999 x"; mkdir -p "$LK.reclaim"; out=$(runlock)
-grep -q 'taking over' <<<"$out" && ! grep -q '^brew' "$LOG" && ok "only one run may take over a stale lock at a time" || bad "macup lock" "reclaim guard ignored: $out"
-mklock "999999 x"; rm -rf "$LK.reclaim"; mkdir -p "$LK.reclaim"; touch -t "$(date -v-5M +%Y%m%d%H%M)" "$LK.reclaim"; runlock >/dev/null
-grep -q '^brew update' "$LOG" && [ ! -e "$LK.reclaim" ] && ok "a crashed taker's leftover guard is cleared" || bad "macup lock" "stale reclaim guard blocked macup"
-# Two runs started together against one stale lock: exactly one may run.
-mklock "999999 x"; rm -rf "$LK.reclaim"; : >"$LOG"
-( XDG_STATE_HOME="$T/lockstate" PATH="$STUB:/usr/bin:/bin" ~/.local/bin/macup </dev/null >/dev/null 2>&1 & XDG_STATE_HOME="$T/lockstate" PATH="$STUB:/usr/bin:/bin" ~/.local/bin/macup </dev/null >/dev/null 2>&1 & wait )
-n=$(grep -c '^brew update' "$LOG"); [ "$n" = 1 ] && ok "two concurrent takeovers: exactly one macup runs" || bad "macup lock" "$n runs went ahead"
-rm -rf "$LK" "$LK.reclaim"
+cat >"$STUB/brew" <<EOF
+#!/bin/bash
+if [ "\$1" = update ]; then touch "$T/in-update"; for i in \$(seq 100); do [ -e "$T/release" ] && break; sleep 0.1; done; fi
+exec "$STUB/brew.real" "\$@"
+EOF
+chmod +x "$STUB/brew"; rm -f "$T/in-update" "$T/release"; : >"$LOG"
+( XDG_STATE_HOME="$T/lockstate" PATH="$STUB:/usr/bin:/bin" ~/.local/bin/macup </dev/null >/dev/null 2>&1 ) & first=$!
+for i in $(seq 100); do [ -e "$T/in-update" ] && break; sleep 0.1; done
+out=$(XDG_STATE_HOME="$T/lockstate" PATH="$STUB:/usr/bin:/bin" ~/.local/bin/macup </dev/null 2>&1); second=$?
+touch "$T/release"; wait $first
+[ -e "$T/in-update" ] && [ $second = 75 ] && [ "$(grep -c '^brew update' "$LOG")" = 1 ] \
+  && ok "an overlapping second macup is refused; exactly one updates" || bad "macup lock" "overlap: second rc=$second, updates=$(grep -c '^brew update' "$LOG")"
+mv "$STUB/brew.real" "$STUB/brew"
 # App Store: an app owned by another Apple Account pops a modal dialog on every
 # update attempt. macup must try it once, report it under "Needs you" (not as
 # a failure), and skip it on the next run. Developer's real ADAM ID is used so
@@ -992,6 +991,8 @@ pbfile() { osascript -l JavaScript -e 'ObjC.import("AppKit"); function run(a){ c
 MAC_CLIP_PASTEBOARD=$PB ~/.local/bin/mac-clip "$T/shot.png" && [ "$(pbfile)" = "$T/shot.png" ] \
   && ok "mac-clip puts the file itself on the pasteboard" || bad "mac-clip" "pasteboard holds '$(pbfile)'"
 MAC_CLIP_PASTEBOARD=$PB ~/.local/bin/mac-clip "$T/nope.mp4" 2>/dev/null && bad "mac-clip" "accepted a missing file" || ok "mac-clip rejects a missing file"
+MAC_CLIP_PASTEBOARD=$PB MAC_CLIP_COUNT_FILE=/dev/null/nope ~/.local/bin/mac-clip "$T/shot.png" >/dev/null 2>&1 \
+  && bad "mac-clip" "succeeded without recording its change count" || ok "mac-clip fails when it can't record its change count"
 # On the REAL clipboard, where the bug was: writeObjects from a process that
 # exits at once lost the file 4 times in 5. Snapshot first, restore after,
 # and only touch the clipboard if the snapshot worked.
@@ -1002,7 +1003,13 @@ if mac-pbsnap save "$T/clip-real.json"; then
     [ "$(pbcount)" = "$CLIP_MINE" ] || { foreign=1; CLIP_MINE=""; break; }
     # The count of OUR write, as the write itself returned it, never a later
     # read (that could adopt something copied in between).
-    MAC_CLIP_COUNT_FILE="$T/clip-count" ~/.local/bin/mac-clip "$T/shot.png" >/dev/null && CLIP_MINE=$(cat "$T/clip-count")
+    # Fresh file each time: a stale count must never be taken as ours.
+    rm -f "$T/clip-count"
+    if MAC_CLIP_COUNT_FILE="$T/clip-count" ~/.local/bin/mac-clip "$T/shot.png" >/dev/null && [ -s "$T/clip-count" ]; then
+      CLIP_MINE=$(cat "$T/clip-count")
+    else
+      CLIP_MINE=""; foreign=1; break   # can't tell our write from anyone's: stop, leave it
+    fi
     sleep 0.3
     osascript -l JavaScript -e 'ObjC.import("AppKit"); function run(){ const u=$.NSPasteboard.generalPasteboard.readObjectsForClassesOptions($.NSArray.arrayWithObject($.NSURL),$.NSDictionary.dictionary); return (u && u.count > 0) ? ObjC.unwrap(u.objectAtIndex(0).path) : ""; }' 2>/dev/null | grep -qxF "$T/shot.png" && kept=$((kept+1))
   done
