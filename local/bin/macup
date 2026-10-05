@@ -8,25 +8,27 @@
 section() { echo -e "\n\033[0;32m$1\033[0m"; }
 FAILED=()
 NEEDS_YOU=()   # not failures: things only a human can fix, reported at the end
-step() { "$@" || FAILED+=("$*"); }
+step() { "$@" 9>&- || FAILED+=("$*"); }   # 9: the lock (see below)
 
 # One macup at a time (upstream: "An Omarchy update is already running").
 # Two at once collide on brew's download locks and both fail spuriously.
-# lockf(1), which ships with macOS, holds a kernel lock on the file for as
-# long as this run lives: the kernel drops it the moment macup exits or dies,
-# so there are no stale locks, no pid reuse and no takeover races. (-k keeps
-# the file: deleting it is itself racy.) A hand-rolled mkdir lock with owner
-# records went through three review rounds and still raced; don't bring it back.
+# lockf(1), which ships with macOS, takes a kernel lock on a descriptor this
+# shell holds open (its man page's way "to lock inside a shell script"): the
+# kernel drops it the moment macup exits or dies, so there are no stale locks,
+# no pid reuse and no takeover races, and macup stays one process, so killing
+# it stops the update. Commands get the descriptor closed (`9>&-` in step, the
+# background helpers and the hook), so nothing they leave running can hold it.
+# A hand-rolled mkdir lock went through three review rounds and still raced.
 LOCKFILE="${XDG_STATE_HOME:-$HOME/.local/state}/macup/macup.lock"   # (the old mkdir lock was a dir named "lock")
-if [ -z "${MACUP_LOCKED:-}" ]; then
-  mkdir -p "${LOCKFILE%/*}"
-  MACUP_LOCKED=1 lockf -k -t 0 "$LOCKFILE" "$0" "$@"; rc=$?
-  [ $rc = 75 ] && echo "macup is already running." >&2   # 75 = EX_TEMPFAIL: held
-  exit $rc
+mkdir -p "${LOCKFILE%/*}"
+exec 9>>"$LOCKFILE"
+if ! lockf -s -t 0 9; then
+  echo "macup is already running." >&2
+  exit 75   # EX_TEMPFAIL, as lockf itself reports a held lock
 fi
 
 # Stay awake while updating (upstream does the same); ends with this process.
-caffeinate -i -w $$ >/dev/null 2>&1 &
+caffeinate -i -w $$ >/dev/null 2>&1 9>&- &
 
 # Stale symlinks mean you're running old copies of these scripts/configs
 # (that's how an old macup without --yes kept prompting). Warn; don't auto-fix,
@@ -38,7 +40,7 @@ fi
 # softwareupdate --list takes 10-30s of network round-trips; start it now and
 # read the result at the end instead of waiting on it serially.
 SWU=$(mktemp); trap 'rm -f "$SWU"' EXIT
-softwareupdate --list >"$SWU" 2>&1 &
+softwareupdate --list >"$SWU" 2>&1 9>&- &
 SWU_PID=$!
 
 section "Homebrew"
@@ -157,7 +159,7 @@ wait "$SWU_PID"
 grep -q 'No new software available' "$SWU" && echo "macOS up to date" || tail -5 "$SWU"
 
 # User hooks (port of omarchy's hook system) — see ~/.config/omarchy-mac/hooks/
-command -v mac-hook >/dev/null && mac-hook post-update
+command -v mac-hook >/dev/null && mac-hook post-update 9>&-
 
 if [ ${#NEEDS_YOU[@]} -gt 0 ]; then
   echo -e "\n\033[0;33mNeeds you:\033[0m"; printf '  %s\n' "${NEEDS_YOU[@]}"

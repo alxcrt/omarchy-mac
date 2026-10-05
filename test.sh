@@ -654,6 +654,17 @@ out=$(XDG_STATE_HOME="$T/lockstate" PATH="$STUB:/usr/bin:/bin" ~/.local/bin/macu
 touch "$T/release"; wait $first
 [ -e "$T/in-update" ] && [ $second = 75 ] && [ "$(grep -c '^brew update' "$LOG")" = 1 ] \
   && ok "an overlapping second macup is refused; exactly one updates" || bad "macup lock" "overlap: second rc=$second, updates=$(grep -c '^brew update' "$LOG")"
+# Cancelling: macup must be one process, so killing it ends the update (a
+# re-exec under lockf left the real updater running behind a dead wrapper),
+# and the step it was in must not inherit the lock.
+rm -f "$T/in-update" "$T/release"; : >"$LOG"
+XDG_STATE_HOME="$T/lockstate" PATH="$STUB:/usr/bin:/bin" ~/.local/bin/macup </dev/null >/dev/null 2>&1 & first=$!
+for i in $(seq 100); do [ -e "$T/in-update" ] && break; sleep 0.1; done
+kill $first; wait $first 2>/dev/null
+lockf -s -t 0 "$LK" true; free=$?   # brew update is still running here
+touch "$T/release"; sleep 1
+[ -e "$T/in-update" ] && [ $free = 0 ] && ! grep -q '^brew upgrade' "$LOG" \
+  && ok "killing macup stops the update and frees the lock at once" || bad "macup lock" "after kill: lock free rc=$free, later steps: $(grep -c '^brew upgrade' "$LOG")"
 mv "$STUB/brew.real" "$STUB/brew"
 # App Store: an app owned by another Apple Account pops a modal dialog on every
 # update attempt. macup must try it once, report it under "Needs you" (not as
@@ -997,7 +1008,7 @@ MAC_CLIP_PASTEBOARD=$PB MAC_CLIP_COUNT_FILE=/dev/null/nope ~/.local/bin/mac-clip
 # exits at once lost the file 4 times in 5. Snapshot first, restore after,
 # and only touch the clipboard if the snapshot worked.
 if mac-pbsnap save "$T/clip-real.json"; then
-  CLIP_SNAP="$T/clip-real.json"; CLIP_MINE=$(pbcount); kept=0; foreign=0
+  CLIP_SNAP="$T/clip-real.json"; CLIP_MINE=$(pbcount); kept=0; foreign=0; broke=0
   for i in 1 2 3 4 5; do
     # Someone else copied since our last write: stop, and leave it alone.
     [ "$(pbcount)" = "$CLIP_MINE" ] || { foreign=1; CLIP_MINE=""; break; }
@@ -1008,12 +1019,18 @@ if mac-pbsnap save "$T/clip-real.json"; then
     if MAC_CLIP_COUNT_FILE="$T/clip-count" ~/.local/bin/mac-clip "$T/shot.png" >/dev/null && [ -s "$T/clip-count" ]; then
       CLIP_MINE=$(cat "$T/clip-count")
     else
-      CLIP_MINE=""; foreign=1; break   # can't tell our write from anyone's: stop, leave it
+      # Our own failure, not a foreign copy: report it, and keep the last
+      # count we know is ours so cleanup can still restore (if this attempt
+      # changed the clipboard anyway, the count no longer matches and cleanup
+      # rightly leaves it).
+      broke=1; break
     fi
     sleep 0.3
     osascript -l JavaScript -e 'ObjC.import("AppKit"); function run(){ const u=$.NSPasteboard.generalPasteboard.readObjectsForClassesOptions($.NSArray.arrayWithObject($.NSURL),$.NSDictionary.dictionary); return (u && u.count > 0) ? ObjC.unwrap(u.objectAtIndex(0).path) : ""; }' 2>/dev/null | grep -qxF "$T/shot.png" && kept=$((kept+1))
   done
-  if [ $foreign = 1 ]; then
+  if [ $broke = 1 ]; then
+    bad "mac-clip" "a write or its change-count record failed on the real clipboard"
+  elif [ $foreign = 1 ]; then
     skip "mac-clip (real clipboard)" "something else was copied mid-test; left it alone"
   else
     [ "$kept" = 5 ] && ok "mac-clip's copy survives on the real clipboard (5/5)" || bad "mac-clip" "copy survived only $kept/5 times"

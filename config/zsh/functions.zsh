@@ -179,9 +179,10 @@ _drive_confirm() {
 # the identity can't be read.
 # Parsed with plistlib, not `plutil -convert json`: that rejects <data> values,
 # and an inserted CD's IOMedia carries one (its TOC), which made every disk
-# unidentifiable.
+# unidentifiable. Brew's python3, not /usr/bin/python3, which is Xcode's
+# launcher and fails (so every disk would be refused) without the CLT.
 _drive_regid() {
-  ioreg -r -c IOMedia -a 2>/dev/null | /usr/bin/python3 -c '
+  ioreg -r -c IOMedia -a 2>/dev/null | /opt/homebrew/bin/python3 -c '
 import plistlib, sys
 def walk(o):
     if isinstance(o, dict):
@@ -196,7 +197,7 @@ sys.exit(1)' "$1" 2>/dev/null
 _drive_identity() {
   local reg info
   reg=$(_drive_regid "$1") && [[ -n $reg ]] || return 1
-  info=$(diskutil info -plist "/dev/$1" 2>/dev/null | /usr/bin/python3 -c '
+  info=$(diskutil info -plist "/dev/$1" 2>/dev/null | /opt/homebrew/bin/python3 -c '
 import plistlib, sys
 d = plistlib.loads(sys.stdin.buffer.read())
 print("|".join(str(d.get(k, "")) for k in ("TotalSize", "MediaName", "IORegistryEntryName", "DeviceTreePath")))' 2>/dev/null) &&
