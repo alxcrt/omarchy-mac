@@ -8,6 +8,8 @@
 # Homebrew 6 refuses to load formulae from untrusted taps and aborts the whole
 # bundle, so install.sh trusts each one first (brew trust --formula ...).
 tap "bjarneo/cliamp"
+tap "blacktop/tap"
+tap "mateussiqueira/unleash"
 
 # --- CLI: Omarchy's pacman set, ported ---
 brew "bat"          # cat with syntax highlighting; used as MANPAGER
@@ -48,6 +50,17 @@ brew "mole"
 brew "openai-whisper"
 brew "whisper-cpp"
 brew "xh"
+
+# --- CLI installed by hand, declared Oct 2026 ---
+brew "duti"         # set default apps for file types / URL schemes
+brew "expat"        # XML parser library (keg-only; macOS ships its own)
+brew "megatools"    # mega.nz command-line client
+brew "rom-tools"    # MAME ROM tools (chdman: .chd images)
+brew "radare2"      # reverse-engineering framework (iOS RE skill)
+brew "blacktop/tap/ipsw"  # iOS firmware / Mach-O analysis (iOS RE skill)
+brew "ipatool"      # search and download IPAs from the App Store
+brew "xcodegen"     # generate Xcode projects from a spec
+brew "mateussiqueira/unleash/unleash"
 
 # --- GUI casks ---
 cask "ghostty@tip"             # terminal (tip builds)
