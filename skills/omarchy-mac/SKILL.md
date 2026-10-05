@@ -181,16 +181,24 @@ extensions.
   reverse, an app installed outside brew (Claude.app), makes `brew bundle`
   fail on "already an App at"; `brew install --cask --adopt <c>` takes it
   over in place without replacing the app, which matters when it's running.
-- **Locks: use `lockf`, never a hand-rolled one.** `macup` takes it as
-  `lockf -s -k -t 0 file caffeinate -i -w $$`, started from a process
-  substitution that reports "locked" (or lockf's error and status) back. The
-  kernel lock lives in that lockf process alone (lockf closes it for its
-  child), and caffeinate exits when macup does, so the lock lasts exactly as
-  long as macup and no child of macup can inherit it. An mkdir/owner-record
-  lock went through three Codex review rounds (Oct 2026) and every fix opened
-  a narrower race; then re-exec under `lockf file "$0"` made `kill` hit only
-  the wrapper, and an fd held in macup's own shell leaked into every child.
-  Exit status 75 means "already held"; anything else is a real setup error.
+- **Locks: use `lockf`, never a hand-rolled one.** `macup` uses the standard
+  shell lock: `exec 9>>file; lockf -s -t 0 9` (lockf's descriptor mode,
+  ships with macOS). The lock lives in macup itself, so it can't be dropped
+  mid-run and the kernel releases it as macup exits. Children inherit it on
+  purpose: a step left running by a killed macup keeps it until it finishes,
+  so a new run can't collide with it, and the refusal lists the holders
+  (`lsof -t file`). Exit status 75 means "held"; anything else is a setup
+  error. Four designs failed Codex review first (Oct 2026): an mkdir lock
+  (races), a re-exec under `lockf file "$0"` (`kill` hit only the wrapper),
+  a `lockf file caffeinate -w $$` helper (released late, and lost the lock
+  if caffeinate died), and a background worker (bash makes background jobs
+  ignore Ctrl-C, and their children inherit that).
+- **bash 3.2: `exec cmd 9>&-` does not close fd 9.** bash saves a copy (as fd
+  10) in case the exec fails, and the copy leaks into cmd. Close it first in
+  its own statement: `exec 9>&-; exec cmd`. `cmd 9>&-` (no exec) is fine.
+- **macOS `mktemp` ignores `TMPDIR` when given no template** (it uses the
+  per-user /var/folders dir). Tests that need temp files contained must pass
+  a template or stub mktemp.
 - **No EXIT trap in a script that must die on `kill`.** bash 3.2 with an
   EXIT trap defers SIGTERM until a running `$(...)` finishes (measured: 5s
   versus 0.5s). Clean up temp files explicitly instead.

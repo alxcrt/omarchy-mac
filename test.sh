@@ -616,13 +616,20 @@ pgrep -f "caffeinate -i -w \$PPID" >/dev/null && echo caffeinated >>"$T/caf.log"
 exit 0
 EOF
 chmod +x "$STUB/brew"
-PATH="$STUB:/usr/bin:/bin" ~/.local/bin/macup </dev/null >/dev/null 2>&1; rc=$?
+# Own state dir and TMPDIR: the real lock and mas-skip stay untouched, and
+# any temp file macup left behind would show up in $T/tmp.
+# macOS mktemp ignores TMPDIR when given no template, so a stub routes it into
+# $T/tmp: the no-leftover-temp-files check below then sees anything macup
+# makes, and nothing lands in the real temp dir.
+mkdir -p "$T/tmp"
+printf '#!/bin/bash\nexec /usr/bin/mktemp "%s/tmp/tmp.XXXXXX"\n' "$T" >"$STUB/mktemp"; chmod +x "$STUB/mktemp"
+XDG_STATE_HOME="$T/state0" TMPDIR="$T/tmp" PATH="$STUB:/usr/bin:/bin" ~/.local/bin/macup </dev/null >/dev/null 2>&1; rc=$?
 grep -q caffeinated "$T/caf.log" 2>/dev/null && ok "macup keeps the Mac awake while it runs (caffeinate)" || bad "macup" "not caffeinated"
 grep -q '^mise uninstall claude@1.0.0' "$LOG" && ok "macup prunes an old tool version nothing is using" || bad "macup" "did not prune claude@1.0.0"
 grep -q '^mise uninstall claude@1.1.0' "$LOG" && bad "macup" "pruned a version a running process has open" || ok "macup keeps a version a running session has open (path with a space)"
 # If lsof yields nothing, "in use" is unknown: nothing may be pruned.
 printf '#!/bin/bash\nexit 1\n' >"$STUB/lsof"; : >"$LOG"
-out=$(PATH="$STUB:/usr/bin:/bin" ~/.local/bin/macup </dev/null 2>&1)
+out=$(XDG_STATE_HOME="$T/state0" TMPDIR="$T/tmp" PATH="$STUB:/usr/bin:/bin" ~/.local/bin/macup </dev/null 2>&1)
 grep -q '^mise uninstall' "$LOG" && bad "macup" "pruned with no process inventory" || ok "macup skips pruning when lsof can't list running executables"
 printf '#!/bin/bash\nprintf "p42\\nn/x y/mise/installs/claude/1.1.0/bin/claude\\n"\n' >"$STUB/lsof"
 grep -q '^brew upgrade .*--yes' "$LOG" && ok "macup upgrades with --yes (never stalls at y/n)" || bad "macup" "brew upgrade without --yes"
@@ -636,14 +643,22 @@ lockf -k "$LK" sleep 30 & holder=$!; sleep 0.5
 out=$(runlock); rc=$?
 [ $rc = 75 ] && grep -q 'already running' <<<"$out" && ! grep -q '^brew' "$LOG" \
   && ok "a second macup refuses while one holds the lock" || bad "macup lock" "rc=$rc: $out"
+grep -q "held by: $holder lockf -k .* sleep 30" <<<"$out" && ok "the refusal names what holds the lock" || bad "macup lock" "holder not named: $out"
 kill $holder 2>/dev/null; wait $holder 2>/dev/null
 runlock >/dev/null
 grep -q '^brew update' "$LOG" && ok "a leftover lock file with no holder never blocks macup" || bad "macup lock" "stale lock file blocked macup"
+# The kernel drops the lock as macup exits, so a run started the moment the
+# last one returns is never refused. (A smoke check: a release that lagged by
+# milliseconds would usually still pass. The guarantee is that macup holds
+# the lock itself, with no helper process to outlive it.)
+refused=0
+for i in 1 2 3; do runlock >/dev/null; [ $? = 75 ] && refused=$((refused+1)); done
+[ $refused = 0 ] && ok "back-to-back runs are never refused" || bad "macup lock" "$refused/3 immediate reruns refused"
 # A lock that can't be taken for another reason (state dir is a file here) is
 # reported as itself, not as "already running", and nothing runs.
 : >"$LOG"; : >"$T/statefile"
 out=$(XDG_STATE_HOME="$T/statefile" PATH="$STUB:/usr/bin:/bin" ~/.local/bin/macup </dev/null 2>&1); rc=$?
-[ $rc = 1 ] && grep -q 'could not take its lock: lockf: cannot open' <<<"$out" && ! grep -q 'already running' <<<"$out" && ! grep -q '^brew' "$LOG" \
+[ $rc = 1 ] && grep -q 'cannot open its lock file' <<<"$out" && ! grep -q 'already running' <<<"$out" && ! grep -q '^brew' "$LOG" \
   && ok "a lock setup error is reported as itself, not as 'already running'" || bad "macup lock" "setup error: rc=$rc: $out"
 # Two runs that really overlap: the first is held inside `brew update` until
 # the second has tried, so the test can't pass by the runs merely queueing.
@@ -660,18 +675,22 @@ out=$(XDG_STATE_HOME="$T/lockstate" PATH="$STUB:/usr/bin:/bin" ~/.local/bin/macu
 touch "$T/release"; wait $first
 [ -e "$T/in-update" ] && [ $second = 75 ] && [ "$(grep -c '^brew update' "$LOG")" = 1 ] \
   && ok "an overlapping second macup is refused; exactly one updates" || bad "macup lock" "overlap: second rc=$second, updates=$(grep -c '^brew update' "$LOG")"
-# Cancelling: macup must be one process, so killing it ends the update (a
-# re-exec under lockf left the real updater running behind a dead wrapper),
-# and the step it was in must not inherit the lock. (-t 2: the helper notices
-# macup's exit asynchronously; a step holding the lock would keep it ~10s.)
+# Cancelling: macup is one process, so killing it ends the update at once (a
+# re-exec under lockf left the real updater running behind a dead wrapper).
+# The step it was in carries on, and keeps the lock until it finishes: a new
+# run must not collide with it, and is told what it is waiting for.
 rm -f "$T/in-update" "$T/release"; : >"$LOG"
-XDG_STATE_HOME="$T/lockstate" PATH="$STUB:/usr/bin:/bin" ~/.local/bin/macup </dev/null >/dev/null 2>&1 & first=$!
+XDG_STATE_HOME="$T/lockstate" TMPDIR="$T/tmp" PATH="$STUB:/usr/bin:/bin" ~/.local/bin/macup </dev/null >/dev/null 2>&1 & first=$!
 for i in $(seq 100); do [ -e "$T/in-update" ] && break; sleep 0.1; done
 kill $first; wait $first 2>/dev/null
-lockf -s -t 2 "$LK" true; free=$?   # brew update is still running here
-touch "$T/release"; sleep 1
-[ -e "$T/in-update" ] && [ $free = 0 ] && ! grep -q '^brew upgrade' "$LOG" \
-  && ok "killing macup stops the update and frees the lock at once" || bad "macup lock" "after kill: lock free rc=$free, later steps: $(grep -c '^brew upgrade' "$LOG")"
+pgrep -f "$STUB/brew update" >/dev/null; inflight=$?   # 0: macup died first
+out=$(XDG_STATE_HOME="$T/lockstate" PATH="$STUB:/usr/bin:/bin" ~/.local/bin/macup </dev/null 2>&1); again=$?
+touch "$T/release"
+lockf -s -t 5 "$LK" true; free=$?   # free once that step has finished
+[ -e "$T/in-update" ] && [ $inflight = 0 ] && [ $again = 75 ] && grep -q 'held by: .*brew update' <<<"$out" \
+  && [ $free = 0 ] && ! grep -q '^brew upgrade' "$LOG" \
+  && ok "killing macup stops it at once; its running step holds the lock until done" \
+  || bad "macup lock" "after kill: died-first=$((1-inflight)) rerun rc=$again freed rc=$free later steps=$(grep -c '^brew upgrade' "$LOG"): $out"
 mv "$STUB/brew.real" "$STUB/brew"
 # App Store: an app owned by another Apple Account pops a modal dialog on every
 # update attempt. macup must try it once, report it under "Needs you" (not as
@@ -702,7 +721,7 @@ for run in 1 2; do
 done
 # Killed while inside a $(...) (mas outdated hanging): bash 3.2 with an EXIT
 # trap would wait for the substitution to finish before dying. macup must die
-# at once, with the stub still blocked, and free the lock.
+# at once, with the stub still blocked; the lock is free once the stub ends.
 cp "$STUB/mas" "$STUB/mas.real"
 cat >"$STUB/mas" <<EOF
 #!/bin/bash
@@ -710,14 +729,16 @@ if [ "\$1" = outdated ]; then touch "$T/in-mas"; for i in \$(seq 100); do [ -e "
 exec "$STUB/mas.real" "\$@"
 EOF
 chmod +x "$STUB/mas"; rm -f "$T/in-mas" "$T/release"; : >"$LOG"
-XDG_STATE_HOME="$T/state" PATH="$STUB:/usr/bin:/bin" ~/.local/bin/macup </dev/null >/dev/null 2>&1 & first=$!
+XDG_STATE_HOME="$T/state" TMPDIR="$T/tmp" PATH="$STUB:/usr/bin:/bin" ~/.local/bin/macup </dev/null >/dev/null 2>&1 & first=$!
 for i in $(seq 100); do [ -e "$T/in-mas" ] && break; sleep 0.1; done
 kill $first; wait $first 2>/dev/null
 pgrep -f "$STUB/mas outdated" >/dev/null; blocked=$?   # 0: macup died first
-lockf -s -t 2 "$T/state/macup/macup.lock" true; free=$?
-touch "$T/release"; sleep 1
+touch "$T/release"
+lockf -s -t 5 "$T/state/macup/macup.lock" true; free=$?
 [ -e "$T/in-mas" ] && [ $blocked = 0 ] && [ $free = 0 ] && ! grep -q '^mise ' "$LOG" \
-  && ok "killing macup inside a \$(...) ends it at once and frees the lock" || bad "macup lock" "kill in mas outdated: died-first=$((1-blocked)) lock-free rc=$free, later steps: $(grep -c '^mise ' "$LOG")"
+  && ok "killing macup inside a \$(...) ends it at once; the lock frees when the stub ends" || bad "macup lock" "kill in mas outdated: died-first=$((1-blocked)) lock-free rc=$free, later steps: $(grep -c '^mise ' "$LOG")"
+# Normal and killed runs above all used TMPDIR=$T/tmp and the mktemp stub.
+[ -z "$(ls -A "$T/tmp")" ] && ok "macup leaves no temp files behind, even when killed" || bad "macup" "left temp files: $(ls -A "$T/tmp" | head -3)"
 mv "$STUB/mas.real" "$STUB/mas"
 fi
 

@@ -12,26 +12,39 @@ step() { "$@" || FAILED+=("$*"); }
 
 # One macup at a time (upstream: "An Omarchy update is already running").
 # Two at once collide on brew's download locks and both fail spuriously.
-# The lock is lockf(1)'s (ships with macOS), held by a helper that lives
-# exactly as long as macup: `lockf file caffeinate -w $$`. caffeinate keeps
-# the Mac awake (upstream does the same) and exits the moment macup exits or
-# dies, and lockf then drops the lock. Only that lockf process holds it (it
-# closes the lock for its own child), so nothing macup starts can inherit it:
-# a step left running after a kill can't wedge the next run. macup itself
-# stays one process with no traps, so `kill` ends it at once (bash 3.2 with
-# an EXIT trap waits out a running $(...) first) and Ctrl-C ends the lot.
-# A hand-rolled mkdir lock went through three review rounds and still raced.
+# The standard shell lock: open the lock file on fd 9 and take lockf(1)'s
+# kernel lock on that descriptor (its man page's way "to lock inside a shell
+# script"; ships with macOS). The kernel drops it once every holder is gone,
+# so it is released by the time anyone sees macup exit: no stale locks, no
+# pid files, no helper whose death could drop it mid-run.
+# Commands macup runs inherit it on purpose: if macup is killed mid-step,
+# that step keeps running, and a new run must wait for it rather than collide
+# with it (the refusal names what still holds it). Only processes that are
+# not the update's own work get it closed: caffeinate, the softwareupdate
+# listing, and the user's hooks, which may leave daemons running.
+# bash 3.2 detail: `exec cmd 9>&-` does NOT close it (bash keeps a copy in
+# case exec fails, and the copy leaks into cmd); close it in its own `exec`.
+# No traps in macup: bash 3.2 with one defers a kill until a running $(...)
+# finishes. An mkdir lock, a re-exec under lockf and a lockf+caffeinate
+# helper each failed review before this (see SKILL.md).
 LOCKFILE="${XDG_STATE_HOME:-$HOME/.local/state}/macup/macup.lock"   # (the old mkdir lock was a dir named "lock")
-mkdir -p "${LOCKFILE%/*}" 2>/dev/null   # if this fails, lockf says why below
-# The helper prints "locked" once it holds the lock; if lockf fails instead,
-# the line is lockf's own error, then its status (-s: none for a held lock).
-exec 8< <(lockf -s -k -t 0 "$LOCKFILE" /bin/sh -c 'echo locked; exec caffeinate -i -w "$1" >/dev/null 2>&1' sh $$ 2>&1; echo "$?")
-read -r got <&8; exec 8<&-
-case $got in
-  locked) ;;
-  75) echo "macup is already running." >&2; exit 75 ;;   # EX_TEMPFAIL: held
-  *)  echo "macup: could not take its lock: ${got:-lockf did not start}" >&2; exit 1 ;;
-esac
+mkdir -p "${LOCKFILE%/*}" && exec 9>>"$LOCKFILE" ||
+  { echo "macup: cannot open its lock file $LOCKFILE" >&2; exit 1; }
+lockf -s -t 0 9; rc=$?
+if [ $rc = 75 ]; then   # EX_TEMPFAIL: held (-s keeps lockf itself quiet)
+  echo "macup is already running." >&2
+  # lsof with fd 9 closed, so it doesn't list itself; then drop this shell.
+  # (The system lsof by path: the prune below takes lsof from PATH.)
+  for pid in $(exec 9>&-; /usr/sbin/lsof -t -- "$LOCKFILE" 2>/dev/null); do
+    [ "$pid" = $$ ] || ps -o pid=,command= -p "$pid" | sed 's/^ */  held by: /' >&2
+  done
+  exit 75
+elif [ $rc != 0 ]; then
+  echo "macup: could not take its lock (lockf exit $rc)" >&2; exit 1
+fi
+
+# Stay awake while updating (upstream does the same); ends with this process.
+caffeinate -i -w $$ >/dev/null 2>&1 9>&- &
 
 # Stale symlinks mean you're running old copies of these scripts/configs
 # (that's how an old macup without --yes kept prompting). Warn; don't auto-fix,
@@ -41,11 +54,10 @@ if [ ! -L "$HOME/.local/bin/macup" ] || [ ! -L "$HOME/.config/mise/config.toml" 
 fi
 
 # softwareupdate --list takes 10-30s of network round-trips; start it now and
-# read the result at the end instead of waiting on it serially. (Removed after
-# reading, not by an EXIT trap: the trap is what made `kill` wait, see above.)
-SWU=$(mktemp)
-softwareupdate --list >"$SWU" 2>&1 &
-SWU_PID=$!
+# read the result at the end instead of waiting on it serially. Through a
+# pipe, not a temp file: nothing to clean up if macup is killed (and cleanup
+# would need a trap, see above).
+exec 7< <(exec 9>&- 2>&1; exec softwareupdate --list)
 
 section "Homebrew"
 step brew update --quiet
@@ -55,7 +67,7 @@ step brew update --quiet
 step brew upgrade --greedy --yes
 
 section "Mac App Store"
-# Two traps, both hit on this Mac:
+# Two pitfalls, both hit on this Mac:
 #  - `mas update` needs root (mas 2+). Authenticate once up front so sudo can
 #    use Touch ID (pam_tid) instead of mas's own password prompt; with no
 #    terminal to ask in, skip rather than hang.
@@ -159,12 +171,11 @@ section "Status"
 # `mac doctor` runs it on demand. mise doctor is fast and catches PATH breakage.
 mise doctor >/dev/null 2>&1 || echo "mise doctor reports problems — run: mise doctor"
 # Report available macOS updates — never auto-install them.
-wait "$SWU_PID"
-grep -q 'No new software available' "$SWU" && echo "macOS up to date" || tail -5 "$SWU"
-rm -f "$SWU"
+swu=$(cat <&7); exec 7<&-   # EOF: softwareupdate has finished
+grep -q 'No new software available' <<<"$swu" && echo "macOS up to date" || tail -5 <<<"$swu"
 
 # User hooks (port of omarchy's hook system) — see ~/.config/omarchy-mac/hooks/
-command -v mac-hook >/dev/null && mac-hook post-update
+command -v mac-hook >/dev/null && mac-hook post-update 9>&-
 
 if [ ${#NEEDS_YOU[@]} -gt 0 ]; then
   echo -e "\n\033[0;33mNeeds you:\033[0m"; printf '  %s\n' "${NEEDS_YOU[@]}"
