@@ -41,8 +41,12 @@ trap 'rm -rf "$out" "$thumbdir"' EXIT
 # If this run is killed (the browser's native host stops it when the extension
 # disconnects), take its "Downloading…" notification down with it.
 # The download runs as a background job (below) so this fires at once — bash
-# defers traps while a foreground pipeline runs — and stops yt-dlp and tee.
-trap 'pkill -TERM -P $$ 2>/dev/null; "${MAC_NOTIFY_BIN:-/opt/homebrew/bin/terminal-notifier}" -remove "webdl-$$" >/dev/null 2>&1; exit 130' INT TERM HUP
+# defers traps while a foreground pipeline runs. It stops the whole tree
+# (yt-dlp's ffmpeg downloader/postprocessor are grandchildren), and every step
+# is best-effort: with no children left, a failing pkill under set -e would
+# otherwise end the handler before the notification is removed.
+killtree() { local c; for c in $(pgrep -P "$1" 2>/dev/null); do killtree "$c"; done; kill -TERM "$1" 2>/dev/null || true; }
+trap 'for c in $(pgrep -P $$ 2>/dev/null); do killtree "$c"; done; "${MAC_NOTIFY_BIN:-/opt/homebrew/bin/terminal-notifier}" -remove "webdl-$$" >/dev/null 2>&1 || true; exit 130' INT TERM HUP
 
 # probe [yt-dlp args] — print "<id><TAB><title>" of the video at $url.
 # Check for an ID, not just the exit code: on a page with no video (the

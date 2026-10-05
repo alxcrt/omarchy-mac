@@ -16,7 +16,17 @@ want() { [ -z "$ONLY" ] || [ "$ONLY" = "$1" ]; }
 
 ONLY="$1"
 export PATH="$HOME/.local/bin:/opt/homebrew/bin:$PATH"
-T=$(mktemp -d); trap 'rm -rf "$T"' EXIT; export T
+T=$(mktemp -d); trap 'clip_restore; rm -rf "$T"' EXIT; export T
+trap 'exit 130' INT TERM   # so Ctrl-C still runs the EXIT cleanup
+# Real-clipboard tests: snapshot first, remember the pasteboard's change count
+# after each OWN write, and restore (here or on exit/Ctrl-C) only while the
+# count still matches. Anything Alex copied since is his and stays.
+CLIP_SNAP=""; CLIP_MINE=""
+pbcount() { osascript -l JavaScript -e 'ObjC.import("AppKit"); $.NSPasteboard.generalPasteboard.changeCount' 2>/dev/null; }
+clip_restore() {
+  [ -n "$CLIP_MINE" ] && [ "$(pbcount)" = "$CLIP_MINE" ] && mac-pbsnap restore "$CLIP_SNAP"
+  CLIP_MINE=""
+}
 # No test may post a real notification or leave a Show/Copy waiter running:
 # mac-notify gets a silent stand-in for terminal-notifier (the notify section
 # passes its own recording stub).
@@ -161,6 +171,61 @@ DZ() { ZRUN "PATH='$DU':\$PATH; $*"; }
 [ "$(DZ '_drive_check /dev/rdisk9')" = disk9 ] && ok "drives: /dev/rdisk9 is accepted as disk9" || bad "_drive_check" "rdisk9 not accepted"
 : >"$T/img.iso"; DZ "iso2sd '$T/img.iso' disk9" </dev/null >/dev/null 2>&1; DZ "format-drive disk9 TEST" </dev/null >/dev/null 2>&1
 [ ! -s "$DL" ] && ok "drives: nothing is unmounted or erased without a yes" || bad "drives" "acted without confirmation: $(cat "$DL")"
+# The write path, against fakes only: a fake diskutil whose card name comes
+# from a file (so a test can swap the card), a fake sudo that captures what dd
+# would write instead of writing, and a gum that says yes. No real disk is
+# ever touched.
+YES="$T/yes-stub"; SL="$T/sudo.log"; mkdir -p "$YES"; echo A >"$T/du-name"
+cat >"$DU/diskutil" <<EOF
+#!/bin/bash
+case "\$*" in
+  "list -plist external physical") printf '<?xml version="1.0"?><plist version="1.0"><dict><key>WholeDisks</key><array><string>disk9</string></array></dict></plist>' ;;
+  "info -plist /dev/disk9") printf '<?xml version="1.0"?><plist version="1.0"><dict><key>TotalSize</key><integer>31914983424</integer><key>MediaName</key><string>SD %s</string><key>IORegistryEntryName</key><string>SD Media</string><key>DeviceTreePath</key><string>IODeviceTree:/usb</string></dict></plist>' "\$(cat "$T/du-name")" ;;
+  *) echo "diskutil \$*" >>"$DL" ;;
+esac
+EOF
+cat >"$YES/sudo" <<EOF
+#!/bin/bash
+echo "sudo \$*" >>"$SL"
+[ "\$1" = dd ] && { case " \$* " in *" if="*) ;; *) cat >"$T/dd-in" ;; esac; }
+exit 0
+EOF
+cat >"$YES/gum" <<EOF
+#!/bin/bash
+[ "\$1" = confirm ] && { [ -f "$T/swap-on-confirm" ] && echo B >"$T/du-name"; exit 0; }
+exit 1
+EOF
+chmod +x "$DU/diskutil" "$YES/sudo" "$YES/gum"
+DY() { : >"$DL"; : >"$SL"; rm -f "$T/dd-in"; ZRUN "PATH='$YES':'$DU':\$PATH; $* 2>&1"; }
+printf 'disk image bytes' >"$T/card.img"
+out=$(DY "iso2sd '$T/card.img' disk9")
+grep -q 'dd if=.*card.img of=/dev/rdisk9' "$SL" && grep -q 'eject /dev/disk9' "$DL" \
+  && ok "iso2sd writes to the raw device and ejects" || bad "iso2sd" "write path: $(cat "$SL" "$DL" | tr '\n' ' ')"
+touch "$T/swap-on-confirm"; echo A >"$T/du-name"; out=$(DY "iso2sd '$T/card.img' disk9")
+! grep -q ' dd ' "$SL" && ! grep -q unmountDisk "$DL" && grep -q 'no longer the disk you confirmed' <<<"$out" \
+  && ok "iso2sd writes nothing if the disk changed after the yes" || bad "iso2sd" "wrote to a swapped disk: $(cat "$SL" | tr '\n' ' ')"
+rm -f "$T/swap-on-confirm"; echo A >"$T/du-name"
+gzip -c "$T/card.img" | head -c 20 >"$T/broken.img.gz"; out=$(DY "iso2sd '$T/broken.img.gz' disk9")
+grep -q 'Write failed' <<<"$out" && ! grep -q eject "$DL" \
+  && ok "iso2sd reports a broken archive and never ejects it as done" || bad "iso2sd" "broken .gz: $out"
+( cd "$T" && printf 'read me' >README.txt && cp card.img disk.img && zip -q one.zip README.txt disk.img && zip -q two.zip disk.img card.img )
+out=$(DY "iso2sd '$T/one.zip' disk9")
+[ "$(cat "$T/dd-in" 2>/dev/null)" = "disk image bytes" ] && ok "iso2sd writes only the image from a .zip (not its README)" || bad "iso2sd" "zip stream: '$(cat "$T/dd-in" 2>/dev/null)'"
+out=$(DY "iso2sd '$T/two.zip' disk9")
+grep -q "Can't tell which file" <<<"$out" && ! grep -q unmountDisk "$DL" && ok "iso2sd refuses a .zip with two images" || bad "iso2sd" "two-image zip: $out"
+# format-drive: the card swaps after its third diskutil info call, i.e.
+# between the confirmation and the erase.
+cat >"$DU/diskutil.sh" <<EOF
+#!/bin/bash
+n=\$(( \$(cat "$T/du-n" 2>/dev/null || echo 0) + 1 )); echo \$n >"$T/du-n"
+[ \$n -gt 3 ] && echo B >"$T/du-name"
+exec "$DU/diskutil.real" "\$@"
+EOF
+mv "$DU/diskutil" "$DU/diskutil.real"; mv "$DU/diskutil.sh" "$DU/diskutil"; chmod +x "$DU/diskutil"
+echo A >"$T/du-name"; rm -f "$T/du-n"; : >"$DL"
+out=$(ZRUN "PATH='$DU':\$PATH; format-drive disk9 TEST 2>&1" <<<"y")
+! grep -q eraseDisk "$DL" && grep -q 'no longer the disk you confirmed' <<<"$out" \
+  && ok "format-drive erases nothing if the disk changed after the yes" || bad "format-drive" "erased a swapped disk: $out"
 # ssh reconnect: only a dropped INTERACTIVE session may be replayed.
 ZRUN '_ssh_interactive host' && ok "ssh: plain host is interactive" || bad "_ssh_interactive" "host"
 ZRUN '_ssh_interactive host uptime' && bad "_ssh_interactive" "remote command treated as interactive" || ok "ssh: a remote command is never replayed"
@@ -225,6 +290,12 @@ head -c 4096 /dev/urandom >"$T/broken.mp4"
 transcode "$T/broken.mp4" mp4 share >/dev/null 2>&1
 [ ! -e "$T/broken-share.mp4" ] && [ -z "$(ls -A "$T" | grep -- '-share\.[0-9]*\.mp4$')" ] \
   && ok "share: a failed encode leaves no partial or temp file" || bad "share" "failed encode left a file behind"
+# A clip that probes fine but cannot be encoded (read-only folder) must fail,
+# not print a path as if it had worked.
+mkdir -p "$T/ro"; cp "$T/s-vp9.mp4" "$T/ro/clip.mp4"; chmod 555 "$T/ro"
+transcode "$T/ro/clip.mp4" mp4 share >/dev/null 2>&1 && bad "share" "encoder failure reported success" \
+  || { [ ! -e "$T/ro/clip-share.mp4" ] && ok "share: an encoder failure fails (exit status, no file)" || bad "share" "encoder failure left a file"; }
+chmod 755 "$T/ro"
 transcode "$T/a.png" bogus high >/dev/null 2>&1 && bad "bogus format" "should fail" || ok "rejects unknown format"
 # wrapper functions call through
 cp "$T/a.png" "$T/w.png"; ZRUN "img2jpg '$T/w.png'" >/dev/null 2>&1
@@ -266,6 +337,10 @@ echo "$hk" | grep -q 'prefix+h / alt+enter *split horizontal' && ok "mac-keys sh
 # herdr's defaults comment out example sub-tables and explain them in prose
 # (`# type = "popup" opens …`); none of that may pass as a binding.
 echo "$hk" | grep -q -E '80%|lazygit|popup' && bad "mac-keys" "herdr comment/example text listed as bindings" || ok "mac-keys skips herdr's commented examples"
+printf '[keys]\nprefix = "ctrl+a"\nzoom = "prefix+z"\n\n[[keys.command]]\nkey = "prefix+g"\ncommand = "lazygit"\n' >"$T/herdr.toml"
+out=$(HERDR_CONFIG="$T/herdr.toml" mac-keys 2>&1); rc=$?
+[ $rc = 0 ] && grep -q 'prefix+z *zoom' <<<"$out" && grep -q 'Ghostty' <<<"$out" \
+  && ok "mac-keys survives a [[keys.command]] table in the herdr config" || bad "mac-keys" "rc=$rc with a [[keys.command]] table"
 fi
 
 # ── 8. git ─────────────────────────────────────────────────────────────────
@@ -300,9 +375,11 @@ if [ -n "$u" ]; then
   # copied file came back as an empty string). Restore it only if it still
   # holds what this test wrote: anything copied meanwhile is Alex's and stays.
   if mac-pbsnap save "$T/clip.json"; then
+    CLIP_SNAP="$T/clip.json"; before=$(pbcount)
     w=$(weburl 2>/dev/null | tail -1)   # the URL weburl actually wrote (the tab may change)
+    [ "$(pbcount)" = $(( before + 1 )) ] && CLIP_MINE=$(pbcount)   # exactly one write: ours
     [ -n "$w" ] && [ "$(pbpaste)" = "$w" ] && ok "weburl copied URL to clipboard" || bad "weburl" "clipboard mismatch"
-    [ -n "$w" ] && [ "$(pbpaste)" = "$w" ] && mac-pbsnap restore "$T/clip.json"
+    clip_restore
   else
     skip "weburl" "could not snapshot the clipboard, so it was left alone"
   fi
@@ -521,16 +598,25 @@ printf '#!/bin/bash\nprintf "p42\\nn/x y/mise/installs/claude/1.1.0/bin/claude\\
 grep -q '^brew upgrade .*--yes' "$LOG" && ok "macup upgrades with --yes (never stalls at y/n)" || bad "macup" "brew upgrade without --yes"
 grep -q '^mise up' "$LOG" && ok "macup still updates mise after a brew failure" || bad "macup" "brew failure skipped mise"
 [ "$rc" -ne 0 ] && ok "macup exits non-zero when a step failed" || bad "macup" "hid a failed step"
-# One macup at a time: a live lock holder makes a second run refuse without
-# touching brew; a lock left by a dead process is taken over.
-mkdir -p "$T/lockstate/macup/lock"; echo $$ >"$T/lockstate/macup/lock/pid"; : >"$LOG"
-out=$(XDG_STATE_HOME="$T/lockstate" PATH="$STUB:/usr/bin:/bin" ~/.local/bin/macup </dev/null 2>&1); lrc=$?
-[ $lrc -ne 0 ] && grep -q 'already running' <<<"$out" && ! grep -q '^brew' "$LOG" \
-  && ok "a second macup refuses while one is running" || bad "macup lock" "rc=$lrc, brew calls: $(grep -c '^brew' "$LOG")"
-echo 999999 >"$T/lockstate/macup/lock/pid"; : >"$LOG"
-XDG_STATE_HOME="$T/lockstate" PATH="$STUB:/usr/bin:/bin" ~/.local/bin/macup </dev/null >/dev/null 2>&1
-grep -q '^brew update' "$LOG" && [ ! -e "$T/lockstate/macup/lock" ] \
-  && ok "a stale lock is taken over, and released at exit" || bad "macup lock" "stale lock not handled"
+# One macup at a time. The lock records pid + process start time.
+LK="$T/lockstate/macup/lock"; pst() { ps -o lstart= -p "$1" | tr -s ' ' | sed 's/^ //; s/ $//'; }
+mklock() { rm -rf "$LK"; mkdir -p "$LK"; [ -n "$1" ] && echo "$1" >"$LK/owner"; touch -t "$2" "$LK" 2>/dev/null; }
+runlock() { : >"$LOG"; XDG_STATE_HOME="$T/lockstate" PATH="$STUB:/usr/bin:/bin" ~/.local/bin/macup </dev/null 2>&1; }
+mklock "$$ $(pst $$)"; out=$(runlock)
+grep -q 'already running' <<<"$out" && ! grep -q '^brew' "$LOG" && ok "a second macup refuses while one is running" || bad "macup lock" "live owner: $out"
+mklock "" "$(date +%Y%m%d%H%M)"; out=$(runlock)
+grep -q 'already starting' <<<"$out" && ! grep -q '^brew' "$LOG" && ok "a just-created lock with no owner yet counts as live" || bad "macup lock" "starting run: $out"
+mklock "$$ Thu Jan 1 00:00:00 1970"; runlock >/dev/null
+grep -q '^brew update' "$LOG" && ok "a reused pid (different start time) is not mistaken for a live run" || bad "macup lock" "pid reuse blocked macup"
+mklock "999999 x"; runlock >/dev/null
+grep -q '^brew update' "$LOG" && [ ! -e "$LK" ] && ok "a stale lock is taken over, and released at exit" || bad "macup lock" "stale lock not handled"
+# A run must not release a lock that is no longer its own: a fake brew swaps
+# in another owner mid-run, and that lock must survive the run's exit.
+cp "$STUB/brew" "$STUB/brew.real"
+printf '#!/bin/bash\n[ "$1" = update ] && echo "4242 someone else" >"%s/owner"\nexec "%s/brew.real" "$@"\n' "$LK" "$STUB" >"$STUB/brew"; chmod +x "$STUB/brew"
+rm -rf "$LK"; runlock >/dev/null
+[ "$(cat "$LK/owner" 2>/dev/null)" = "4242 someone else" ] && ok "macup never removes a lock it no longer owns" || bad "macup lock" "released someone else's lock"
+mv "$STUB/brew.real" "$STUB/brew"; rm -rf "$LK"
 # App Store: an app owned by another Apple Account pops a modal dialog on every
 # update attempt. macup must try it once, report it under "Needs you" (not as
 # a failure), and skip it on the next run. Developer's real ADAM ID is used so
@@ -620,8 +706,11 @@ _a=$(mac-wm --keys --porcelain | wc -l | tr -d ' ')
 _b=$(mac-keys | grep -cE '^  (fn ⌃|⌃ |drag )')
 [ "$_a" = "$_b" ] && ok "mac-keys renders all $_a native shortcuts" \
                   || bad "mac-keys" "renders $_b of $_a native shortcuts"
-mac-wm --status | grep -q 'Desktops that exist' && ok "mac-wm reports Spaces state" \
-  || bad "mac-wm --status" "no Spaces report"
+# Desktops are counted per display (⌃N only reaches Desktop N of the display
+# you're on), matching macOS's own Spaces data, not a total across displays.
+want=$(defaults export com.apple.spaces - 2>/dev/null | plutil -convert json -o - - 2>/dev/null | jq -r '[.SpacesDisplayConfiguration["Management Data"].Monitors[]? | [.Spaces[]? | select(.type == 0)] | length | select(. > 0)] | map(tostring) | join(",")')
+got=$(mac-wm --status | sed -n 's/^ *Desktops per display *//p' | sed 's/ (main display)//' | tr -d ' ')
+[ -n "$want" ] && [ "$got" = "$want" ] && ok "mac-wm reports Desktops per display ($got)" || bad "mac-wm" "Desktops per display: got '$got', want '$want'"
 fi
 
 # ── 15. modifier remap ─────────────────────────────────────────────────────
@@ -842,6 +931,8 @@ N() { MAC_NOTIFY_BIN="$NS" ~/.local/bin/mac-notify "$@"; }
 touch "$T/shot.png"; N "Transcode complete" "shot.png" "$T/shot.png"
 grep -qx -- '-execute' "$NL" && ok "clicking a file notification runs a command" || bad "mac-notify" "no -execute for a file"
 grep -qx -- '-contentImage' "$NL" && ok "image results attach a thumbnail" || bad "mac-notify" "no thumbnail for a .png"
+( cd "$T" && N "Done" "x" "shot.png" )
+grep -qxF -- "open -R $T/shot.png" "$NL" && ok "a relative file is stored as an absolute path" || bad "mac-notify" "click command: $(grep -A1 -x -- -execute "$NL" | tail -1)"
 N "Copied URL" "https://example.com"
 grep -qx -- '-execute' "$NL" && bad "mac-notify" "click action without a file" || ok "no click action when there is no file"
 N "Title" "-looks-like-a-flag"
@@ -866,14 +957,20 @@ MAC_CLIP_PASTEBOARD=$PB ~/.local/bin/mac-clip "$T/nope.mp4" 2>/dev/null && bad "
 # exits at once lost the file 4 times in 5. Snapshot first, restore after,
 # and only touch the clipboard if the snapshot worked.
 if mac-pbsnap save "$T/clip-real.json"; then
-  kept=0
+  CLIP_SNAP="$T/clip-real.json"; CLIP_MINE=$(pbcount); kept=0; foreign=0
   for i in 1 2 3 4 5; do
-    ~/.local/bin/mac-clip "$T/shot.png" >/dev/null && sleep 0.3
+    # Someone else copied since our last write: stop, and leave it alone.
+    [ "$(pbcount)" = "$CLIP_MINE" ] || { foreign=1; CLIP_MINE=""; break; }
+    ~/.local/bin/mac-clip "$T/shot.png" >/dev/null && CLIP_MINE=$(pbcount)
+    sleep 0.3
     osascript -l JavaScript -e 'ObjC.import("AppKit"); function run(){ const u=$.NSPasteboard.generalPasteboard.readObjectsForClassesOptions($.NSArray.arrayWithObject($.NSURL),$.NSDictionary.dictionary); return (u && u.count > 0) ? ObjC.unwrap(u.objectAtIndex(0).path) : ""; }' 2>/dev/null | grep -qxF "$T/shot.png" && kept=$((kept+1))
   done
-  [ "$kept" = 5 ] && ok "mac-clip's copy survives on the real clipboard (5/5)" || bad "mac-clip" "copy survived only $kept/5 times"
-  osascript -l JavaScript -e 'ObjC.import("AppKit"); function run(){ const u=$.NSPasteboard.generalPasteboard.readObjectsForClassesOptions($.NSArray.arrayWithObject($.NSURL),$.NSDictionary.dictionary); return (u && u.count > 0) ? ObjC.unwrap(u.objectAtIndex(0).path) : ""; }' 2>/dev/null | grep -qxF "$T/shot.png" \
-    && mac-pbsnap restore "$T/clip-real.json"
+  if [ $foreign = 1 ]; then
+    skip "mac-clip (real clipboard)" "something else was copied mid-test; left it alone"
+  else
+    [ "$kept" = 5 ] && ok "mac-clip's copy survives on the real clipboard (5/5)" || bad "mac-clip" "copy survived only $kept/5 times"
+  fi
+  clip_restore   # also restores when the copies vanished (the bug this guards)
 else
   skip "mac-clip (real clipboard)" "could not snapshot the clipboard, so it was left alone"
 fi
@@ -895,7 +992,7 @@ for a; do
     [ "\${YTMODE:-ok}" = none ] || printf 'abc\tTest clip\n'; exit 0
   fi
 done
-case "\${YTMODE:-ok}" in fail) exit 1 ;; hang) exec sleep 30 ;; esac
+case "\${YTMODE:-ok}" in fail) exit 1 ;; hang) sleep 31 & wait ;; esac
 p="$T/dl/Test_clip [abc].mp4"; cp "$T/fixture.mp4" "\$p"; echo "\$p"
 EOF
 chmod +x "$YS/yt-dlp"
@@ -925,7 +1022,7 @@ YTMODE=fail W "https://example.com/v" >/dev/null 2>&1
 grep -qx 'Download failed' "$NL" && ok "a failing download says so (pipefail no longer exits early)" || bad "webdl" "no failure notification: $(tr '\n' ' ' <"$NL")"
 ( YTMODE=hang W "https://example.com/v" >/dev/null 2>&1 ) & wpid=$!
 sleep 2; k0=$(date +%s); pkill -TERM -f "$HOME/.local/bin/webdl https://example.com/v" 2>/dev/null; wait $wpid 2>/dev/null
-kt=$(( $(date +%s) - k0 )); stray=$(pgrep -f "^sleep 30$" 2>/dev/null | tr '\n' ' ')
+kt=$(( $(date +%s) - k0 )); sleep 0.3; stray=$(pgrep -f "^sleep 31$" 2>/dev/null | tr '\n' ' ')   # the grandchild
 [ "$kt" -le 2 ] && [ -z "$stray" ] \
   && ok "a killed webdl stops at once and takes its download with it" || bad "webdl" "kill took ${kt}s; stray download pids: [$stray]"
 grep -qx -- '-remove' "$NL" && ok "a killed run removes its \"Downloading…\" notification" || bad "webdl" "killed run left: $(tr '\n' ' ' <"$NL")"

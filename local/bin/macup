@@ -16,15 +16,30 @@ step() { "$@" || FAILED+=("$*"); }
 # that died is taken over.
 LOCK="${XDG_STATE_HOME:-$HOME/.local/state}/macup/lock"
 mkdir -p "${LOCK%/*}"
+# Ownership = pid + that process's start time, so a pid reused by an
+# unrelated process after a crash or reboot does not look like a live run.
+pstart() { ps -o lstart= -p "$1" 2>/dev/null | tr -s ' ' | sed 's/^ //; s/ $//'; }
+me="$$ $(pstart $$)"
+lock_owner_alive() {
+  local pid start
+  read -r pid start <"$LOCK/owner" 2>/dev/null || return 1
+  [ -n "$pid" ] && [ "$(pstart "$pid")" = "$start" ]
+}
 if ! mkdir "$LOCK" 2>/dev/null; then
-  holder=$(cat "$LOCK/pid" 2>/dev/null)
-  if [ -n "$holder" ] && kill -0 "$holder" 2>/dev/null; then
-    echo "macup is already running (pid $holder)." >&2
-    exit 1
+  # A lock under a minute old with no owner yet is a run that is starting up:
+  # it is live, not stale (deleting it would let both runs go ahead).
+  if [ ! -e "$LOCK/owner" ] && [ -z "$(find "$LOCK" -maxdepth 0 -mmin +1 2>/dev/null)" ]; then
+    echo "macup is already starting." >&2; exit 1
   fi
-  rm -rf "$LOCK" && mkdir "$LOCK" || { echo "macup: could not take the lock $LOCK" >&2; exit 1; }
+  if lock_owner_alive; then
+    echo "macup is already running (pid $(cut -d' ' -f1 "$LOCK/owner"))." >&2; exit 1
+  fi
+  # Stale. Rename it away before deleting: only one of several takers can win
+  # the rename, and the losers then fail the mkdir below.
+  mv "$LOCK" "$LOCK.stale.$$" 2>/dev/null && rm -rf "$LOCK.stale.$$"
+  mkdir "$LOCK" 2>/dev/null || { echo "macup: another run took the lock." >&2; exit 1; }
 fi
-echo $$ >"$LOCK/pid"
+echo "$me" >"$LOCK/owner"
 
 # Stay awake while updating (upstream does the same); ends with this process.
 caffeinate -i -w $$ >/dev/null 2>&1 &
@@ -38,7 +53,8 @@ fi
 
 # softwareupdate --list takes 10-30s of network round-trips; start it now and
 # read the result at the end instead of waiting on it serially.
-SWU=$(mktemp); trap 'rm -f "$SWU"; rm -rf "$LOCK"' EXIT
+# Release the lock only while it is still ours.
+SWU=$(mktemp); trap 'rm -f "$SWU"; [ "$(cat "$LOCK/owner" 2>/dev/null)" = "$me" ] && rm -rf "$LOCK"' EXIT
 softwareupdate --list >"$SWU" 2>&1 &
 SWU_PID=$!
 

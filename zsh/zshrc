@@ -25,10 +25,10 @@ autoload -Uz compinit
 # globs, so `[[ -n file(N.mh+24) ]]` is always true and would audit every time.
 _zstale=( $_zcache/zcompdump(N.mh+24) )
 if (( $#_zstale )) || [[ ! -s $_zcache/zcompdump ]]; then
-  compinit -d $_zcache/zcompdump
-  # compinit leaves an unchanged dump untouched, so without this every shell
-  # after the first day would run the full audit again.
-  touch $_zcache/zcompdump
+  # compinit leaves an unchanged dump untouched, so without the touch every
+  # shell after the first day would run the full audit again. Only after a
+  # successful audit: an audit the owner aborted must not count as passed.
+  compinit -d $_zcache/zcompdump && touch $_zcache/zcompdump
 else
   compinit -C -d $_zcache/zcompdump
 fi
@@ -91,9 +91,12 @@ if [[ -x $_starship ]]; then
       # STARSHIP_SHELL=zsh makes starship wrap escapes in %{ %}, as its own
       # init does; without it zsh miscounts the prompt width.
       print -r -- "PROMPT2=${(qq)$(STARSHIP_SHELL=zsh $_starship prompt --continuation)}"
-      [[ -n $(STARSHIP_SHELL=zsh $_starship prompt --right) ]] &&
+      # `if`, not `[[ ]] &&`: with no right prompt (Omarchy's config) the
+      # group must still succeed, or the cache below is never published.
+      if [[ -n $(STARSHIP_SHELL=zsh $_starship prompt --right) ]]; then
         $_starship init zsh --print-full-init | grep '^RPROMPT='
-    } >| $_f.$$ && mv -f $_f.$$ $_f   # atomic, as for zoxide above
+      fi
+    } >| $_f.$$ && mv -f $_f.$$ $_f || rm -f $_f.$$   # atomic, as for zoxide above
   fi
   source $_f
 fi

@@ -63,9 +63,16 @@ status() {
       | tr -d ' \n' | grep -q "$((118 + i))={enabled=1;" && on=$((on + 1))
   done
   printf '  %-32s %s of 9\n' "⌃1-9 switch-to-Desktop enabled" "$on"
-  n=$(defaults read com.apple.spaces SpacesDisplayConfiguration 2>/dev/null \
-      | grep -c 'ManagedSpaceID' || true)
-  printf '  %-32s %s\n' "Desktops that exist" "${n:-unknown}"
+  # Per display, from macOS's own Spaces data. ⌃N only reaches Desktop N of
+  # the display you're on, so a total across displays (the old count, which
+  # also counted displays no longer connected) made ⌃2-9 look usable when the
+  # MacBook screen had a single Desktop. Displays with none are stale entries.
+  desk=$(defaults export com.apple.spaces - 2>/dev/null | plutil -convert json -o - - 2>/dev/null |
+    jq -r '[.SpacesDisplayConfiguration["Management Data"].Monitors[]?
+            | {id: .["Display Identifier"], n: ([.Spaces[]? | select(.type == 0)] | length)}
+            | select(.n > 0) | if .id == "Main" then "\(.n) (main display)" else "\(.n)" end] | join(", ")')
+  printf '  %-32s %s\n' "Desktops per display" "${desk:-unknown}"
+  printf '  %-32s %s\n' "" "(add more in Mission Control: ⌃↑, then +)"
 }
 
 # The native shortcuts are built into macOS and have no config file to read,

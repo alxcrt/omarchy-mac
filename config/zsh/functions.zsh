@@ -171,17 +171,52 @@ _drive_confirm() {
     local confirm; read "confirm?$1 (y/N): "; [[ $confirm == [yY]* ]]; fi
 }
 
+# _drive_identity <diskN> — what the disk is (size, media name, device),
+# compared again right before anything destructive: if the card is pulled
+# while a prompt is open, macOS can hand diskN to different media.
+_drive_identity() {
+  diskutil info -plist "/dev/$1" 2>/dev/null | plutil -convert json -o - - 2>/dev/null |
+    jq -r '[.TotalSize, .MediaName, .IORegistryEntryName, .DeviceTreePath] | map(tostring) | join("|")'
+}
+
+# _drive_still <diskN> <identity> — still an external physical disk, and the
+# same one. Run after authenticating, immediately before writing.
+_drive_still() {
+  _drive_check "$1" >/dev/null || return 1
+  if [[ "$(_drive_identity "$1")" != "$2" ]]; then
+    echo "/dev/$1 is no longer the disk you confirmed (was it unplugged?); nothing was written." >&2
+    return 1
+  fi
+}
+
 # iso2sd <image> [disk] — write an image to an SD card or USB stick. Plain
 # images go straight through dd; .gz/.xz/.zst/.zip stream-decompress to it.
 iso2sd() {
+  # zsh leaves pipefail off: without it a truncated archive's partial image
+  # would be written, ejected and reported as done.
+  setopt local_options pipe_fail
   if (( $# < 1 )); then
     echo "Usage: iso2sd <image> [disk]"
     echo "Example: iso2sd ~/Downloads/ROCKNIX.img.gz disk4"
     echo; echo "External disks:"; _external_disks
     return 1
   fi
-  local img=$1 disk=${2:-}
+  local img=$1 disk=${2:-} member=""
   [[ -f $img ]] || { echo "No such image: $img"; return 1; }
+
+  # A .zip must hold exactly one disk image: `unzip -p` with no member would
+  # concatenate every file in it (a README first) onto the card.
+  if [[ $img == *.zip ]]; then
+    local -a members=("${(@f)$(unzip -Z1 -- "$img" 2>/dev/null | grep -v -e '/$' -e '^__MACOSX/')}")
+    members=(${members:#})
+    local -a images=(${(M)members:#*.(img|iso|raw|bin)})
+    if (( $#members == 1 )); then member=${members[1]}
+    elif (( $#images == 1 )); then member=${images[1]}
+    else
+      echo "Can't tell which file in $(basename "$img") is the disk image:"; printf '  %s\n' "${members[@]}"
+      return 1
+    fi
+  fi
 
   if [[ -z $disk ]]; then
     local -a disks=("${(@f)$(_external_disks)}")
@@ -195,20 +230,23 @@ iso2sd() {
     [[ -n $disk ]] || { echo "No disk selected"; return 1; }
   fi
   disk=$(_drive_check "$disk") || return 1
+  local id=$(_drive_identity "$disk")
   local desc=$(_external_disks | awk -F'\t' -v d="$disk" '$1 == d { print $2 ", " $3 }')
 
-  _drive_confirm "ERASE /dev/$disk ($desc) and write $(basename "$img") to it?" || return 1
+  _drive_confirm "ERASE /dev/$disk ($desc) and write $(basename "$img")${member:+ ($member)} to it?" || return 1
+  sudo -v || return 1                      # authenticate first, then check last
+  _drive_still "$disk" "$id" || return 1
   diskutil unmountDisk "/dev/$disk" || return 1
   # /dev/rdiskN (raw) skips the buffer cache: several times faster. For a pipe,
   # obs=4m makes dd collect whole blocks, since a raw disk rejects writes that
   # aren't sector-aligned.
   case $img in
-    *.gz)  gzip -dc -- "$img"  | sudo dd of="/dev/r$disk" ibs=64k obs=4m status=progress ;;
-    *.xz)  xz -dc -- "$img"    | sudo dd of="/dev/r$disk" ibs=64k obs=4m status=progress ;;
-    *.zst) zstd -dc -- "$img"  | sudo dd of="/dev/r$disk" ibs=64k obs=4m status=progress ;;
-    *.zip) unzip -p -- "$img"  | sudo dd of="/dev/r$disk" ibs=64k obs=4m status=progress ;;
+    *.gz)  gzip -dc -- "$img"          | sudo dd of="/dev/r$disk" ibs=64k obs=4m status=progress ;;
+    *.xz)  xz -dc -- "$img"            | sudo dd of="/dev/r$disk" ibs=64k obs=4m status=progress ;;
+    *.zst) zstd -dc -- "$img"          | sudo dd of="/dev/r$disk" ibs=64k obs=4m status=progress ;;
+    *.zip) unzip -p -- "$img" "$member" | sudo dd of="/dev/r$disk" ibs=64k obs=4m status=progress ;;
     *)     sudo dd if="$img" of="/dev/r$disk" bs=4m status=progress ;;
-  esac || { echo "Write failed"; return 1; }
+  esac || { echo "Write failed: the card is incomplete; don't boot from it."; return 1; }
   sync
   diskutil eject "/dev/$disk"
 }
@@ -223,10 +261,12 @@ format-drive() {
     return 1
   fi
   local disk; disk=$(_drive_check "$1") || return 1
+  local id=$(_drive_identity "$disk")
   local desc=$(_external_disks | awk -F'\t' -v d="$disk" '$1 == d { print $2 ", " $3 }')
   echo "WARNING: This will completely erase all data on /dev/$disk ($desc) and label it '$2'."
   local confirm; read "confirm?Are you sure you want to continue? (y/N): "
   [[ $confirm == [yY]* ]] || return 1
+  _drive_still "$disk" "$id" || return 1
   diskutil eraseDisk ExFAT "$2" GPT "/dev/$disk" && echo "Drive /dev/$disk formatted as exFAT and labeled '$2'."
 }
 

@@ -29,7 +29,7 @@ if [ "${1:-}" = --copy ]; then
   # Runs from a notification click, under launchd's bare PATH: put back what
   # mac-clip --share needs (transcode -> ffmpeg/ffprobe).
   export PATH="$HOME/.local/bin:/opt/homebrew/bin:/usr/bin:/bin:/usr/sbin:/sbin"
-  file=${2:?usage: mac-notify --copy <file>}
+  file=${2:?usage: mac-notify --copy <file>}   # always absolute (see below)
   export MAC_NOTIFY_GROUP="mac-clip-$$"; unset MAC_NOTIFY_CLICK MAC_NOTIFY_IMAGE
   "$self" "Preparing to share…" "$(basename "$file")"
   if shared=$(mac-clip --share "$file"); then
@@ -42,6 +42,9 @@ if [ "${1:-}" = --copy ]; then
 fi
 
 title=${1:?usage: mac-notify <title> <message> [file]} msg=${2:-} file=${3:-}
+# Click commands run later, from launchd's working directory: store an
+# absolute path, or ./clip.mp4 would point somewhere else (or nowhere).
+[ -n "$file" ] && [ -e "$file" ] && file="$(cd "$(dirname "$file")" && pwd)/$(basename "$file")"
 
 if [ ! -x "$tn" ]; then
   # Fallback: no click action, but at least the notification shows. Strings go

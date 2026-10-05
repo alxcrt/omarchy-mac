@@ -7,7 +7,7 @@
 set -e
 
 MD=0; [ "$1" = "--md" ] && MD=1
-H=~/.config/herdr/config.toml
+H=${HERDR_CONFIG:-$HOME/.config/herdr/config.toml}   # override: tests
 G=~/.config/ghostty/config
 E=~/.config/omarchy-mac/extensions
 
@@ -86,9 +86,12 @@ with open(sys.argv[1], "rb") as f:
 merged = {**defaults, **user}
 print("prefix\t" + str(merged.get("prefix", "")))
 for action, keys in merged.items():
-    if not isinstance(keys, (str, list)):
-        continue   # a sub-table such as [keys.navigate]
-    keys = [keys] if isinstance(keys, str) else keys
+    # Bindings are a string or a list of strings; [keys.navigate] (a table) and
+    # [[keys.command]] (a list of tables) are other things, not bindings.
+    if isinstance(keys, str):
+        keys = [keys]
+    elif not (isinstance(keys, list) and all(isinstance(k, str) for k in keys)):
+        continue
     keys = [k for k in keys if k]
     if action != "prefix" and keys:
         print(" / ".join(keys) + "\t" + action.replace("_", " "))

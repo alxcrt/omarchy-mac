@@ -61,7 +61,8 @@ case "$format" in
       tmp="$dir/.${base}-share.$$.mp4"
       trap 'rm -f "$tmp"' EXIT
       ffmpeg -hide_banner -loglevel error -y -i "$file" -map 0:v:0 -map '0:a:0?' \
-        "${vargs[@]}" "${aargs[@]}" -movflags +faststart "$tmp" && mv -f "$tmp" "$out"
+        "${vargs[@]}" "${aargs[@]}" -movflags +faststart "$tmp" || exit 1   # set -e skips a && left side
+      mv -f "$tmp" "$out" || exit 1
       echo "$out"; exit 0
     fi
     case "$quality" in
