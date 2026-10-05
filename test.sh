@@ -93,7 +93,7 @@ fi
 # ── 3. shell functions ─────────────────────────────────────────────────────
 if want functions; then
 sec "Shell functions defined"
-for f in zd sff compress ga gd n fip dip lip rsw lsw dsw ssh _ssh_disarm _ssh_interactive \
+for f in zd sff compress ga gd n fip dip lip rsw lsw dsw ssh _ssh_disarm _ssh_interactive iso2sd format-drive \
          hdl hds hdlm hsl _herdr_ratio _herdr_split \
          img2jpg img2png img2jpg-small img2jpg-medium img2jpg-large \
          transcode-video-1080p transcode-video-4K transcode-video-gif; do
@@ -136,6 +136,31 @@ else
   ok "dsw stops the watcher and its fswatch (whole process group)"
 fi
 [ "$(pgrep -f 'rsw-watch ' | wc -l | tr -d ' ')" = "$others" ] && ok "dsw test left real watches alone" || bad "dsw test" "real watch count changed"
+# iso2sd / format-drive erase disks: only external physical whole disks may
+# pass. Guards run against the real diskutil (disk0 is the internal SSD);
+# the rest against a fake that reports one SD card and logs any write.
+ZRUN '_drive_check disk0' >/dev/null 2>&1 && bad "_drive_check" "accepted the internal disk" || ok "drives: the internal disk (disk0) is refused"
+ZRUN '_drive_check disk4s1' >/dev/null 2>&1 && bad "_drive_check" "accepted a partition" || ok "drives: a partition is refused (whole disks only)"
+ZRUN 'iso2sd' 2>&1 | grep -q 'Usage: iso2sd' && ok "iso2sd shows usage with no args" || bad "iso2sd" "no usage"
+ZRUN "iso2sd '$T/none.img' disk9" 2>&1 | grep -q 'No such image' && ok "iso2sd rejects a missing image" || bad "iso2sd" "missing image accepted"
+out=$(ZRUN "format-drive disk0 X 2>&1" </dev/null)   # 2>&1 inside: ZRUN drops stderr
+grep -q 'not an external physical disk' <<<"$out" && ! grep -q 'Are you sure' <<<"$out" \
+  && ok "format-drive refuses the internal disk before asking anything" || bad "format-drive" "disk0: $out"
+DU="$T/du-stub"; DL="$T/du.log"; mkdir -p "$DU"; : >"$DL"
+cat >"$DU/diskutil" <<EOF
+#!/bin/bash
+case "\$*" in
+  "list -plist external physical") printf '<?xml version="1.0"?><plist version="1.0"><dict><key>WholeDisks</key><array><string>disk9</string></array></dict></plist>' ;;
+  "info -plist /dev/disk9") printf '<?xml version="1.0"?><plist version="1.0"><dict><key>TotalSize</key><integer>31914983424</integer><key>MediaName</key><string>SD Card Reader</string></dict></plist>' ;;
+  *) echo "diskutil \$*" >>"$DL"; exit 1 ;;
+esac
+EOF
+chmod +x "$DU/diskutil"
+DZ() { ZRUN "PATH='$DU':\$PATH; $*"; }
+[ "$(DZ _external_disks)" = "$(printf 'disk9\t31.9 GB\tSD Card Reader')" ] && ok "drives: external disks read from diskutil's plists" || bad "_external_disks" "got '$(DZ _external_disks)'"
+[ "$(DZ '_drive_check /dev/rdisk9')" = disk9 ] && ok "drives: /dev/rdisk9 is accepted as disk9" || bad "_drive_check" "rdisk9 not accepted"
+: >"$T/img.iso"; DZ "iso2sd '$T/img.iso' disk9" </dev/null >/dev/null 2>&1; DZ "format-drive disk9 TEST" </dev/null >/dev/null 2>&1
+[ ! -s "$DL" ] && ok "drives: nothing is unmounted or erased without a yes" || bad "drives" "acted without confirmation: $(cat "$DL")"
 # ssh reconnect: only a dropped INTERACTIVE session may be replayed.
 ZRUN '_ssh_interactive host' && ok "ssh: plain host is interactive" || bad "_ssh_interactive" "host"
 ZRUN '_ssh_interactive host uptime' && bad "_ssh_interactive" "remote command treated as interactive" || ok "ssh: a remote command is never replayed"
@@ -229,7 +254,15 @@ for f in hdl hdlm; do
 done
 ZRUN 'unset HERDR_PANE_ID; hsl 3 x' 2>&1 | grep -qi 'must start herdr' && ok "hsl refuses outside herdr" || bad "hsl guard" "no guard"
 ZRUN 'unset HERDR_PANE_ID; hds' 2>&1 | grep -qi 'must start herdr' && ok "hds refuses outside herdr" || bad "hds guard" "no guard"
-mac-keys 2>/dev/null | grep -q 'split horizontal' && ok "mac-keys lists herdr's bindings" || bad "mac-keys" "no herdr section"
+# opencode is mise's: its own updater must stay off (as opencode resolves its
+# config, not as the file reads).
+[ "$(gtimeout 20 opencode debug config 2>/dev/null | jq -r .autoupdate)" = false ] \
+  && ok "opencode's self-update is off (mise owns it)" || bad "opencode" "autoupdate not false in its resolved config"
+# herdr's built-in bindings show (from herdr --default-config) and the
+# user's [keys] override them.
+hk=$(mac-keys 2>/dev/null | sed -n '/herdr (prefix/,/Ghostty/p')
+echo "$hk" | grep -q 'prefix+w *workspace picker' && ok "mac-keys lists herdr's built-in bindings" || bad "mac-keys" "herdr defaults missing"
+echo "$hk" | grep -q 'prefix+h / alt+enter *split horizontal' && ok "mac-keys shows the user's override, not the default" || bad "mac-keys" "user override lost"
 fi
 
 # ── 8. git ─────────────────────────────────────────────────────────────────
@@ -463,7 +496,18 @@ EOF
 # (paths with a space: lsof's n records carry them whole)
 printf '#!/bin/bash\nprintf "p42\\nn/x y/mise/installs/claude/1.1.0/bin/claude\\n"\n' >"$STUB/lsof"
 chmod +x "$STUB/mise" "$STUB/lsof"
+# brew's stub also records whether macup is being kept awake (caffeinate -w
+# on macup's pid, which is the stub's parent).
+cat >"$STUB/brew" <<EOF
+#!/bin/bash
+echo "brew \$*" >>"$LOG"
+pgrep -f "caffeinate -i -w \$PPID" >/dev/null && echo caffeinated >>"$T/caf.log"
+[ "brew \$1" = "brew upgrade" ] && exit 1
+exit 0
+EOF
+chmod +x "$STUB/brew"
 PATH="$STUB:/usr/bin:/bin" ~/.local/bin/macup </dev/null >/dev/null 2>&1; rc=$?
+grep -q caffeinated "$T/caf.log" 2>/dev/null && ok "macup keeps the Mac awake while it runs (caffeinate)" || bad "macup" "not caffeinated"
 grep -q '^mise uninstall claude@1.0.0' "$LOG" && ok "macup prunes an old tool version nothing is using" || bad "macup" "did not prune claude@1.0.0"
 grep -q '^mise uninstall claude@1.1.0' "$LOG" && bad "macup" "pruned a version a running process has open" || ok "macup keeps a version a running session has open (path with a space)"
 # If lsof yields nothing, "in use" is unknown: nothing may be pruned.
@@ -474,6 +518,16 @@ printf '#!/bin/bash\nprintf "p42\\nn/x y/mise/installs/claude/1.1.0/bin/claude\\
 grep -q '^brew upgrade .*--yes' "$LOG" && ok "macup upgrades with --yes (never stalls at y/n)" || bad "macup" "brew upgrade without --yes"
 grep -q '^mise up' "$LOG" && ok "macup still updates mise after a brew failure" || bad "macup" "brew failure skipped mise"
 [ "$rc" -ne 0 ] && ok "macup exits non-zero when a step failed" || bad "macup" "hid a failed step"
+# One macup at a time: a live lock holder makes a second run refuse without
+# touching brew; a lock left by a dead process is taken over.
+mkdir -p "$T/lockstate/macup/lock"; echo $$ >"$T/lockstate/macup/lock/pid"; : >"$LOG"
+out=$(XDG_STATE_HOME="$T/lockstate" PATH="$STUB:/usr/bin:/bin" ~/.local/bin/macup </dev/null 2>&1); lrc=$?
+[ $lrc -ne 0 ] && grep -q 'already running' <<<"$out" && ! grep -q '^brew' "$LOG" \
+  && ok "a second macup refuses while one is running" || bad "macup lock" "rc=$lrc, brew calls: $(grep -c '^brew' "$LOG")"
+echo 999999 >"$T/lockstate/macup/lock/pid"; : >"$LOG"
+XDG_STATE_HOME="$T/lockstate" PATH="$STUB:/usr/bin:/bin" ~/.local/bin/macup </dev/null >/dev/null 2>&1
+grep -q '^brew update' "$LOG" && [ ! -e "$T/lockstate/macup/lock" ] \
+  && ok "a stale lock is taken over, and released at exit" || bad "macup lock" "stale lock not handled"
 # App Store: an app owned by another Apple Account pops a modal dialog on every
 # update attempt. macup must try it once, report it under "Needs you" (not as
 # a failure), and skip it on the next run. Developer's real ADAM ID is used so

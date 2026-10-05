@@ -87,6 +87,8 @@ Shell flows in `config/zsh/functions.zsh` (zsh ports of Omarchy's bash fns):
 | `hds` | editor + diff watch + terminal + opencode |
 | `ga <branch>` / `gd` | git worktree add+cd / remove worktree+branch |
 | `rsw <src> <dest>` / `lsw` / `dsw` | sync a folder to a host on every change (fswatch + rsync) / list / stop |
+| `iso2sd <image> [disk]` | write an image (also .gz/.xz/.zst/.zip) to an SD card / USB stick; external disks only, confirms first |
+| `format-drive <disk> <name>` | erase an external disk to one exFAT partition (GPT); confirms first |
 | `ssh …` | wraps ssh: clears stuck mouse/alt-screen modes and reconnects a dropped interactive session |
 | `compress <dir>` | tar.gz a directory |
 | `img2jpg`, `transcode-video-1080p`, … | transcoding wrappers |

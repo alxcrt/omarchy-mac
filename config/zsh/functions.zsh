@@ -135,6 +135,101 @@ dsw() {
   (( found )) || echo "No active watches"
 }
 
+# ── Drives (upstream fns/drives), rewritten for diskutil ───────────────────
+# On a Mac the wrong /dev/diskN is the internal SSD, so only whole, external,
+# physical disks are ever offered or accepted, read from diskutil's plists
+# (not its prose), and both commands confirm with the disk's name and size.
+
+# _external_disks — one line per external physical whole disk:
+#   diskN<TAB>size<TAB>name
+_external_disks() {
+  local d info
+  for d in $(diskutil list -plist external physical 2>/dev/null |
+             plutil -extract WholeDisks json -o - - 2>/dev/null | jq -r '.[]?'); do
+    info=$(diskutil info -plist "/dev/$d" 2>/dev/null) || continue
+    printf '%s\t%s\t%s\n' "$d" \
+      "$(plutil -extract TotalSize raw -o - - <<<"$info" | awk '{ printf "%.1f GB", $1 / 1e9 }')" \
+      "$(plutil -extract MediaName raw -o - - <<<"$info")"
+  done
+}
+
+# _drive_check <disk> — print diskN if it is an external physical whole disk.
+_drive_check() {
+  local d=${1#/dev/}; d=${d#r}   # disk4, /dev/disk4 and /dev/rdisk4 all mean disk4
+  if [[ $d != disk<-> ]]; then
+    echo "Give a whole disk like disk4, not '$1'" >&2; return 1
+  fi
+  if ! _external_disks | cut -f1 | grep -qx "$d"; then
+    echo "/dev/$d is not an external physical disk; refusing. See: diskutil list external physical" >&2
+    return 1
+  fi
+  echo "$d"
+}
+
+_drive_confirm() {
+  if command -v gum >/dev/null; then gum confirm "$1"; else
+    local confirm; read "confirm?$1 (y/N): "; [[ $confirm == [yY]* ]]; fi
+}
+
+# iso2sd <image> [disk] — write an image to an SD card or USB stick. Plain
+# images go straight through dd; .gz/.xz/.zst/.zip stream-decompress to it.
+iso2sd() {
+  if (( $# < 1 )); then
+    echo "Usage: iso2sd <image> [disk]"
+    echo "Example: iso2sd ~/Downloads/ROCKNIX.img.gz disk4"
+    echo; echo "External disks:"; _external_disks
+    return 1
+  fi
+  local img=$1 disk=${2:-}
+  [[ -f $img ]] || { echo "No such image: $img"; return 1; }
+
+  if [[ -z $disk ]]; then
+    local -a disks=("${(@f)$(_external_disks)}")
+    disks=(${disks:#})
+    (( $#disks )) || { echo "No external disk found and no disk given"; return 1; }
+    if (( $#disks == 1 )); then
+      disk=${disks[1]%%$'\t'*}
+    else
+      disk=$(printf '%s\n' "${disks[@]}" | gum choose --header "Write $(basename "$img") to:" | cut -f1)
+    fi
+    [[ -n $disk ]] || { echo "No disk selected"; return 1; }
+  fi
+  disk=$(_drive_check "$disk") || return 1
+  local desc=$(_external_disks | awk -F'\t' -v d="$disk" '$1 == d { print $2 ", " $3 }')
+
+  _drive_confirm "ERASE /dev/$disk ($desc) and write $(basename "$img") to it?" || return 1
+  diskutil unmountDisk "/dev/$disk" || return 1
+  # /dev/rdiskN (raw) skips the buffer cache: several times faster. For a pipe,
+  # obs=4m makes dd collect whole blocks, since a raw disk rejects writes that
+  # aren't sector-aligned.
+  case $img in
+    *.gz)  gzip -dc -- "$img"  | sudo dd of="/dev/r$disk" ibs=64k obs=4m status=progress ;;
+    *.xz)  xz -dc -- "$img"    | sudo dd of="/dev/r$disk" ibs=64k obs=4m status=progress ;;
+    *.zst) zstd -dc -- "$img"  | sudo dd of="/dev/r$disk" ibs=64k obs=4m status=progress ;;
+    *.zip) unzip -p -- "$img"  | sudo dd of="/dev/r$disk" ibs=64k obs=4m status=progress ;;
+    *)     sudo dd if="$img" of="/dev/r$disk" bs=4m status=progress ;;
+  esac || { echo "Write failed"; return 1; }
+  sync
+  diskutil eject "/dev/$disk"
+}
+
+# format-drive <disk> <name> — one exFAT partition over the whole disk (GPT),
+# which is what upstream's wipefs/dd/parted/mkfs.exfat sequence produces.
+format-drive() {
+  if (( $# != 2 )); then
+    echo "Usage: format-drive <disk> <name>"
+    echo "Example: format-drive disk4 'My Stuff'"
+    echo; echo "External disks:"; _external_disks
+    return 1
+  fi
+  local disk; disk=$(_drive_check "$1") || return 1
+  local desc=$(_external_disks | awk -F'\t' -v d="$disk" '$1 == d { print $2 ", " $3 }')
+  echo "WARNING: This will completely erase all data on /dev/$disk ($desc) and label it '$2'."
+  local confirm; read "confirm?Are you sure you want to continue? (y/N): "
+  [[ $confirm == [yY]* ]] || return 1
+  diskutil eraseDisk ExFAT "$2" GPT "/dev/$disk" && echo "Drive /dev/$disk formatted as exFAT and labeled '$2'."
+}
+
 # ── SSH reconnect (upstream fns/ssh-reconnect) ─────────────────────────────
 # Wrap ssh to clean up the terminal and reconnect when a connection drops.
 #

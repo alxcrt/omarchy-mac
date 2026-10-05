@@ -44,38 +44,59 @@ Caps Lock is Escape and the right ⌘ is ⌥, remapped by hidutil (`mac-keyremap
 
 | Keys | Action |
 |---|---|
-| `prefix+q` | reload config |
 | `prefix+?` | help |
+| `prefix+s` | settings |
 | `prefix+d` | detach |
-| `prefix+[` | copy mode |
-| `prefix+h / alt+enter` | split horizontal |
-| `prefix+v / alt+shift+enter` | split vertical |
-| `prefix+x / alt+esc` | close pane |
-| `prefix+z` | zoom |
-| `prefix+;` | last pane |
+| `prefix+q` | reload config |
+| `prefix+o` | open notification target |
+| `prefix+w` | workspace picker |
+| `prefix+g` | goto |
+| `prefix+shift+c` | new workspace |
+| `prefix+shift+g` | new worktree |
+| `prefix+shift+r` | rename workspace |
+| `prefix+shift+k` | close workspace |
+| `prefix+shift+p / alt+up` | previous workspace |
+| `prefix+shift+n / alt+down` | next workspace |
+| `ctrl+v` | remote image paste |
+| `prefix+c` | new tab |
+| `prefix+r` | rename tab |
+| `prefix+p / alt+left` | previous tab |
+| `prefix+n / alt+right` | next tab |
+| `alt+shift+left` | move tab previous |
+| `alt+shift+right` | move tab next |
+| `prefix+1..9 / alt+1..9` | switch tab |
+| `prefix+k` | close tab |
+| `prefix+shift+o` | rename pane |
+| `prefix+e` | edit scrollback |
 | `ctrl+alt+left` | focus pane left |
 | `ctrl+alt+down` | focus pane down |
 | `ctrl+alt+up` | focus pane up |
 | `ctrl+alt+right` | focus pane right |
+| `prefix+tab` | cycle pane next |
+| `prefix+shift+tab` | cycle pane previous |
+| `prefix+;` | last pane |
+| `prefix+v / alt+shift+enter` | split vertical |
+| `prefix+h / alt+enter` | split horizontal |
+| `prefix+x / alt+esc` | close pane |
+| `prefix+z` | zoom |
 | `prefix+ctrl+left / prefix+ctrl+down / prefix+ctrl+up / prefix+ctrl+right` | resize mode |
 | `ctrl+alt+shift+left` | resize pane left |
 | `ctrl+alt+shift+down` | resize pane down |
 | `ctrl+alt+shift+up` | resize pane up |
 | `ctrl+alt+shift+right` | resize pane right |
-| `prefix+shift+o` | rename pane |
-| `prefix+c` | new tab |
-| `prefix+r` | rename tab |
-| `prefix+k` | close tab |
-| `prefix+1..9 / alt+1..9` | switch tab |
-| `prefix+p / alt+left` | previous tab |
-| `prefix+n / alt+right` | next tab |
-| `alt+shift+left` | move tab previous |
-| `alt+shift+right` | move tab next |
-| `prefix+shift+c` | new workspace |
-| `prefix+shift+r` | rename workspace |
-| `prefix+shift+k` | close workspace |
-| `prefix+shift+p / alt+up` | previous workspace |
-| `prefix+shift+n / alt+down` | next workspace |
+| `prefix+b` | toggle sidebar |
+| `up` | navigate workspace up |
+| `down` | navigate workspace down |
+| `h` | navigate pane left |
+| `j` | navigate pane down |
+| `k` | navigate pane up |
+| `l` | navigate pane right |
+| `popup` | type |
+| `prefix+alt+g` | key |
+| `lazygit` | command |
+| `80%` | width |
+| `80%` | height |
+| `prefix+[` | copy mode |
 
 ## Ghostty (inside the terminal)
 

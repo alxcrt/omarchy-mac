@@ -25,6 +25,7 @@ link config/starship.toml      .config/starship.toml
 link config/zsh/functions.zsh  .config/zsh/functions.zsh
 link config/btop/btop.conf     .config/btop/btop.conf
 link config/herdr/config.toml  .config/herdr/config.toml
+link config/opencode/opencode.jsonc .config/opencode/opencode.jsonc
 link config/git/config         .config/git/config
 link config/ghostty/config     .config/ghostty/config
 # Every script in local/bin — no hand-kept list to fall out of date.

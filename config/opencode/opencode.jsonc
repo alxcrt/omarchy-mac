@@ -1,0 +1,8 @@
+{
+  "$schema": "https://opencode.ai/config.json",
+  // mise owns opencode (config/mise/config.toml); its own updater would
+  // replace the mise-installed binary behind mise's back. Upstream sets the same.
+  // (Upstream also sets "theme": "system"; opencode's current schema has no
+  // theme key, so it is left out.)
+  "autoupdate": false
+}

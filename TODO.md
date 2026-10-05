@@ -18,6 +18,8 @@ file current whenever a request arrives mid-task.
   `~/Library/Containers/org.pqrs.Karabiner-VirtualHIDDevice-Manager` to the
   Trash in Finder (macOS protects it from scripts). The driver itself was
   deactivated and its files removed on Oct 6; it drops out at the next reboot.
+- **Text snippets** (upstream's XCompose: `<Multi> m s` → 😄, two spaces →
+  "—", name/email) as Raycast Snippets: Raycast has no scriptable import.
 - **Raycast hotkeys** for the SUPER launchers (macOS has no scriptable global
   launch-hotkey system). Mind the ⌥ clash: SUPER = ⌥ = herdr's `alt` layer
   (`alt+enter`, `alt+1..9`, `alt+arrows`), so pick other chords or Raycast's
@@ -27,24 +29,22 @@ file current whenever a request arrives mid-task.
 
 ## Queued
 
-1. **`mac keys` × herdr defaults**: merge `herdr --default-config` so built-in
-   binds (prefix+s settings, prefix+w picker, prefix+g goto, …) show too.
-2. **opencode config**: track `config/opencode/opencode.json` with
-   `"autoupdate": false` (mise owns opencode).
-3. **Replace-with-existing-tool candidates** (decide per item):
+1. **Replace-with-existing-tool candidates** (decide per item):
    `macup` → topgrade; `install.sh` symlinks → GNU stow; `test.sh` → bats
    (likely not worth it); `webdl` → cobalt (rejected: hosted service, yt-dlp
    is the local engine).
-4. **More AI CLIs upstream installs** (pick): ghui, crush, agy, copilot,
+2. **More AI CLIs upstream installs** (pick): ghui, crush, agy, copilot,
    playwright, ori, muse, hey, basecamp, cf.
-5. **Agent account switching** (`omarchy-agent-account-*`): several
+3. **Agent account switching** (`omarchy-agent-account-*`): several
    Claude/Codex/Grok subscriptions, auto-switch near limits. Bash-4 code;
    bigger port.
-6. **Smaller**: `macup` update lock + `caffeinate`, `fns/drives`
-   (`diskutil` rewrite), XCompose-style text snippets via Raycast.
 
 ## Done (Oct 2026, newest first)
 
+- `mac keys` merges herdr's built-in bindings with the config's overrides;
+  opencode's self-update is off (tracked config); `macup` has an update lock
+  and stays awake (caffeinate); `iso2sd` / `format-drive` ported to diskutil
+  (external physical disks only, confirm first, compressed images stream).
 - Codex review (gpt-6.1-sol, xhigh) of the day's work: fixed the clipboard
   write that silently vanished, notification text starting with ( { < " '
   being rejected, macup pruning with no process list, partial share files,

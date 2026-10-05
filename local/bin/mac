@@ -82,6 +82,8 @@ Shell flows (from ~/.config/zsh/functions.zsh):
   hds                     editor + diff watch + terminal + opencode
   ga <branch> / gd        git worktree add+cd / remove+delete branch
   rsw <src> <dest>        sync a folder on every change (lsw lists, dsw stops)
+  iso2sd <image> [disk]   write an image to an SD card / USB stick (external only)
+  format-drive <disk> <n> erase an external disk to exFAT
   compress <dir>          tar.gz a directory
 EOF
     ;;

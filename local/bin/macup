@@ -10,6 +10,25 @@ FAILED=()
 NEEDS_YOU=()   # not failures: things only a human can fix, reported at the end
 step() { "$@" || FAILED+=("$*"); }
 
+# One macup at a time (upstream: "An Omarchy update is already running").
+# Two at once collide on brew's download locks and both fail spuriously.
+# mkdir is the atomic test-and-set (macOS has no flock); a lock left by a run
+# that died is taken over.
+LOCK="${XDG_STATE_HOME:-$HOME/.local/state}/macup/lock"
+mkdir -p "${LOCK%/*}"
+if ! mkdir "$LOCK" 2>/dev/null; then
+  holder=$(cat "$LOCK/pid" 2>/dev/null)
+  if [ -n "$holder" ] && kill -0 "$holder" 2>/dev/null; then
+    echo "macup is already running (pid $holder)." >&2
+    exit 1
+  fi
+  rm -rf "$LOCK" && mkdir "$LOCK" || { echo "macup: could not take the lock $LOCK" >&2; exit 1; }
+fi
+echo $$ >"$LOCK/pid"
+
+# Stay awake while updating (upstream does the same); ends with this process.
+caffeinate -i -w $$ >/dev/null 2>&1 &
+
 # Stale symlinks mean you're running old copies of these scripts/configs
 # (that's how an old macup without --yes kept prompting). Warn; don't auto-fix,
 # since relinking replaces whatever local edits the copy holds.
@@ -19,7 +38,7 @@ fi
 
 # softwareupdate --list takes 10-30s of network round-trips; start it now and
 # read the result at the end instead of waiting on it serially.
-SWU=$(mktemp); trap 'rm -f "$SWU"' EXIT
+SWU=$(mktemp); trap 'rm -f "$SWU"; rm -rf "$LOCK"' EXIT
 softwareupdate --list >"$SWU" 2>&1 &
 SWU_PID=$!
 

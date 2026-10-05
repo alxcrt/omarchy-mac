@@ -61,18 +61,34 @@ for c in (m.get("commands") or {}).values():
 PY
 done | while IFS=$'\t' read -r k d; do row "$k" "$d"; done
 
-# herdr's [keys] table: action = "keys" or ["keys", "keys"].
-prefix=$(awk -F'"' '/^prefix *=/{print $2; exit}' "$H")
-section "herdr (prefix = ${prefix:-unset})"
-awk '
-  /^\[/ { inkeys = ($0 == "[keys]"); next }
-  inkeys && /^[a-z_]+ *=/ {
-    name = $1; v = $0; sub(/^[^=]*= */, "", v)
-    # strip only an array'"'"'s outer brackets: keys like prefix+[ contain them
-    sub(/^\[/, "", v); sub(/\]$/, "", v)
-    gsub(/"/, "", v); gsub(/, */, " / ", v); gsub(/_/, " ", name)
-    if (name != "prefix") printf "%s\t%s\n", v, name
-  }' "$H" | while IFS=$'\t' read -r k d; do row "$k" "$d"; done
+# herdr: its built-in bindings (`herdr --default-config`, where they are
+# commented out) merged with the user's [keys], which override them, as
+# upstream's omarchy-menu-herdr-keybindings does. Values are read as TOML, so
+# keys like prefix+[ need no special-casing. Unset actions ("") are left out.
+herdr_keys() {
+  herdr --default-config 2>/dev/null | /opt/homebrew/bin/python3 -c '
+import re, sys, tomllib
+defaults, inkeys = {}, False
+for line in sys.stdin.read().splitlines():
+    if line.startswith("["):
+        inkeys = line.strip() == "[keys]"; continue
+    m = re.match(r"#\s*([a-z_]+)\s*=\s*(\"[^\"]*\"|\[[^\]]*\])", line) if inkeys else None
+    if m:
+        defaults[m.group(1)] = tomllib.loads("v = " + m.group(2))["v"]
+with open(sys.argv[1], "rb") as f:
+    user = tomllib.load(f).get("keys", {})
+merged = {**defaults, **user}
+print("prefix\t" + str(merged.get("prefix", "")))
+for action, keys in merged.items():
+    keys = [keys] if isinstance(keys, str) else keys
+    keys = [k for k in keys if k]
+    if action != "prefix" and keys:
+        print(" / ".join(keys) + "\t" + action.replace("_", " "))
+' "$H"
+}
+herdr_out=$(herdr_keys)
+section "herdr (prefix = $(printf '%s\n' "$herdr_out" | awk -F'\t' '$1 == "prefix" { print $2; exit }'))"
+printf '%s\n' "$herdr_out" | grep -v '^prefix	' | while IFS=$'\t' read -r k d; do row "$k" "$d"; done
 
 section "Ghostty (inside the terminal)"
 grep -E '^keybind' "$G" | while IFS= read -r l; do
