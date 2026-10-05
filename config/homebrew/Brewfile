@@ -46,6 +46,7 @@ brew "xh"
 # --- GUI casks ---
 cask "ghostty@tip"             # terminal (tip builds)
 cask "google-chrome"           # primary browser (Phase 7 webapp target)
+cask "helium-browser"          # Helium (ungoogled Chromium); not "helium", an unrelated Gatekeeper-disabled Intel app
 cask "iina"                    # media player (macOS-native mpv)
 cask "localsend"
 cask "tailscale-app"           # mesh VPN (menu-bar app; ships its own CLI)
