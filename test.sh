@@ -75,8 +75,8 @@ for f in zd sff compress ga gd n fip dip lip \
   ZRUN "typeset -f $f >/dev/null" && ok "$f defined" || bad "$f" "not defined"
 done
 # both an alias AND a function of the same name must coexist where expected
-ZRUN 'typeset -f ga >/dev/null' && ok "ga survives oh-my-zsh alias clash" || bad "ga" "clobbered by omz"
-ZRUN 'typeset -f gd >/dev/null' && ok "gd survives oh-my-zsh alias clash" || bad "gd" "clobbered by omz"
+ZRUN 'typeset -f ga >/dev/null' && ok "ga defined (not shadowed by an alias)" || bad "ga" "clobbered by an alias"
+ZRUN 'typeset -f gd >/dev/null' && ok "gd defined (not shadowed by an alias)" || bad "gd" "clobbered by an alias"
 # grep the CODE, not comments — the fix is documented in a comment that
 # mentions the very string we're banning.
 grep -vE '^\s*#' ~/.config/zsh/functions.zsh | grep -q 'pgrep -af' \
@@ -489,7 +489,20 @@ fi
 if want shell; then
 sec "Prompt + environment"
 [ "$(zsh -ic 'echo $STARSHIP_SHELL' 2>/dev/null | tail -1)" = zsh ] && ok "starship active" || bad "starship" "not initialised"
-[ -z "$(zsh -ic 'echo $ZSH_THEME' 2>/dev/null | tail -1)" ] && ok "oh-my-zsh theme disabled (starship owns prompt)" || bad "ZSH_THEME" "still set"
+# No oh-my-zsh: zshrc sets what it used to provide, at ~half the startup cost.
+[ -z "$(zsh -ic 'echo ${ZSH:-}' 2>/dev/null | tail -1)" ] && ok "oh-my-zsh not loaded" || bad "zshrc" "oh-my-zsh still loaded"
+[ -e "$HOME/.oh-my-zsh" ] && bad "cleanup" "~/.oh-my-zsh still present" || ok "~/.oh-my-zsh removed"
+# Startup budget: the median of 7 interactive starts must stay under 100ms
+# (oh-my-zsh + uncached inits was ~132ms; this zshrc is ~70ms).
+ms=$(for i in 1 2 3 4 5 6 7; do /usr/bin/python3 -c 'import subprocess,time;t=time.time();subprocess.run(["zsh","-i","-c","exit"],capture_output=True);print(int((time.time()-t)*1000))'; done | sort -n | sed -n 4p)
+[ "${ms:-999}" -lt 100 ] && ok "interactive zsh starts in ${ms}ms (<100)" || bad "startup" "${ms}ms (budget 100ms)"
+SC="$HOME/.cache/zsh/starship.zsh"
+[ -s "$SC" ] && ok "starship init is cached" || bad "starship cache" "missing"
+grep -q '^RPROMPT=' "$SC" && bad "starship cache" "keeps an RPROMPT (a starship process per prompt)" || ok "no per-prompt RPROMPT process"
+grep -q '^PROMPT2=.*%{' "$SC" && ok "PROMPT2 baked with zsh %{ %} escapes" || bad "starship cache" "PROMPT2 missing or unescaped"
+[ "$(zsh -ic 'whence -w try' 2>/dev/null | tail -1)" = "try: function" ] && ok "try is a lazy shell function" || bad "try" "not defined"
+zsh -ic 'bindkey "^[[A"' 2>/dev/null | grep -q history-beginning-search-backward && ok "↑ searches history by prefix (inputrc parity)" || bad "↑ binding" "not prefix search"
+[ "$(zsh -ic 'whence -p git' 2>/dev/null | tail -1)" = /opt/homebrew/bin/git ] && ok "git is brew's (no xcrun stub)" || bad "git" "resolves to $(zsh -ic 'whence -p git' 2>/dev/null | tail -1)"
 [ "$(zsh -ic 'echo $EDITOR' 2>/dev/null | tail -1)" = nvim ] && ok "EDITOR=nvim" || bad "EDITOR" "not nvim"
 [ "$(zsh -ic 'echo $BAT_THEME' 2>/dev/null | tail -1)" = ansi ] && ok "BAT_THEME=ansi" || bad "BAT_THEME" "not ansi"
 zsh -ic 'echo $MANPAGER' 2>/dev/null | grep -q bat && ok "MANPAGER uses bat" || bad "MANPAGER" "not bat"
@@ -507,7 +520,7 @@ fi
 if want brew; then
 sec "Homebrew + mise layers"
 brew list --formula >/dev/null 2>&1 && ok "brew responds" || bad "brew" "not working"
-for f in bat eza fd fzf ripgrep zoxide jq gum cliamp btop fastfetch starship neovim lazygit gifski mas pam-reattach; do
+for f in git bat eza fd fzf ripgrep zoxide jq gum try cliamp btop fastfetch starship neovim lazygit gifski mas pam-reattach; do
   brew list "$f" >/dev/null 2>&1 && ok "formula $f installed" || bad "formula $f" "missing"
 done
 mise doctor 2>&1 | grep -q 'No problems found' && ok "mise doctor clean" || bad "mise doctor" "problems reported"
