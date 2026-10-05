@@ -742,18 +742,14 @@ if want notify; then
 sec "Notifications (mac-notify -> terminal-notifier)"
 /opt/homebrew/bin/terminal-notifier -version >/dev/null 2>&1 && ok "terminal-notifier installed" || bad "terminal-notifier" "missing"
 # A stub records the argv mac-notify would hand terminal-notifier, one per
-# line; when buttons are offered it "presses" $STUB_CHOICE, as the real one
-# prints the chosen button. A fake `open` logs what it was asked to reveal.
+# line. A fake `open` logs what it was asked to reveal.
 NS="$T/tn-stub"; NL="$T/tn.log"; OL="$T/open.log"
 cat >"$NS" <<EOF
 #!/bin/bash
 printf '%s\n' "\$@" >"$NL"
-for a; do [ "\$a" = -action ] && { printf '%s\n' "\${STUB_CHOICE:-@CLOSED}"; break; }; done
 EOF
 chmod +x "$NS"
 mkdir -p "$T/openstub"; printf '#!/bin/sh\nprintf "%%s\\n" "$*" >>"%s"\n' "$OL" >"$T/openstub/open"; chmod +x "$T/openstub/open"
-# Buttons are answered in the background; wait (≤3s) for $1 to become true.
-settle() { for i in $(seq 30); do eval "$1" && return 0; sleep 0.1; done; return 1; }
 N() { MAC_NOTIFY_BIN="$NS" ~/.local/bin/mac-notify "$@"; }
 touch "$T/shot.png"; N "Transcode complete" "shot.png" "$T/shot.png"
 grep -qx -- '-execute' "$NL" && ok "clicking a file notification runs a command" || bad "mac-notify" "no -execute for a file"
@@ -778,8 +774,9 @@ pbfile() { osascript -l JavaScript -e 'ObjC.import("AppKit"); function run(a){ c
 MAC_CLIP_PASTEBOARD=$PB ~/.local/bin/mac-clip "$T/shot.png" && [ "$(pbfile)" = "$T/shot.png" ] \
   && ok "mac-clip puts the file itself on the pasteboard" || bad "mac-clip" "pasteboard holds '$(pbfile)'"
 MAC_CLIP_PASTEBOARD=$PB ~/.local/bin/mac-clip "$T/nope.mp4" 2>/dev/null && bad "mac-clip" "accepted a missing file" || ok "mac-clip rejects a missing file"
-# End to end: webdl against a fake yt-dlp. A finished download offers a Copy
-# button (a share-ready copy onto the pasteboard); clicking it reveals the file.
+# End to end: webdl against a fake yt-dlp. Clicking the finished download's
+# notification puts a share-ready copy on the pasteboard; clicking the
+# confirmation reveals that copy.
 YS="$T/ytdlp-stub"; mkdir -p "$YS" "$T/dl"
 # What yt-dlp often really saves: VP9 + Opus inside .mp4.
 ffmpeg -hide_banner -loglevel error -y -f lavfi -i testsrc=duration=1:size=320x240:rate=24 -f lavfi -i sine=duration=1 \
@@ -801,21 +798,23 @@ EOF
 chmod +x "$YS/yt-dlp"
 W() { PATH="$T/openstub:$YS:$PATH" OMARCHY_YTDLP_DIR="$T/dl" MAC_CLIP_PASTEBOARD=$PB MAC_NOTIFY_BIN="$NS" ~/.local/bin/webdl "$@"; }
 F="$T/dl/Test_clip [abc].mp4"
-pbclear; s0=$(date +%s); STUB_CHOICE=@CLOSED W "https://example.com/v" >/dev/null 2>&1
+pbclear; s0=$(date +%s); W "https://example.com/v" >/dev/null 2>&1
 [ $(( $(date +%s) - s0 )) -lt 5 ] && ok "webdl returns without waiting for a click" || bad "webdl" "blocked on the notification"
-grep -qx 'Download complete' "$NL" && grep -qx 'Copy' "$NL" \
-  && ok "finished download offers a Copy button (one: two become an Options menu)" || bad "webdl" "notification: $(tr '\n' ' ' <"$NL")"
-grep -qx 'Test clip' "$NL" && ok "notification shows the video title, not the filename" || bad "webdl" "no title in: $(tr '\n' ' ' <"$NL")"
-[ -z "$(pbfile)" ] && ok "nothing is copied unless Copy is pressed" || bad "webdl" "copied without asking"
-STUB_CHOICE=Copy W "https://example.com/v" >/dev/null 2>&1
+grep -qx 'Download complete' "$NL" && grep -qx -- '-execute' "$NL" && ! grep -qx -- '-action' "$NL" \
+  && ok "finished download is a click command (no button, no waiting process)" || bad "webdl" "notification: $(tr '\n' ' ' <"$NL")"
+grep -qx 'Test clip — click to copy' "$NL" && ok "notification shows the video title, not the filename" || bad "webdl" "no title in: $(tr '\n' ' ' <"$NL")"
+[ -z "$(pbfile)" ] && ok "nothing is copied until the notification is clicked" || bad "webdl" "copied without a click"
+# Click it: run the stored command as macOS does, through sh under launchd's
+# bare PATH (no /opt/homebrew/bin, no ~/.local/bin).
+click=$(grep -A1 -x -- '-execute' "$NL" | tail -1)
+env -i HOME="$HOME" MAC_NOTIFY_BIN="$NS" MAC_CLIP_PASTEBOARD="$PB" PATH=/usr/bin:/bin:/usr/sbin:/sbin sh -c "$click" >/dev/null 2>&1
 SF="$T/dl/Test_clip [abc]-share.mp4"
-settle '[ "$(pbfile)" = "$SF" ]' && ok "Copy puts a share-ready copy on the pasteboard" || bad "webdl Copy" "pasteboard holds '$(pbfile)'"
-[ "$(ffp "$SF" v:0 codec_name)" = h264 ] && [ -s "$F" ] && ok "the share copy is H.264 and the original is kept" || bad "webdl Copy" "share copy: $(ffp "$SF" v:0 codec_name)"
-grep -qx 'Copied · ready to paste' "$NL" && ok "Copy confirms with a notification" || bad "webdl Copy" "last notification: $(tr '\n' ' ' <"$NL")"
-: >"$OL"; STUB_CHOICE=Show W "https://example.com/v" >/dev/null 2>&1
-settle 'grep -qxF -- "-R $F" "$OL"' && ok "Show reveals the file in Finder" || bad "webdl Show" "open got: $(cat "$OL")"
-: >"$OL"; STUB_CHOICE=@ACTIONCLICKED W "https://example.com/v" >/dev/null 2>&1
-settle 'grep -qxF -- "-R $F" "$OL"' && ok "clicking the notification body also reveals it" || bad "webdl click" "open got: $(cat "$OL")"
+[ "$(pbfile)" = "$SF" ] && ok "clicking copies a share-ready copy (even under launchd's PATH)" || bad "webdl click" "pasteboard holds '$(pbfile)'"
+[ "$(ffp "$SF" v:0 codec_name)" = h264 ] && [ -s "$F" ] && ok "the share copy is H.264 and the original is kept" || bad "webdl click" "share copy: $(ffp "$SF" v:0 codec_name)"
+grep -qx 'Copied · ready to paste' "$NL" && ok "the click confirms with a notification" || bad "webdl click" "last notification: $(tr '\n' ' ' <"$NL")"
+click=$(grep -A1 -x -- '-execute' "$NL" | tail -1); : >"$OL"
+PATH="$T/openstub:$PATH" sh -c "$click" >/dev/null 2>&1
+grep -qxF -- "-R $SF" "$OL" && ok "the confirmation's click shows the copy in Finder" || bad "webdl" "open got: $(cat "$OL")"
 rm -f "$T/dl/"*; YTMODE=none W "https://www.youtube.com/" >/dev/null 2>&1
 grep -qx 'No video found for download' "$NL" && [ -z "$(ls "$T/dl")" ] \
   && ok "a page with no video (exit 0, no ID) is rejected" || bad "webdl" "accepted a page with no video"

@@ -95,10 +95,10 @@ if [[ -n ${filepath:-} && -f $filepath ]]; then
   # A frame from the video as the notification's thumbnail.
   thumb="$thumbdir/thumb.jpg"
   ffmpeg -loglevel error -y -ss 1 -i "$filepath" -frames:v 1 -vf scale=480:-2 "$thumb" 2>/dev/null || thumb=
-  # Click it to show the file in Finder; the Copy button puts a share-ready
-  # copy on the clipboard. One button on purpose: macOS folds two or more
-  # into an "Options" menu instead of showing them.
-  MAC_NOTIFY_ACTIONS="Copy" MAC_NOTIFY_IMAGE=$thumb notify "Download complete" "$title" "$filepath"
+  # Clicking it puts a share-ready copy on the clipboard (H.264/AAC for chat
+  # apps); the "Copied" confirmation's click shows it in Finder. See
+  # mac-notify for why this is a click and not buttons.
+  MAC_NOTIFY_CLICK=copy MAC_NOTIFY_IMAGE=$thumb notify "Download complete" "$title — click to copy" "$filepath"
   echo "$filepath"
 else
   notify "Download failed" "$title"

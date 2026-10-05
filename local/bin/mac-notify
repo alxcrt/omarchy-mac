@@ -1,24 +1,47 @@
 #!/bin/bash
-# mac-notify — post a notification about a file, with Show / Copy buttons.
+# mac-notify — post a notification about a file; clicking it acts on the file.
 #
 #   mac-notify <title> <message> [file]
+#   mac-notify --copy <file>          (what a MAC_NOTIFY_CLICK=copy click runs)
 #
-#   MAC_NOTIFY_ACTIONS="Copy"       buttons for the file: Copy puts a
-#                                   share-ready copy on the clipboard (mac-clip
-#                                   --share), Show reveals it. Clicking the
-#                                   notification itself always reveals it.
-#                                   Use ONE button: macOS folds two or more
-#                                   into an "Options" menu.
-#   MAC_NOTIFY_GROUP=<id>           replace the previous notification in <id>
-#   MAC_NOTIFY_IMAGE=<path>         thumbnail (image files get one automatically)
+#   MAC_NOTIFY_CLICK=copy    clicking puts a share-ready copy of FILE on the
+#                            clipboard (mac-clip --share: H.264/AAC for chat
+#                            apps), then confirms with a notification whose
+#                            click shows the copy in Finder.
+#                            Default (show): clicking shows FILE in Finder.
+#   MAC_NOTIFY_GROUP=<id>    replace the previous notification in <id>
+#   MAC_NOTIFY_IMAGE=<path>  thumbnail (image files get one automatically)
 #
-# osascript's `display notification` is posted as Script Editor and cannot
-# carry a click action, so clicking one just opens Script Editor's file
-# dialog. terminal-notifier (3.1) supports click commands and buttons.
-# Upstream Omarchy gets the same thing from notify-send actions.
+# Why clicks, not buttons: an -action button needs a terminal-notifier process
+# waiting for the answer, and with two such notifications pending macOS hands
+# the click to whichever process it likes. Pressing Copy on one notification
+# copied ANOTHER download (seen Oct 2026). An -execute click command is stored
+# in the notification itself, so it works for any number of them, even after
+# a reboot, with nothing left running.
+#
+# osascript's `display notification` is not used: it is posted as Script
+# Editor and cannot carry a click action, so clicking one opens Script Editor.
+
+tn=${MAC_NOTIFY_BIN:-/opt/homebrew/bin/terminal-notifier}   # override: tests
+self="$HOME/.local/bin/mac-notify"
+
+if [ "${1:-}" = --copy ]; then
+  # Runs from a notification click, under launchd's bare PATH: put back what
+  # mac-clip --share needs (transcode -> ffmpeg/ffprobe).
+  export PATH="$HOME/.local/bin:/opt/homebrew/bin:/usr/bin:/bin:/usr/sbin:/sbin"
+  file=${2:?usage: mac-notify --copy <file>}
+  export MAC_NOTIFY_GROUP="mac-clip-$$"; unset MAC_NOTIFY_CLICK MAC_NOTIFY_IMAGE
+  "$self" "Preparing to share…" "$(basename "$file")"
+  if shared=$(mac-clip --share "$file"); then
+    "$self" "Copied · ready to paste" "$(basename "$shared") — click to show in Finder" "$shared"
+  else
+    "$self" "Copy failed" "$(basename "$file")"
+    exit 1
+  fi
+  exit 0
+fi
 
 title=${1:?usage: mac-notify <title> <message> [file]} msg=${2:-} file=${3:-}
-tn=${MAC_NOTIFY_BIN:-/opt/homebrew/bin/terminal-notifier}   # override: tests
 
 if [ ! -x "$tn" ]; then
   # Fallback: no click action, but at least the notification shows. Strings go
@@ -43,28 +66,10 @@ case $file in
     args+=(-contentImage "$file") ;;   # an image result is its own thumbnail
 esac
 
-if [ -z "${MAC_NOTIFY_ACTIONS:-}" ]; then
-  # The click command runs through sh -c, so quote the path for the shell.
-  exec "$tn" "${args[@]}" -execute "open -R $(printf '%q' "$file")"
+# The click command runs through sh -c, so every word is shell-quoted.
+if [ "${MAC_NOTIFY_CLICK:-show}" = copy ]; then
+  click="$(printf '%q' "$self") --copy $(printf '%q' "$file")"
+else
+  click="open -R $(printf '%q' "$file")"
 fi
-
-# With buttons, terminal-notifier waits for the answer and prints it. Wait in
-# the background so the caller returns at once (webdl runs under the browser's
-# native host, which must not block on a click). Give up after a day.
-(
-  choice=$("$tn" "${args[@]}" -action "$MAC_NOTIFY_ACTIONS" -timeout 86400)
-  case $choice in
-    Copy)
-      # Videos go on the clipboard share-ready (H.264/AAC, `transcode mp4
-      # share`); encoding can take a few seconds, so say so meanwhile.
-      export MAC_NOTIFY_GROUP="mac-clip-$$"; unset MAC_NOTIFY_ACTIONS MAC_NOTIFY_IMAGE
-      "$0" "Preparing to share…" "$(basename "$file")"
-      if shared=$("$HOME/.local/bin/mac-clip" --share "$file"); then
-        "$0" "Copied · ready to paste" "$(basename "$shared")" "$shared"
-      else
-        "$0" "Copy failed" "$(basename "$file")"
-      fi ;;
-    Show|@ACTIONCLICKED) open -R "$file" ;;
-  esac
-) </dev/null >/dev/null 2>&1 &
-disown
+exec "$tn" "${args[@]}" -execute "$click"
