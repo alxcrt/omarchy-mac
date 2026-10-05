@@ -70,9 +70,15 @@ herdr_keys() {
 import re, sys, tomllib
 defaults, inkeys = {}, False
 for line in sys.stdin.read().splitlines():
-    if line.startswith("["):
-        inkeys = line.strip() == "[keys]"; continue
-    m = re.match(r"#\s*([a-z_]+)\s*=\s*(\"[^\"]*\"|\[[^\]]*\])", line) if inkeys else None
+    # Sections end at any table header, commented-out ones too (the defaults
+    # comment out [keys.navigate] and [[keys.custom]] examples): only lines
+    # under a bare [keys] are bindings.
+    header = re.match(r"#?\s*(\[\[?[^\]]*\]\]?)\s*$", line)
+    if header:
+        inkeys = header.group(1) == "[keys]"; continue
+    # A whole `# action = value` line (an optional trailing comment allowed):
+    # prose such as `# type = "popup" opens a session-modal terminal` is not one.
+    m = re.match(r"#\s*([a-z_]+)\s*=\s*(\"[^\"]*\"|\[[^\]]*\])\s*(#.*)?$", line) if inkeys else None
     if m:
         defaults[m.group(1)] = tomllib.loads("v = " + m.group(2))["v"]
 with open(sys.argv[1], "rb") as f:
@@ -80,6 +86,8 @@ with open(sys.argv[1], "rb") as f:
 merged = {**defaults, **user}
 print("prefix\t" + str(merged.get("prefix", "")))
 for action, keys in merged.items():
+    if not isinstance(keys, (str, list)):
+        continue   # a sub-table such as [keys.navigate]
     keys = [keys] if isinstance(keys, str) else keys
     keys = [k for k in keys if k]
     if action != "prefix" and keys:

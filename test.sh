@@ -263,6 +263,9 @@ ZRUN 'unset HERDR_PANE_ID; hds' 2>&1 | grep -qi 'must start herdr' && ok "hds re
 hk=$(mac-keys 2>/dev/null | sed -n '/herdr (prefix/,/Ghostty/p')
 echo "$hk" | grep -q 'prefix+w *workspace picker' && ok "mac-keys lists herdr's built-in bindings" || bad "mac-keys" "herdr defaults missing"
 echo "$hk" | grep -q 'prefix+h / alt+enter *split horizontal' && ok "mac-keys shows the user's override, not the default" || bad "mac-keys" "user override lost"
+# herdr's defaults comment out example sub-tables and explain them in prose
+# (`# type = "popup" opens …`); none of that may pass as a binding.
+echo "$hk" | grep -q -E '80%|lazygit|popup' && bad "mac-keys" "herdr comment/example text listed as bindings" || ok "mac-keys skips herdr's commented examples"
 fi
 
 # ── 8. git ─────────────────────────────────────────────────────────────────

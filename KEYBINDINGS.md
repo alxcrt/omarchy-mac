@@ -91,11 +91,6 @@ Caps Lock is Escape and the right ⌘ is ⌥, remapped by hidutil (`mac-keyremap
 | `j` | navigate pane down |
 | `k` | navigate pane up |
 | `l` | navigate pane right |
-| `popup` | type |
-| `prefix+alt+g` | key |
-| `lazygit` | command |
-| `80%` | width |
-| `80%` | height |
 | `prefix+[` | copy mode |
 
 ## Ghostty (inside the terminal)
