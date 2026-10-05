@@ -31,7 +31,7 @@ ffp() { ffprobe -v error -select_streams "$2" -show_entries "stream=$3" -of csv=
 # ── 1. package layering ────────────────────────────────────────────────────
 if want layering; then
 sec "Package layering (one source per tool)"
-for t in node claude codex gh bun go opencode grok omp herdr; do
+for t in node claude codex gh bun go opencode grok omp herdr crush agy copilot ghui playwright cf; do
   p=$(zsh -ic "command -v $t" 2>/dev/null)
   case "$p" in */mise/*) ok "$t resolves to mise";; "") bad "$t" "not found";; *) bad "$t" "resolves to $p";; esac
 done

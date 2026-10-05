@@ -76,7 +76,7 @@ alias up='macup'
 # Upstream's `a='omarchy-agent --inline'` launches the *configured default*
 # coding agent, each with its own spelling of "don't stop to ask"
 # (bin/omarchy-agent). There's no omarchy-agent here, so `a` reads the choice
-# from OMARCHY_AGENT: claude|codex|opencode|grok|omp|hermes|pi.
+# from OMARCHY_AGENT: claude|codex|opencode|grok|omp|hermes|crush|agy|copilot|pi.
 # Like upstream, a launch from $HOME starts in the work dir (~/Developer here,
 # ~/Work upstream): agents won't remember trust for $HOME and re-ask every
 # session. A subshell, so the calling shell stays where it was, as it does
@@ -91,6 +91,9 @@ a() {
     grok)     cmd=(grok --permission-mode bypassPermissions) ;;
     omp)      cmd=(omp --auto-approve) ;;
     hermes)   cmd=(hermes --yolo) ;;
+    crush)    cmd=(crush --yolo) ;;
+    agy)      cmd=(agy --dangerously-skip-permissions) ;;
+    copilot)  cmd=(copilot --allow-all) ;;
     *)        cmd=("$OMARCHY_AGENT") ;;   # pi and others have nothing to skip
   esac
   (

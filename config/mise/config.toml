@@ -54,6 +54,18 @@ grok = "latest"
 # Browser automation CLI for AI agents (was an nvm-era npm global)
 "npm:agent-browser" = "latest"
 
+# More of upstream Omarchy's agent CLIs (install/user/mise.sh), same backends:
+crush = "latest"                 # Charm's coding agent
+antigravity-cli = "latest"       # Google's Antigravity CLI (command: agy; replaced gemini)
+copilot = "latest"               # GitHub Copilot CLI
+# ghui: terminal UI for GitHub pull requests. mise's supply-chain guard blocks
+# npm packages under 1000 weekly downloads; approved after checking (Oct 2026):
+# sole maintainer kitlangton (Kit Langton), repo github.com/kitlangton/ghui,
+# the same package upstream installs. The guard stays on for everything else.
+"npm:@kitlangton/ghui" = { version = "latest", allow_low_downloads = true }
+"npm:playwright" = "latest"      # browser automation for agents
+"npm:cf" = "latest"              # Cloudflare's CLI (beta). NOT mise's bare `cf`, which is Cloud Foundry
+
 # Terminal workspace manager (herdr.dev = github.com/herdrdev/herdr).
 # Ships a herdr-macos-aarch64 release binary, so it stays in the update path.
 "github:herdrdev/herdr" = "latest"

@@ -29,18 +29,24 @@ file current whenever a request arrives mid-task.
 
 ## Queued
 
-1. **Replace-with-existing-tool candidates** (decide per item):
-   `macup` → topgrade; `install.sh` symlinks → GNU stow; `test.sh` → bats
-   (likely not worth it); `webdl` → cobalt (rejected: hosted service, yt-dlp
-   is the local engine).
-2. **More AI CLIs upstream installs** (pick): ghui, crush, agy, copilot,
-   playwright, ori, muse, hey, basecamp, cf.
-3. **Agent account switching** (`omarchy-agent-account-*`): several
-   Claude/Codex/Grok subscriptions, auto-switch near limits. Bash-4 code;
-   bigger port.
+Nothing queued. Parked for later:
+
+- **Agent account switching** (`omarchy-agent-account-*`): several
+  Claude/Codex/Grok subscriptions, auto-switch near limits. Not now; Alex
+  may try a CLI-proxy-API console instead (Oct 2026).
+
+Decided (Oct 2026), don't reopen without a new reason: keep `macup` over
+topgrade (its App Store skip-list, Touch ID sudo, in-use-safe pruning and
+lock would stay custom anyway); keep `install.sh` links over GNU stow;
+`test.sh` stays plain bash (no bats); `webdl` stays on yt-dlp (cobalt is a
+hosted service).
 
 ## Done (Oct 2026, newest first)
 
+- Upstream's agent CLIs via mise: crush, agy (antigravity-cli), copilot,
+  ghui (approved past mise's low-download guard after checking its
+  publisher), playwright, cf (npm, not Cloud Foundry). `a` knows the first
+  three's auto-approve flags.
 - `mac keys` merges herdr's built-in bindings with the config's overrides;
   opencode's self-update is off (tracked config); `macup` has an update lock
   and stays awake (caffeinate); `iso2sd` / `format-drive` ported to diskutil
