@@ -14,6 +14,8 @@ set -e
 SETTINGS='-g|InitialKeyRepeat|int|15|short delay before key repeat
 -g|KeyRepeat|int|1|fastest key repeat
 com.apple.finder|AppleShowAllFiles|bool|true|Finder shows hidden files
+com.apple.finder|ShowPathbar|bool|true|Finder shows the full path at the bottom
+com.apple.finder|ShowStatusBar|bool|true|Finder shows item count and free disk space
 com.apple.dock|autohide|bool|true|Dock hides itself
 com.apple.dock|autohide-delay|float|0|Dock shows with no delay
 com.apple.dock|autohide-time-modifier|int|0|Dock hides/shows with no animation'

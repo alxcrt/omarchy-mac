@@ -39,7 +39,7 @@ into `~/.config` + `~/.local/bin`.
 | `~/.config/zsh/functions.zsh` | herdr layouts `hdl`/`hds`/`hdlm`/`hsl`, `ga`/`gd`, transcode wrappers |
 | `~/.local/bin/mac-wm` | window management: native tiling + Spaces settings, and the only place the native shortcuts are written down |
 | `config/launchd/com.omarchy.keyremap.plist` | login agent that reapplies the hidutil remap |
-| `~/.local/bin/mac-defaults` | the macOS preferences (key repeat, Finder hidden files, instant Dock autohide, `~/Developer`) as one list; `--status` / `--apply` |
+| `~/.local/bin/mac-defaults` | the macOS preferences (key repeat, Finder hidden files + path bar + status bar, instant Dock autohide, `~/Developer`) as one list; `--status` / `--apply` |
 | `~/.config/herdr/config.toml` | herdr (the multiplexer), keys mapped from Omarchy's tmux.conf. tmux itself was removed in Oct 2026; don't re-add it |
 | `~/.config/ghostty/config` | upstream Omarchy, macOS-adjusted |
 | `~/.local/bin/` | `mac`, `macup`, `mac-keys`, `mac-keyremap`, `mac-defaults`, `mac-hook`, `ghostty-run`, `transcode`, `webdl`, `weburl`, `browser-url`, `chrome-extensions`, `chromium-native-host`, `mise-install`, `agent-usage-*` |

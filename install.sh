@@ -60,7 +60,7 @@ section "Configuring native window management"
 "$HOME/.local/bin/mac-wm" --apply
 
 section "Applying macOS defaults"
-# Key repeat, hidden files in Finder, instant Dock autohide, ~/Developer.
+# Key repeat, Finder hidden files/path bar/status bar, instant Dock autohide, ~/Developer.
 "$HOME/.local/bin/mac-defaults" --apply
 
 section "Ensuring Homebrew"

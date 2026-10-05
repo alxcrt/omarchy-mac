@@ -563,6 +563,7 @@ grep -q Dock "$KL" && grep -q Finder "$KL" && ok "--apply restarts Dock and Find
 [ -s "$KL" ] && bad "mac-defaults" "restarts Dock/Finder with nothing to change" || ok "a second --apply changes nothing and restarts nothing"
 # Then the real Mac, read straight from cfprefs rather than through the script.
 for kv in "-g InitialKeyRepeat 15" "-g KeyRepeat 1" "com.apple.finder AppleShowAllFiles 1" \
+          "com.apple.finder ShowPathbar 1" "com.apple.finder ShowStatusBar 1" \
           "com.apple.dock autohide 1" "com.apple.dock autohide-delay 0" "com.apple.dock autohide-time-modifier 0"; do
   set -- $kv
   [ "$(defaults read "$1" "$2" 2>/dev/null)" = "$3" ] && ok "live: $2 = $3" || bad "live default" "$2 is $(defaults read "$1" "$2" 2>&1), want $3"
