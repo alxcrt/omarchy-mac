@@ -518,7 +518,7 @@ fi
 if want brew; then
 sec "Homebrew + mise layers"
 brew list --formula >/dev/null 2>&1 && ok "brew responds" || bad "brew" "not working"
-for f in bat eza fd fzf ripgrep zoxide jq btop fastfetch starship tmux neovim lazygit gifski mas pam-reattach; do
+for f in bat eza fd fzf ripgrep zoxide jq gum cliamp btop fastfetch starship tmux neovim lazygit gifski mas pam-reattach; do
   brew list "$f" >/dev/null 2>&1 && ok "formula $f installed" || bad "formula $f" "missing"
 done
 mise doctor 2>&1 | grep -q 'No problems found' && ok "mise doctor clean" || bad "mise doctor" "problems reported"

@@ -4,6 +4,11 @@
 # Dev tooling + AI CLIs are deliberately NOT here — those live in mise
 # (~/.config/mise/config.toml). One package manager per layer, no overlap.
 
+# --- Third-party taps ---
+# Homebrew 6 refuses to load formulae from untrusted taps and aborts the whole
+# bundle, so install.sh trusts each one first (brew trust --formula ...).
+tap "bjarneo/cliamp"
+
 # --- CLI: Omarchy's pacman set, ported ---
 brew "bat"          # cat with syntax highlighting; used as MANPAGER
 brew "eza"          # ls replacement, aliased over ls
@@ -13,6 +18,7 @@ brew "ripgrep"
 brew "zoxide"       # aliased over cd
 brew "jq"
 brew "gum"          # confirm prompt in gd (functions.zsh)
+brew "bjarneo/cliamp/cliamp"  # Omarchy's music TUI (upstream base package)
 brew "btop"
 brew "fastfetch"
 brew "starship"

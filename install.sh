@@ -74,6 +74,9 @@ section "Ensuring mise"
 command -v mise >/dev/null 2>&1 || brew install mise
 
 section "Reconciling Homebrew layer (Brewfile)"
+# Homebrew 6 aborts the whole bundle on a formula from an untrusted tap, so
+# tap and trust the third-party ones first. Trust the formula, not the tap.
+brew tap bjarneo/cliamp && brew trust --formula bjarneo/cliamp/cliamp
 brew bundle --file="$HOME/.config/homebrew/Brewfile" || true
 
 section "Reconciling mise layer"
