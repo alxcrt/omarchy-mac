@@ -23,6 +23,8 @@ window-save-state = always
 # macOS-only: native tabs, and Option must behave as Alt for tmux/Neovim.
 macos-titlebar-style = tabs
 macos-option-as-alt = true
+# Dock/app-switcher icon: the green pixel ghost on a CRT screen.
+macos-icon = retro
 
 # ── Cursor ──
 cursor-style = "block"
