@@ -25,21 +25,31 @@ lock_owner_alive() {
   read -r pid start <"$LOCK/owner" 2>/dev/null || return 1
   [ -n "$pid" ] && [ "$(pstart "$pid")" = "$start" ]
 }
+lock_fresh() { [ -z "$(find "$1" -maxdepth 0 -mmin +1 2>/dev/null)" ]; }
 if ! mkdir "$LOCK" 2>/dev/null; then
-  # A lock under a minute old with no owner yet is a run that is starting up:
-  # it is live, not stale (deleting it would let both runs go ahead).
-  if [ ! -e "$LOCK/owner" ] && [ -z "$(find "$LOCK" -maxdepth 0 -mmin +1 2>/dev/null)" ]; then
+  # No complete owner record yet in a lock under a minute old: a run that is
+  # starting up (the record is published atomically below), so it is live.
+  read -r opid ostart <"$LOCK/owner" 2>/dev/null
+  if { [ -z "${opid:-}" ] || [ -z "${ostart:-}" ]; } && lock_fresh "$LOCK"; then
     echo "macup is already starting." >&2; exit 1
   fi
   if lock_owner_alive; then
-    echo "macup is already running (pid $(cut -d' ' -f1 "$LOCK/owner"))." >&2; exit 1
+    echo "macup is already running (pid $opid)." >&2; exit 1
   fi
-  # Stale. Rename it away before deleting: only one of several takers can win
-  # the rename, and the losers then fail the mkdir below.
-  mv "$LOCK" "$LOCK.stale.$$" 2>/dev/null && rm -rf "$LOCK.stale.$$"
-  mkdir "$LOCK" 2>/dev/null || { echo "macup: another run took the lock." >&2; exit 1; }
+  # Stale. Taking it over is serialised by a second, short-lived lock, and
+  # re-checked under it: without that, a slow taker could rename away the
+  # fresh lock a faster taker had just made, and both would run.
+  stale=$(cat "$LOCK/owner" 2>/dev/null)
+  if ! lock_fresh "$LOCK.reclaim" 2>/dev/null; then rm -rf "$LOCK.reclaim"; fi   # a crashed taker's guard
+  mkdir "$LOCK.reclaim" 2>/dev/null || { echo "macup: another run is taking over the lock." >&2; exit 1; }
+  if [ "$(cat "$LOCK/owner" 2>/dev/null)" = "$stale" ] && ! lock_owner_alive; then
+    mv "$LOCK" "$LOCK.stale.$$" 2>/dev/null && rm -rf "$LOCK.stale.$$"
+  fi
+  mkdir "$LOCK" 2>/dev/null || { rmdir "$LOCK.reclaim"; echo "macup: another run took the lock." >&2; exit 1; }
+  rmdir "$LOCK.reclaim"
 fi
-echo "$me" >"$LOCK/owner"
+# Publish the owner record whole: written aside, then renamed into place.
+echo "$me" >"$LOCK/owner.$$" && mv -f "$LOCK/owner.$$" "$LOCK/owner"
 
 # Stay awake while updating (upstream does the same); ends with this process.
 caffeinate -i -w $$ >/dev/null 2>&1 &

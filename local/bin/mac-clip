@@ -10,6 +10,9 @@
 #
 # MAC_CLIP_PASTEBOARD=<name> writes to a private named pasteboard instead of
 # the general one (tests use it so they never clobber the real clipboard).
+# MAC_CLIP_COUNT_FILE=<file> receives the pasteboard change count of THIS
+# write (returned by the write itself), so a test can tell its own write from
+# anything copied a moment later.
 
 share=0; [ "${1:-}" = --share ] && { share=1; shift; }
 f=${1:?usage: mac-clip [--share] <file>}
@@ -34,15 +37,16 @@ fi
 # in 5 (Oct 2026) — "Copied" was announced and the clipboard was empty. These
 # setters are synchronous, like pbcopy's. Both the modern file URL and the
 # legacy filename list are written, as Finder's ⌘C provides both.
-osascript -l JavaScript - "$abs" "${MAC_CLIP_PASTEBOARD:-}" >/dev/null <<'JXA' || exit 1
+osascript -l JavaScript - "$abs" "${MAC_CLIP_PASTEBOARD:-}" "${MAC_CLIP_COUNT_FILE:-}" >/dev/null <<'JXA' || exit 1
 ObjC.import("AppKit");
 function run(argv) {
   const pb = argv[1] ? $.NSPasteboard.pasteboardWithName(argv[1])
                      : $.NSPasteboard.generalPasteboard;
-  pb.declareTypesOwner($(["public.file-url", "NSFilenamesPboardType"]), null);
+  const count = pb.declareTypesOwner($(["public.file-url", "NSFilenamesPboardType"]), null);
   const ok = pb.setStringForType($.NSURL.fileURLWithPath(argv[0]).absoluteString, "public.file-url")
           && pb.setPropertyListForType($([argv[0]]), "NSFilenamesPboardType");
   if (!ok) throw new Error("pasteboard write failed");
+  if (argv[2]) $(String(count)).writeToFileAtomicallyEncodingError(argv[2], true, $.NSUTF8StringEncoding, null);
 }
 JXA
 echo "$abs"

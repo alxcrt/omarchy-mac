@@ -171,19 +171,31 @@ _drive_confirm() {
     local confirm; read "confirm?$1 (y/N): "; [[ $confirm == [yY]* ]]; fi
 }
 
-# _drive_identity <diskN> — what the disk is (size, media name, device),
-# compared again right before anything destructive: if the card is pulled
-# while a prompt is open, macOS can hand diskN to different media.
+# _drive_identity <diskN> — what the disk is, compared again right before
+# anything destructive: if the card is pulled while a prompt is open, macOS
+# can hand diskN to different media. The IOKit registry ID is new on every
+# attach, so even an identical card swapped into the same reader differs;
+# size, media name and device path back it up. Fails (and so refuses) when
+# the identity can't be read.
+_drive_regid() {
+  ioreg -r -c IOMedia -a 2>/dev/null | plutil -convert json -o - - 2>/dev/null |
+    jq -r --arg d "$1" '[.. | objects | select(."BSD Name"? == $d) | .IORegistryEntryID] | first // empty'
+}
 _drive_identity() {
-  diskutil info -plist "/dev/$1" 2>/dev/null | plutil -convert json -o - - 2>/dev/null |
-    jq -r '[.TotalSize, .MediaName, .IORegistryEntryName, .DeviceTreePath] | map(tostring) | join("|")'
+  local reg info
+  reg=$(_drive_regid "$1") && [[ -n $reg ]] || return 1
+  info=$(diskutil info -plist "/dev/$1" 2>/dev/null | plutil -convert json -o - - 2>/dev/null |
+    jq -r '[.TotalSize, .MediaName, .IORegistryEntryName, .DeviceTreePath] | map(tostring) | join("|")') &&
+    [[ -n $info ]] || return 1
+  print -r -- "$reg|$info"
 }
 
 # _drive_still <diskN> <identity> — still an external physical disk, and the
-# same one. Run after authenticating, immediately before writing.
+# same one. Run immediately before each destructive step.
 _drive_still() {
   _drive_check "$1" >/dev/null || return 1
-  if [[ "$(_drive_identity "$1")" != "$2" ]]; then
+  local now; now=$(_drive_identity "$1")
+  if [[ -z $2 || $now != "$2" ]]; then
     echo "/dev/$1 is no longer the disk you confirmed (was it unplugged?); nothing was written." >&2
     return 1
   fi
@@ -230,22 +242,27 @@ iso2sd() {
     [[ -n $disk ]] || { echo "No disk selected"; return 1; }
   fi
   disk=$(_drive_check "$disk") || return 1
-  local id=$(_drive_identity "$disk")
+  local id; id=$(_drive_identity "$disk") || { echo "Can't identify /dev/$disk; nothing written."; return 1; }
   local desc=$(_external_disks | awk -F'\t' -v d="$disk" '$1 == d { print $2 ", " $3 }')
 
   _drive_confirm "ERASE /dev/$disk ($desc) and write $(basename "$img")${member:+ ($member)} to it?" || return 1
   sudo -v || return 1                      # authenticate first, then check last
   _drive_still "$disk" "$id" || return 1
   diskutil unmountDisk "/dev/$disk" || return 1
+  # Unmounting can wait on a busy volume; check again after it, and write
+  # with non-interactive sudo so nothing can pause between check and write.
+  _drive_still "$disk" "$id" || return 1
+  # unzip reads a member name as a wildcard pattern: escape [ ] * ? \ in it.
+  local pattern=$(printf '%s' "$member" | sed 's/[][*?\\]/\\&/g')
   # /dev/rdiskN (raw) skips the buffer cache: several times faster. For a pipe,
   # obs=4m makes dd collect whole blocks, since a raw disk rejects writes that
   # aren't sector-aligned.
   case $img in
-    *.gz)  gzip -dc -- "$img"          | sudo dd of="/dev/r$disk" ibs=64k obs=4m status=progress ;;
-    *.xz)  xz -dc -- "$img"            | sudo dd of="/dev/r$disk" ibs=64k obs=4m status=progress ;;
-    *.zst) zstd -dc -- "$img"          | sudo dd of="/dev/r$disk" ibs=64k obs=4m status=progress ;;
-    *.zip) unzip -p -- "$img" "$member" | sudo dd of="/dev/r$disk" ibs=64k obs=4m status=progress ;;
-    *)     sudo dd if="$img" of="/dev/r$disk" bs=4m status=progress ;;
+    *.gz)  gzip -dc -- "$img"           | sudo -n dd of="/dev/r$disk" ibs=64k obs=4m status=progress ;;
+    *.xz)  xz -dc -- "$img"             | sudo -n dd of="/dev/r$disk" ibs=64k obs=4m status=progress ;;
+    *.zst) zstd -dc -- "$img"           | sudo -n dd of="/dev/r$disk" ibs=64k obs=4m status=progress ;;
+    *.zip) unzip -p -- "$img" "$pattern" | sudo -n dd of="/dev/r$disk" ibs=64k obs=4m status=progress ;;
+    *)     sudo -n dd if="$img" of="/dev/r$disk" bs=4m status=progress ;;
   esac || { echo "Write failed: the card is incomplete; don't boot from it."; return 1; }
   sync
   diskutil eject "/dev/$disk"
@@ -261,11 +278,10 @@ format-drive() {
     return 1
   fi
   local disk; disk=$(_drive_check "$1") || return 1
-  local id=$(_drive_identity "$disk")
+  local id; id=$(_drive_identity "$disk") || { echo "Can't identify /dev/$disk; nothing erased."; return 1; }
   local desc=$(_external_disks | awk -F'\t' -v d="$disk" '$1 == d { print $2 ", " $3 }')
   echo "WARNING: This will completely erase all data on /dev/$disk ($desc) and label it '$2'."
-  local confirm; read "confirm?Are you sure you want to continue? (y/N): "
-  [[ $confirm == [yY]* ]] || return 1
+  _drive_confirm "Erase /dev/$disk and label it '$2'?" || return 1
   _drive_still "$disk" "$id" || return 1
   diskutil eraseDisk ExFAT "$2" GPT "/dev/$disk" && echo "Drive /dev/$disk formatted as exFAT and labeled '$2'."
 }

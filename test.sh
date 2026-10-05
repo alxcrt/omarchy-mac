@@ -184,15 +184,23 @@ case "\$*" in
   *) echo "diskutil \$*" >>"$DL" ;;
 esac
 EOF
+echo 100 >"$T/io-id"
+cat >"$DU/ioreg" <<EOF
+#!/bin/bash
+[ -s "$T/io-id" ] || exit 0
+printf '<?xml version="1.0"?><plist version="1.0"><array><dict><key>BSD Name</key><string>disk9</string><key>IORegistryEntryID</key><integer>%s</integer></dict></array></plist>' "\$(cat "$T/io-id")"
+EOF
+chmod +x "$DU/ioreg"
 cat >"$YES/sudo" <<EOF
 #!/bin/bash
 echo "sudo \$*" >>"$SL"
+[ "\$1" = -n ] && shift   # the write runs as non-interactive sudo
 [ "\$1" = dd ] && { case " \$* " in *" if="*) ;; *) cat >"$T/dd-in" ;; esac; }
 exit 0
 EOF
 cat >"$YES/gum" <<EOF
 #!/bin/bash
-[ "\$1" = confirm ] && { [ -f "$T/swap-on-confirm" ] && echo B >"$T/du-name"; exit 0; }
+[ "\$1" = confirm ] && { [ -f "$T/swap-on-confirm" ] && echo B >"$T/du-name"; [ -f "$T/same-card-on-confirm" ] && echo 200 >"$T/io-id"; exit 0; }
 exit 1
 EOF
 chmod +x "$DU/diskutil" "$YES/sudo" "$YES/gum"
@@ -205,27 +213,31 @@ touch "$T/swap-on-confirm"; echo A >"$T/du-name"; out=$(DY "iso2sd '$T/card.img'
 ! grep -q ' dd ' "$SL" && ! grep -q unmountDisk "$DL" && grep -q 'no longer the disk you confirmed' <<<"$out" \
   && ok "iso2sd writes nothing if the disk changed after the yes" || bad "iso2sd" "wrote to a swapped disk: $(cat "$SL" | tr '\n' ' ')"
 rm -f "$T/swap-on-confirm"; echo A >"$T/du-name"
+touch "$T/same-card-on-confirm"; out=$(DY "iso2sd '$T/card.img' disk9")
+! grep -q ' dd ' "$SL" && grep -q 'no longer the disk you confirmed' <<<"$out" \
+  && ok "iso2sd catches an identical card swapped in (new IOKit registry id)" || bad "iso2sd" "identical swapped card written: $(cat "$SL" | tr '\n' ' ')"
+rm -f "$T/same-card-on-confirm"; echo 100 >"$T/io-id"
+: >"$T/io-id"; out=$(DY "iso2sd '$T/card.img' disk9")
+! grep -q -e ' dd ' -e unmountDisk "$SL" "$DL" && grep -q "Can't identify" <<<"$out" \
+  && ok "iso2sd refuses when the disk's identity can't be read" || bad "iso2sd" "wrote without an identity: $out"
+echo 100 >"$T/io-id"
 gzip -c "$T/card.img" | head -c 20 >"$T/broken.img.gz"; out=$(DY "iso2sd '$T/broken.img.gz' disk9")
 grep -q 'Write failed' <<<"$out" && ! grep -q eject "$DL" \
   && ok "iso2sd reports a broken archive and never ejects it as done" || bad "iso2sd" "broken .gz: $out"
-( cd "$T" && printf 'read me' >README.txt && cp card.img disk.img && zip -q one.zip README.txt disk.img && zip -q two.zip disk.img card.img )
+( cd "$T" && printf 'read me' >README.txt && cp card.img disk.img && zip -q one.zip README.txt disk.img && zip -q two.zip disk.img card.img \
+  && cp card.img 'disk[1].img' && zip -q bracket.zip README.txt 'disk[1].img' )
 out=$(DY "iso2sd '$T/one.zip' disk9")
 [ "$(cat "$T/dd-in" 2>/dev/null)" = "disk image bytes" ] && ok "iso2sd writes only the image from a .zip (not its README)" || bad "iso2sd" "zip stream: '$(cat "$T/dd-in" 2>/dev/null)'"
+out=$(DY "iso2sd '$T/bracket.zip' disk9")
+[ "$(cat "$T/dd-in" 2>/dev/null)" = "disk image bytes" ] && ok "iso2sd handles a .zip member named like a wildcard (disk[1].img)" || bad "iso2sd" "bracket member: '$(cat "$T/dd-in" 2>/dev/null)' $out"
 out=$(DY "iso2sd '$T/two.zip' disk9")
 grep -q "Can't tell which file" <<<"$out" && ! grep -q unmountDisk "$DL" && ok "iso2sd refuses a .zip with two images" || bad "iso2sd" "two-image zip: $out"
-# format-drive: the card swaps after its third diskutil info call, i.e.
-# between the confirmation and the erase.
-cat >"$DU/diskutil.sh" <<EOF
-#!/bin/bash
-n=\$(( \$(cat "$T/du-n" 2>/dev/null || echo 0) + 1 )); echo \$n >"$T/du-n"
-[ \$n -gt 3 ] && echo B >"$T/du-name"
-exec "$DU/diskutil.real" "\$@"
-EOF
-mv "$DU/diskutil" "$DU/diskutil.real"; mv "$DU/diskutil.sh" "$DU/diskutil"; chmod +x "$DU/diskutil"
-echo A >"$T/du-name"; rm -f "$T/du-n"; : >"$DL"
-out=$(ZRUN "PATH='$DU':\$PATH; format-drive disk9 TEST 2>&1" <<<"y")
+# format-drive: the card is swapped exactly at the confirmation.
+touch "$T/swap-on-confirm"; echo A >"$T/du-name"; out=$(DY "format-drive disk9 TEST")
 ! grep -q eraseDisk "$DL" && grep -q 'no longer the disk you confirmed' <<<"$out" \
   && ok "format-drive erases nothing if the disk changed after the yes" || bad "format-drive" "erased a swapped disk: $out"
+rm -f "$T/swap-on-confirm"; echo A >"$T/du-name"; out=$(DY "format-drive disk9 TEST")
+grep -q 'eraseDisk ExFAT TEST GPT /dev/disk9' "$DL" && ok "format-drive erases a confirmed, unchanged disk" || bad "format-drive" "did not erase: $(cat "$DL")"
 # ssh reconnect: only a dropped INTERACTIVE session may be replayed.
 ZRUN '_ssh_interactive host' && ok "ssh: plain host is interactive" || bad "_ssh_interactive" "host"
 ZRUN '_ssh_interactive host uptime' && bad "_ssh_interactive" "remote command treated as interactive" || ok "ssh: a remote command is never replayed"
@@ -377,7 +389,8 @@ if [ -n "$u" ]; then
   if mac-pbsnap save "$T/clip.json"; then
     CLIP_SNAP="$T/clip.json"; before=$(pbcount)
     w=$(weburl 2>/dev/null | tail -1)   # the URL weburl actually wrote (the tab may change)
-    [ "$(pbcount)" = $(( before + 1 )) ] && CLIP_MINE=$(pbcount)   # exactly one write: ours
+    now=$(pbcount)   # read ONCE: exactly one write since `before` is weburl's
+    [ "$now" = $(( before + 1 )) ] && CLIP_MINE=$now
     [ -n "$w" ] && [ "$(pbpaste)" = "$w" ] && ok "weburl copied URL to clipboard" || bad "weburl" "clipboard mismatch"
     clip_restore
   else
@@ -415,7 +428,15 @@ for x in yt-dlp copy-url whatsapp-slim; do
   diff -rq ~/omarchy-mac/config/chromium/extensions/$x "$E/$x" >/dev/null 2>&1 \
     && ok "staged $x matches the repo" || bad "extensions" "$x drifted from the repo (run: chrome-extensions sync)"
 done
-chrome-extensions sync 2>&1 | grep -q 'already up to date' && ok "chrome-extensions sync is idempotent" || bad "chrome-extensions sync" "changed files on a clean tree"
+# sync itself runs on scratch copies, never on the folders Chrome loads.
+SX="$T/ext-src"; SD="$T/ext-staged"; mkdir -p "$SX"; cp -R ~/omarchy-mac/config/chromium/extensions/copy-url "$SX/"
+CHROME_EXT_SRC="$SX" CHROME_EXT_DIR="$SD" chrome-extensions sync >/dev/null 2>&1
+diff -rq "$SX/copy-url" "$SD/copy-url" >/dev/null && ok "chrome-extensions sync stages a copy" || bad "chrome-extensions sync" "copy differs"
+CHROME_EXT_SRC="$SX" CHROME_EXT_DIR="$SD" chrome-extensions sync 2>&1 | grep -q 'already up to date' && ok "chrome-extensions sync is idempotent" || bad "chrome-extensions sync" "changed files on a clean tree"
+echo changed >>"$SX/copy-url/manifest.json"; chmod 000 "$SX/copy-url/manifest.json"
+CHROME_EXT_SRC="$SX" CHROME_EXT_DIR="$SD" chrome-extensions sync >/dev/null 2>&1 && bad "chrome-extensions sync" "a failed copy exited 0" \
+  || { ! grep -q changed "$SD/copy-url/manifest.json" && ok "a failed copy fails and keeps the old staged copy" || bad "chrome-extensions sync" "half-updated staging"; }
+chmod 644 "$SX/copy-url/manifest.json"
 for base in "$E" ~/omarchy-mac/config/chromium/extensions; do
   i="$base/copy-url/icon.png"
   [ -f "$i" ] && [ ! -L "$i" ] && file "$i" | grep -q PNG \
@@ -624,6 +645,17 @@ printf '#!/bin/bash\n[ "$1" = update ] && echo "4242 someone else" >"%s/owner"\n
 rm -rf "$LK"; runlock >/dev/null
 [ "$(cat "$LK/owner" 2>/dev/null)" = "4242 someone else" ] && ok "macup never removes a lock it no longer owns" || bad "macup lock" "released someone else's lock"
 mv "$STUB/brew.real" "$STUB/brew"; rm -rf "$LK"
+mklock ""; : >"$LK/owner"; out=$(runlock)
+grep -q 'already starting' <<<"$out" && ok "a fresh lock with an empty owner record counts as starting" || bad "macup lock" "empty owner: $out"
+mklock "999999 x"; mkdir -p "$LK.reclaim"; out=$(runlock)
+grep -q 'taking over' <<<"$out" && ! grep -q '^brew' "$LOG" && ok "only one run may take over a stale lock at a time" || bad "macup lock" "reclaim guard ignored: $out"
+mklock "999999 x"; rm -rf "$LK.reclaim"; mkdir -p "$LK.reclaim"; touch -t "$(date -v-5M +%Y%m%d%H%M)" "$LK.reclaim"; runlock >/dev/null
+grep -q '^brew update' "$LOG" && [ ! -e "$LK.reclaim" ] && ok "a crashed taker's leftover guard is cleared" || bad "macup lock" "stale reclaim guard blocked macup"
+# Two runs started together against one stale lock: exactly one may run.
+mklock "999999 x"; rm -rf "$LK.reclaim"; : >"$LOG"
+( XDG_STATE_HOME="$T/lockstate" PATH="$STUB:/usr/bin:/bin" ~/.local/bin/macup </dev/null >/dev/null 2>&1 & XDG_STATE_HOME="$T/lockstate" PATH="$STUB:/usr/bin:/bin" ~/.local/bin/macup </dev/null >/dev/null 2>&1 & wait )
+n=$(grep -c '^brew update' "$LOG"); [ "$n" = 1 ] && ok "two concurrent takeovers: exactly one macup runs" || bad "macup lock" "$n runs went ahead"
+rm -rf "$LK" "$LK.reclaim"
 # App Store: an app owned by another Apple Account pops a modal dialog on every
 # update attempt. macup must try it once, report it under "Needs you" (not as
 # a failure), and skip it on the next run. Developer's real ADAM ID is used so
@@ -968,7 +1000,9 @@ if mac-pbsnap save "$T/clip-real.json"; then
   for i in 1 2 3 4 5; do
     # Someone else copied since our last write: stop, and leave it alone.
     [ "$(pbcount)" = "$CLIP_MINE" ] || { foreign=1; CLIP_MINE=""; break; }
-    ~/.local/bin/mac-clip "$T/shot.png" >/dev/null && CLIP_MINE=$(pbcount)
+    # The count of OUR write, as the write itself returned it, never a later
+    # read (that could adopt something copied in between).
+    MAC_CLIP_COUNT_FILE="$T/clip-count" ~/.local/bin/mac-clip "$T/shot.png" >/dev/null && CLIP_MINE=$(cat "$T/clip-count")
     sleep 0.3
     osascript -l JavaScript -e 'ObjC.import("AppKit"); function run(){ const u=$.NSPasteboard.generalPasteboard.readObjectsForClassesOptions($.NSArray.arrayWithObject($.NSURL),$.NSDictionary.dictionary); return (u && u.count > 0) ? ObjC.unwrap(u.objectAtIndex(0).path) : ""; }' 2>/dev/null | grep -qxF "$T/shot.png" && kept=$((kept+1))
   done
@@ -1025,6 +1059,9 @@ grep -qxF -- "-R $SF" "$OL" && ok "the confirmation's click shows the copy in Fi
 rm -f "$T/dl/"*; YTMODE=none W "https://www.youtube.com/" >/dev/null 2>&1
 grep -qx 'No video found for download' "$NL" && [ -z "$(ls "$T/dl")" ] \
   && ok "a page with no video (exit 0, no ID) is rejected" || bad "webdl" "accepted a page with no video"
+# An early failure (the download folder can't be created) still reports.
+: >"$NL"; PATH="$YS:$PATH" OMARCHY_YTDLP_DIR=/dev/null/nope MAC_NOTIFY_BIN="$NS" ~/.local/bin/webdl "https://example.com/v" >/dev/null 2>&1
+grep -qx 'Download failed' "$NL" && ok "an early webdl failure still posts \"Download failed\"" || bad "webdl" "silent early failure: $(tr '\n' ' ' <"$NL")"
 YTMODE=fail W "https://example.com/v" >/dev/null 2>&1
 grep -qx 'Download failed' "$NL" && ok "a failing download says so (pipefail no longer exits early)" || bad "webdl" "no failure notification: $(tr '\n' ' ' <"$NL")"
 ( YTMODE=hang W "https://example.com/v" >/dev/null 2>&1 ) & wpid=$!

@@ -20,7 +20,7 @@
 # extension Chrome ran was an Aug 2026 copy long after the repo moved on.
 set -e
 
-EXT_DIR="$HOME/.config/omarchy-mac/extensions"
+EXT_DIR="${CHROME_EXT_DIR:-$HOME/.config/omarchy-mac/extensions}"   # override: tests
 NMH="$HOME/Library/Application Support/Google/Chrome/NativeMessagingHosts"
 CHROME="/Applications/Google Chrome.app/Contents/MacOS/Google Chrome"
 CHROME_DIR="$HOME/Library/Application Support/Google/Chrome"
@@ -104,21 +104,26 @@ PY
     ;;
 
   sync)
-    REPO_EXT="$(cd "$(dirname "$(readlink "$0" || echo "$0")")/../.." && pwd)/config/chromium/extensions"
+    REPO_EXT="${CHROME_EXT_SRC:-$(cd "$(dirname "$(readlink "$0" || echo "$0")")/../.." && pwd)/config/chromium/extensions}"
     [ -d "$REPO_EXT" ] || REPO_EXT="$HOME/omarchy-mac/config/chromium/extensions"
     mkdir -p "$EXT_DIR"
-    changed=0
+    changed=0 failed=0
     for src in "$REPO_EXT"/*/; do
       name=$(basename "$src")
-      if ! diff -rq "$src" "$EXT_DIR/$name" >/dev/null 2>&1; then
-        # -L: copy what a symlink points at; the staged copy must hold real files.
-        rm -rf "$EXT_DIR/$name.new" && cp -RL "$src" "$EXT_DIR/$name.new" &&
-          rm -rf "$EXT_DIR/$name" && mv "$EXT_DIR/$name.new" "$EXT_DIR/$name"
+      diff -rq "$src" "$EXT_DIR/$name" >/dev/null 2>&1 && continue
+      # Build the new copy aside (-L: real files, never symlinks), then swap.
+      # Every step is checked: a copy that fails must not be reported as
+      # updated, and the old copy stays in place.
+      if rm -rf "$EXT_DIR/$name.new" && cp -RL "$src" "$EXT_DIR/$name.new" &&
+         rm -rf "$EXT_DIR/$name" && mv "$EXT_DIR/$name.new" "$EXT_DIR/$name"; then
         echo "updated $name"; changed=1
+      else
+        rm -rf "$EXT_DIR/$name.new"; echo "FAILED to update $name" >&2; failed=1
       fi
     done
-    [ $changed = 1 ] && echo "Reload them in chrome://extensions (or restart Chrome) to run the new code." \
-      || echo "extensions already up to date"
+    [ $changed = 1 ] && echo "Reload them in chrome://extensions (or restart Chrome) to run the new code."
+    [ $changed = 0 ] && [ $failed = 0 ] && echo "extensions already up to date"
+    exit $failed
     ;;
   *) echo "Usage: chrome-extensions [list|verify|install|relaunch|sync]"; exit 1 ;;
 esac

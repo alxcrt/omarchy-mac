@@ -35,9 +35,15 @@ notify() {
   MAC_NOTIFY_GROUP="webdl-$$" "$HOME/.local/bin/mac-notify" "$@" || echo "notify failed (rc=$?)" >&2
 }
 
+# Every exit says how it went: webdl is the only one reporting the outcome
+# (the browser extension shows progress only), so an early failure, such as
+# a download folder that can't be created, must not exit silently. A kill
+# (below) or an outcome already posted counts as reported.
+reported=0
+out=""; thumbdir=""
+trap 'rc=$?; rm -rf "$out" "$thumbdir"; [ $rc -ne 0 ] && [ $reported = 0 ] && notify "Download failed" "${title:-$url}"' EXIT
 mkdir -p "$DOWNLOAD_DIR"
 out=$(mktemp); thumbdir=$(mktemp -d)
-trap 'rm -rf "$out" "$thumbdir"' EXIT
 # If this run is killed (the browser's native host stops it when the extension
 # disconnects), take its "Downloading…" notification down with it.
 # The download runs as a background job (below) so this fires at once — bash
@@ -46,7 +52,7 @@ trap 'rm -rf "$out" "$thumbdir"' EXIT
 # is best-effort: with no children left, a failing pkill under set -e would
 # otherwise end the handler before the notification is removed.
 killtree() { local c; for c in $(pgrep -P "$1" 2>/dev/null); do killtree "$c"; done; kill -TERM "$1" 2>/dev/null || true; }
-trap 'for c in $(pgrep -P $$ 2>/dev/null); do killtree "$c"; done; "${MAC_NOTIFY_BIN:-/opt/homebrew/bin/terminal-notifier}" -remove "webdl-$$" >/dev/null 2>&1 || true; exit 130' INT TERM HUP
+trap 'reported=1; for c in $(pgrep -P $$ 2>/dev/null); do killtree "$c"; done; "${MAC_NOTIFY_BIN:-/opt/homebrew/bin/terminal-notifier}" -remove "webdl-$$" >/dev/null 2>&1 || true; exit 130' INT TERM HUP
 
 # probe [yt-dlp args] — print "<id><TAB><title>" of the video at $url.
 # Check for an ID, not just the exit code: on a page with no video (the
@@ -68,7 +74,7 @@ if [[ -z $found ]]; then
   [[ -n $found ]] && cookies=()
 fi
 if [[ -z $found ]]; then
-  notify "No video found for download" "$url"
+  reported=1; notify "No video found for download" "$url"
   echo "No video found for download: $url" >&2
   exit 0
 fi
@@ -105,9 +111,9 @@ if [[ -n ${filepath:-} && -f $filepath ]]; then
   # Clicking it puts a share-ready copy on the clipboard (H.264/AAC for chat
   # apps); the "Copied" confirmation's click shows it in Finder. See
   # mac-notify for why this is a click and not buttons.
-  MAC_NOTIFY_CLICK=copy MAC_NOTIFY_IMAGE=$thumb notify "Download complete" "$title — click to copy" "$filepath"
+  reported=1; MAC_NOTIFY_CLICK=copy MAC_NOTIFY_IMAGE=$thumb notify "Download complete" "$title — click to copy" "$filepath"
   echo "$filepath"
 else
-  notify "Download failed" "$title"
+  reported=1; notify "Download failed" "$title"
   exit 1
 fi
