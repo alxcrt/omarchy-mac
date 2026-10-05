@@ -16,7 +16,12 @@ want() { [ -z "$ONLY" ] || [ "$ONLY" = "$1" ]; }
 
 ONLY="$1"
 export PATH="$HOME/.local/bin:/opt/homebrew/bin:$PATH"
-T=$(mktemp -d); trap 'rm -rf "$T"' EXIT
+T=$(mktemp -d); trap 'rm -rf "$T"' EXIT; export T
+# No test may post a real notification or leave a Show/Copy waiter running:
+# mac-notify gets a silent stand-in for terminal-notifier (the notify section
+# passes its own recording stub).
+printf '#!/bin/bash\nfor a; do [ "$a" = -action ] && { echo @CLOSED; break; }; done\n' >"$T/silent-notifier"
+chmod +x "$T/silent-notifier"; export MAC_NOTIFY_BIN="$T/silent-notifier"
 ZRUN() { zsh -ic "source ~/.config/zsh/functions.zsh 2>/dev/null; $*" 2>/dev/null; }
 # ffp <file> <stream> <fields>: ffprobe one stream's fields as csv. Fields come
 # back in ffprobe's own order (codec_name, width, height, pix_fmt), not the
@@ -246,10 +251,13 @@ sec "browser-url / weburl / webdl"
 u=$(browser-url 2>/dev/null)
 if [ -n "$u" ]; then
   ok "browser-url -> $u"
-  saved=$(pbpaste)
+  # Snapshot the real clipboard with every type (pbpaste only sees text, so a
+  # copied file came back as an empty string). Restore it only if it still
+  # holds what this test wrote: anything copied meanwhile is Alex's and stays.
+  mac-pbsnap save "$T/clip.json"
   weburl >/dev/null 2>&1
   [ "$(pbpaste)" = "$u" ] && ok "weburl copied URL to clipboard" || bad "weburl" "clipboard mismatch"
-  printf '%s' "$saved" | pbcopy
+  [ "$(pbpaste)" = "$u" ] && mac-pbsnap restore "$T/clip.json"
 else
   skip "browser-url" "no Chromium-family browser with an open tab"
 fi
@@ -295,11 +303,15 @@ import json,struct,subprocess,os,sys
 h=os.path.expanduser("~/.local/bin/chromium-native-host")
 def frame(o):
     d=json.dumps(o).encode(); return struct.pack('@I',len(d))+d
-saved=subprocess.run(["pbpaste"],capture_output=True).stdout
+# Full snapshot (files too), restored only if the clipboard still holds the
+# test's URL; see the weburl test above.
+snap=os.path.join(os.environ["T"],"clip-host.json")
+subprocess.run([os.path.expanduser("~/.local/bin/mac-pbsnap"),"save",snap])
 r=subprocess.run([h,"chrome-extension://bgpiichlckmfanooecilcjemknkcpngb/"],
     input=frame({"url":"https://example.com/native-test"}),capture_output=True)
 clip=subprocess.run(["pbpaste"],capture_output=True).stdout.decode()
-subprocess.run(["pbcopy"],input=saved)
+if clip=="https://example.com/native-test":
+    subprocess.run([os.path.expanduser("~/.local/bin/mac-pbsnap"),"restore",snap])
 sys.exit(0 if r.returncode==0 and clip=="https://example.com/native-test" else 1)
 PY
 python3 - <<'PY' && ok "native host: rejects non-http url" || bad "native host guard" "did not reject"
@@ -744,8 +756,8 @@ pbfile() { osascript -l JavaScript -e 'ObjC.import("AppKit"); function run(a){ c
 MAC_CLIP_PASTEBOARD=$PB ~/.local/bin/mac-clip "$T/shot.png" && [ "$(pbfile)" = "$T/shot.png" ] \
   && ok "mac-clip puts the file itself on the pasteboard" || bad "mac-clip" "pasteboard holds '$(pbfile)'"
 MAC_CLIP_PASTEBOARD=$PB ~/.local/bin/mac-clip "$T/nope.mp4" 2>/dev/null && bad "mac-clip" "accepted a missing file" || ok "mac-clip rejects a missing file"
-# End to end: webdl against a fake yt-dlp. A finished download offers Show and
-# Copy buttons: Copy puts the file on the pasteboard, Show reveals it.
+# End to end: webdl against a fake yt-dlp. A finished download offers a Copy
+# button (a share-ready copy onto the pasteboard); clicking it reveals the file.
 YS="$T/ytdlp-stub"; mkdir -p "$YS" "$T/dl"
 # What yt-dlp often really saves: VP9 + Opus inside .mp4.
 ffmpeg -hide_banner -loglevel error -y -f lavfi -i testsrc=duration=1:size=320x240:rate=24 -f lavfi -i sine=duration=1 \
@@ -769,8 +781,8 @@ W() { PATH="$T/openstub:$YS:$PATH" OMARCHY_YTDLP_DIR="$T/dl" MAC_CLIP_PASTEBOARD
 F="$T/dl/Test_clip [abc].mp4"
 pbclear; s0=$(date +%s); STUB_CHOICE=@CLOSED W "https://example.com/v" >/dev/null 2>&1
 [ $(( $(date +%s) - s0 )) -lt 5 ] && ok "webdl returns without waiting for a click" || bad "webdl" "blocked on the notification"
-grep -qx 'Download complete' "$NL" && grep -qx 'Show,Copy' "$NL" \
-  && ok "finished download offers Show and Copy buttons" || bad "webdl" "notification: $(tr '\n' ' ' <"$NL")"
+grep -qx 'Download complete' "$NL" && grep -qx 'Copy' "$NL" \
+  && ok "finished download offers a Copy button (one: two become an Options menu)" || bad "webdl" "notification: $(tr '\n' ' ' <"$NL")"
 grep -qx 'Test clip' "$NL" && ok "notification shows the video title, not the filename" || bad "webdl" "no title in: $(tr '\n' ' ' <"$NL")"
 [ -z "$(pbfile)" ] && ok "nothing is copied unless Copy is pressed" || bad "webdl" "copied without asking"
 STUB_CHOICE=Copy W "https://example.com/v" >/dev/null 2>&1

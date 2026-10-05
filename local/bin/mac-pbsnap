@@ -1,0 +1,39 @@
+#!/bin/bash
+# mac-pbsnap save|restore <file> [pasteboard] — snapshot a pasteboard with
+# every item and type (files, images, rich text), not just the text pbpaste
+# sees, and put it back exactly. test.sh uses it so a test that has to touch
+# the real clipboard can't turn a copied file into an empty string.
+#
+#   pasteboard: a named pasteboard instead of the general one (tests).
+
+mode=${1:?usage: mac-pbsnap save|restore <file> [pasteboard]} file=${2:?file}
+case $mode in save|restore) ;; *) echo "usage: mac-pbsnap save|restore <file> [pasteboard]" >&2; exit 1 ;; esac
+
+osascript -l JavaScript - "$mode" "$file" "${3:-}" >/dev/null <<'JXA'
+ObjC.import("AppKit");
+function run(argv) {
+  const [mode, file, name] = argv;
+  const pb = name ? $.NSPasteboard.pasteboardWithName(name) : $.NSPasteboard.generalPasteboard;
+  if (mode === "save") {
+    const items = pb.pasteboardItems, out = [];
+    for (let i = 0; i < items.count; i++) {
+      const item = items.objectAtIndex(i), types = item.types, entry = {};
+      for (let j = 0; j < types.count; j++) {
+        const type = types.objectAtIndex(j), data = item.dataForType(type);
+        if (data && !data.isNil()) entry[ObjC.unwrap(type)] = ObjC.unwrap(data.base64EncodedStringWithOptions(0));
+      }
+      out.push(entry);
+    }
+    $(JSON.stringify(out)).writeToFileAtomicallyEncodingError(file, true, $.NSUTF8StringEncoding, null);
+  } else {
+    const saved = JSON.parse(ObjC.unwrap($.NSString.stringWithContentsOfFileEncodingError(file, $.NSUTF8StringEncoding, null)));
+    pb.clearContents;
+    const items = saved.map(entry => {
+      const item = $.NSPasteboardItem.alloc.init;
+      for (const type in entry) item.setDataForType($.NSData.alloc.initWithBase64EncodedStringOptions(entry[type], 0), type);
+      return item;
+    });
+    if (items.length) pb.writeObjects($(items));
+  }
+}
+JXA

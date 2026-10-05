@@ -3,9 +3,12 @@
 #
 #   mac-notify <title> <message> [file]
 #
-#   MAC_NOTIFY_ACTIONS="Show,Copy"  buttons for the file: Show reveals it in
-#                                   Finder, Copy puts the file itself on the
-#                                   clipboard (mac-clip). Clicking the body = Show.
+#   MAC_NOTIFY_ACTIONS="Copy"       buttons for the file: Copy puts a
+#                                   share-ready copy on the clipboard (mac-clip
+#                                   --share), Show reveals it. Clicking the
+#                                   notification itself always reveals it.
+#                                   Use ONE button: macOS folds two or more
+#                                   into an "Options" menu.
 #   MAC_NOTIFY_GROUP=<id>           replace the previous notification in <id>
 #   MAC_NOTIFY_IMAGE=<path>         thumbnail (image files get one automatically)
 #
