@@ -32,14 +32,69 @@ zsh/zshrc                    → ~/.zshrc                       # minimal zsh: s
 
 ## Install
 
+Clone to `~/omarchy-mac` (a few scripts point there). `install.sh` is
+idempotent: it symlinks every config into place (a real file it replaces is
+copied to `<file>.bak` first), installs Homebrew if missing, then reconciles
+both layers (`brew bundle` + `mise install`) and applies the macOS defaults.
+Safe to re-run any time.
+
+### A new Mac
+
+1. Apple's Command Line Tools, for git (Homebrew needs them too).
+   ```sh
+   xcode-select --install
+   ```
+2. Clone (HTTPS: the repo is public, no SSH key needed yet) and install. The
+   Homebrew step asks for your password once; the first run takes a while.
+   ```sh
+   git clone https://github.com/alxcrt/omarchy-mac.git ~/omarchy-mac
+   ~/omarchy-mac/install.sh
+   ```
+3. Open a new terminal (Ghostty), then do the parts only you can do:
+   - **Touch ID for sudo**: see [below](#touch-id-in-the-terminal-omarchys-fingerprint-auth).
+   - **Sign in**: the App Store (so `macup` can update its apps),
+     `gh auth login` (pick HTTPS: gh then handles git pushes too),
+     `claude auth login`, `codex login`, and any other agent CLI you use.
+   - **Git identity** lives in `~/.gitconfig`, not the repo:
+     `git config --global user.name "…"` and `git config --global user.email "…"`.
+   - **Chrome extensions**: `chrome-extensions install` opens Load unpacked
+     with the folders revealed; `chrome-extensions verify` checks them.
+   - **Desktops**: add the ones you want per display in Mission Control
+     (`mac wm --status` shows the current layout).
+   - **Apps the Brewfile skips on purpose** (root-owned self-updaters that
+     break `brew upgrade`): install Cursor and 1Password from their sites.
+   - **Machine-only settings** (extra PATH entries, work aliases, `ssh-add`)
+     go in `~/.zshrc.local`, which the repo never touches.
+4. Check it: `mac doctor` for a quick health check, `./test.sh` in the repo
+   for the full suite (a few checks need the sign-ins above).
+
+### A Mac already set up some other way
+
+Run the same two steps (Command Line Tools, clone + `install.sh`), then:
+
+- Move anything machine-specific from `~/.zshrc.bak` (your old `.zshrc`) into
+  `~/.zshrc.local`. oh-my-zsh is no longer loaded; `~/.oh-my-zsh` can go.
+- One manager per tool: remove nvm/pyenv/asdf/rbenv, and brew copies of
+  anything mise now owns (node, gh, the AI CLIs). `./test.sh layering` lists
+  every tool that resolves somewhere other than mise.
+- Quit and uninstall Karabiner-Elements and AeroSpace if present: `mac
+  keyremap` (hidutil) and macOS's own tiling replace them, and both fight them.
+- See what is installed but not declared:
+  `brew bundle cleanup --file ~/.config/homebrew/Brewfile` only lists it
+  (`--force` removes it). Add anything you want to keep to the Brewfile.
+
+### A Mac already on omarchy-mac
+
+The live configs are symlinks into the repo, so edits are made in the repo:
+commit and push on one Mac, then on the other pull and re-run the installer.
+
 ```sh
-git clone git@github.com:alxcrt/omarchy-mac.git ~/omarchy-mac
-cd ~/omarchy-mac && ./install.sh
+git -C ~/omarchy-mac pull && ~/omarchy-mac/install.sh
+macup
 ```
 
-`install.sh` is idempotent: it symlinks the configs into place (backing up anything
-it would overwrite to `*.bak`), ensures Homebrew + mise, then reconciles both layers
-(`brew bundle` + `mise install`). Safe to re-run.
+`install.sh --links` only repairs the symlinks (fast); `macup` warns when they
+have drifted into plain copies.
 
 ## Update
 
@@ -192,14 +247,6 @@ binding works with the mapping cleared.
 - **Adobe Acrobat Reader** was intentionally dropped — the `26.001.21662` cask has a
   broken pkg install script that fails under `installer` even with sudo. macOS Preview
   handles PDFs; grab Reader from adobe.com directly if you truly need it.
-
-### First-run: trust third-party casks/formulae
-
-Homebrew now requires trusting third-party taps or it silently ignores their
-casks/formulae during upgrades. After `install.sh`, run once:
-
-```sh
-brew trust --formula anomalyco/tap/opencode
-brew trust --cask   anomalyco/tap/cmux
-brew trust --formula bjarneo/cliamp/cliamp
-```
+- Third-party taps: Homebrew 6 refuses formulae from untrusted taps, so
+  `install.sh` taps and trusts the Brewfile's three (cliamp, blacktop, unleash)
+  before `brew bundle`.
