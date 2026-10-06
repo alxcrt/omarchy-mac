@@ -5,11 +5,12 @@
 #   mac-defaults --apply      write them; restart Finder/Dock only if they changed
 #
 # Key repeat is read at login: apps opened before a logout keep the old rate.
-# Transmission reads its prefs at launch; --apply never quits it, since that
-# would cut off running downloads.
+# Transmission and Docker Desktop read their prefs at launch; --apply never
+# quits them, since that would cut off running downloads and containers.
 set -e
 
-# domain|key|type|value|what it does   (a leading ~ in a value is $HOME)
+# domain|key|type|value|what it does   (a leading ~ in either is $HOME)
+#   A domain ending in .json is an app's JSON settings file (plutil edits it).
 #   InitialKeyRepeat 15 is the shortest delay the Settings slider allows;
 #   KeyRepeat 1 is faster than its fastest stop (2).
 #   autohide is on so the two Dock timings have something to speed up.
@@ -24,7 +25,8 @@ com.apple.dock|autohide-time-modifier|int|0|Dock hides/shows with no animation
 org.m0k.transmission|DownloadLocationConstant|bool|true|Transmission saves to one fixed folder
 org.m0k.transmission|DownloadFolder|string|~/Downloads|Transmission saves to ~/Downloads
 org.m0k.transmission|WarningDonate|bool|false|Transmission never asks for donations
-org.m0k.transmission|WarningLegal|bool|false|Transmission skips its legal notice'
+org.m0k.transmission|WarningLegal|bool|false|Transmission skips its legal notice
+~/Library/Group Containers/group.com.docker/settings-store.json|MemoryMiB|int|4096|Docker VM capped at 4 GB (default 8)'
 
 # Default apps, set with duti (from the Brewfile).
 # bundle id|URL scheme, or .extension for a file type|what it does
@@ -33,7 +35,12 @@ org.m0k.transmission|.torrent|.torrent files open in Transmission'
 
 # `defaults read` prints booleans as 1/0
 readback() { case "$1|$2" in bool\|true) echo 1 ;; bool\|false) echo 0 ;; *) echo "${2/#\~/$HOME}" ;; esac; }
-current()  { defaults read "$1" "$2" 2>/dev/null || echo "(unset)"; }
+current()  {
+  case "$1" in
+    *.json) plutil -extract "$2" raw -o - "${1/#\~/$HOME}" 2>/dev/null || echo "(unset)" ;;
+    *) defaults read "$1" "$2" 2>/dev/null || echo "(unset)" ;;
+  esac
+}
 # `duti -x ext` prints the app's name, path and bundle id, one per line.
 handler()  { case "$1" in .*) duti -x "${1#.}" 2>/dev/null | sed -n 3p ;; *) duti -d "$1" 2>/dev/null || true ;; esac; }
 
@@ -68,7 +75,12 @@ apply() {
   while IFS='|' read -r domain key type value desc; do
     [ "$(current "$domain" "$key")" = "$(readback "$type" "$value")" ] && continue
     value=${value/#\~/$HOME}
-    defaults write "$domain" "$key" "-$type" "$value"
+    case "$domain" in
+      *.json) # The app writes this file on first launch; until then, skip it.
+        plutil -replace "$key" "-${type/#int/integer}" "$value" "${domain/#\~/$HOME}" 2>/dev/null \
+          || { echo "skipped $key: ${domain##*/} doesn't exist yet (open the app once)"; continue; } ;;
+      *) defaults write "$domain" "$key" "-$type" "$value" ;;
+    esac
     echo "set $key = $value ($desc)"
     case "$domain" in com.apple.finder) restart+=(Finder) ;; com.apple.dock) restart+=(Dock) ;; esac
   done <<<"$SETTINGS"

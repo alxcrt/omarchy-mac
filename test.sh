@@ -991,7 +991,7 @@ fi
 
 # ── macOS defaults ─────────────────────────────────────────────────────────
 if want defaults; then
-sec "macOS defaults (key repeat, Finder, Dock, Transmission)"
+sec "macOS defaults (key repeat, Finder, Dock, Transmission, Docker)"
 # Sandboxed first: a stub `defaults` and `duti` backed by temp files and a stub
 # `killall` that logs, so drift detection and --apply are exercised for real without
 # touching this Mac's preferences.
@@ -1015,6 +1015,9 @@ esac
 EOF
 printf '#!/bin/bash\necho "$*" >>"%s"\n' "$KL" >"$DS/killall"; chmod +x "$DS/defaults" "$DS/duti" "$DS/killall"
 MD() { HOME="$T/dhome" PATH="$DS:/usr/bin:/bin" ~/.local/bin/mac-defaults "$@"; }
+# Docker's settings are a real JSON file (plutil, no stub), as Docker leaves it.
+DJ="$T/dhome/Library/Group Containers/group.com.docker/settings-store.json"
+mkdir -p "$(dirname "$DJ")"; echo '{"AutoStart":false}' >"$DJ"
 MD --status >/dev/null 2>&1 && bad "mac-defaults" "unset prefs reported as fine" || ok "--status flags unset prefs (exit 1)"
 MD --apply >/dev/null 2>&1
 MD --status >/dev/null 2>&1 && ok "--apply makes --status clean" || bad "mac-defaults --apply" "drift remains after apply"
@@ -1024,11 +1027,14 @@ grep -qx "magnet=org.m0k.transmission" "$UB" && grep -qx ".torrent=org.m0k.trans
 grep -q Transmission "$KL" && bad "mac-defaults" "quit Transmission (cuts off downloads)" || ok "--apply never quits Transmission"
 grep -q Dock "$KL" && grep -q Finder "$KL" && ok "--apply restarts Dock and Finder after changing them" || bad "mac-defaults" "did not restart Dock/Finder"
 [ -d "$T/dhome/Developer" ] && ok "--apply creates ~/Developer" || bad "mac-defaults" "no ~/Developer"
+[ "$(plutil -extract MemoryMiB raw -o - "$DJ")" = 4096 ] && [ "$(plutil -extract AutoStart raw -o - "$DJ")" = false ] \
+  && ok "--apply caps Docker's VM in its JSON settings, keeping the rest" || bad "mac-defaults" "Docker settings: $(cat "$DJ")"
 : >"$KL"; MD --apply >/dev/null 2>&1
 [ -s "$KL" ] && bad "mac-defaults" "restarts Dock/Finder with nothing to change" || ok "a second --apply changes nothing and restarts nothing"
-# A fresh Mac runs this before brew has installed duti: it must skip, not abort.
-chmod -x "$DS/duti"; : >"$DB"
-MD --apply >/dev/null 2>&1 && grep -q "InitialKeyRepeat" "$DB" && ok "--apply without duti still sets the prefs" || bad "mac-defaults" "aborts when duti is missing"
+# A fresh Mac runs this before brew has installed duti, or Docker has ever
+# launched (no settings file yet): it must skip, not abort.
+chmod -x "$DS/duti"; : >"$DB"; rm "$DJ"
+MD --apply >/dev/null 2>&1 && grep -q "InitialKeyRepeat" "$DB" && [ ! -e "$DJ" ] && ok "--apply without duti or Docker's settings still sets the prefs" || bad "mac-defaults" "aborts when duti or Docker's settings are missing"
 MD --status >/dev/null 2>&1 && bad "mac-defaults" "--status clean without duti" || ok "--status flags missing duti as drift"
 chmod +x "$DS/duti"
 # Then the real Mac, read straight from cfprefs rather than through the script.
@@ -1042,6 +1048,8 @@ for kv in "-g InitialKeyRepeat 15" "-g KeyRepeat 1" "com.apple.finder AppleShowA
 done
 [ "$(duti -d magnet 2>/dev/null)" = org.m0k.transmission ] && ok "live: magnet links open in Transmission" || bad "live handler" "magnet → $(duti -d magnet 2>&1)"
 [ "$(duti -x torrent 2>/dev/null | sed -n 3p)" = org.m0k.transmission ] && ok "live: .torrent files open in Transmission" || bad "live handler" ".torrent → $(duti -x torrent 2>&1 | sed -n 3p)"
+# The VM Docker actually booted, not just the file: Docker rewrites it.
+docker info >/dev/null 2>&1 && { m=$(docker info --format '{{.MemTotal}}'); [ "$m" -le $((4096*1024*1024)) ] && ok "live: Docker VM has ≤ 4 GB" || bad "live Docker" "VM has $((m>>20)) MiB, want ≤ 4096"; }
 fi
 
 # ── notifications ──────────────────────────────────────────────────────────

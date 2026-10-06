@@ -43,6 +43,13 @@ hosted service).
 
 ## Done (Oct 2026, newest first)
 
+- Memory (Oct 6): swap was 50 of 52 GB on 36 GB. Docker's VM is capped at
+  4 GB through `mac-defaults`, which now also edits apps' JSON settings files
+  with plutil (Docker's VM had held ~19 GB with 25 MB of containers). Its
+  100 GB build cache was pruned. Shells start in ~50 ms again: `.zshrc.local`
+  reloaded every Keychain SSH key per shell (250 ms) and prepended
+  `~/.hunk/bin` ahead of mise's hunk. `install.sh` trusts `ipsw-frida` too:
+  ipsw's `conflicts_with` loads it, and bundle refused ipsw without it.
 - `macup`'s lock, through Codex review rounds 2–10 (gpt-6.1-sol, xhigh) until
   a round came back clean: now the standard shell lock (`exec 9>>file;
   lockf -s -t 0 9`) held by macup itself. Killing macup stops it at once (no
