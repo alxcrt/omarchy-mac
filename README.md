@@ -61,8 +61,9 @@ Safe to re-run any time.
      with the folders revealed; `chrome-extensions verify` checks them.
    - **Desktops**: add the ones you want per display in Mission Control
      (`mac wm --status` shows the current layout).
-   - **Apps the Brewfile skips on purpose** (root-owned self-updaters that
-     break `brew upgrade`): install Cursor and 1Password from their sites.
+   - **A Jamf-managed Mac** skips the Cursor and 1Password casks (Jamf
+     installs them root-owned, which breaks `brew upgrade`); everywhere else
+     the Brewfile installs them.
    - **Machine-only settings** (extra PATH entries, work aliases, `ssh-add`)
      go in `~/.zshrc.local`, which the repo never touches.
 4. Check it: `mac doctor` for a quick health check, `./test.sh` in the repo

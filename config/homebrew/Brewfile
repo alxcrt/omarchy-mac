@@ -89,9 +89,14 @@ cask "localsend"
 cask "tailscale-app"           # mesh VPN (menu-bar app; ships its own CLI)
 cask "transmission"            # replaced qbittorrent (Gatekeeper-deprecated, disabled 2026-09-01)
 cask "raycast"                 # launcher
-# cursor NOT a cask here: installed root-owned and self-updating, so every
-# greedy upgrade dies on "Permission denied .../Cursor.app/Contents/
-# CodeResources". Same story as google-chrome below. Install manually once.
+# Cursor and 1Password: brew's, except on a Jamf-managed Mac (the work Mac),
+# where they are root-owned and self-updating, so every greedy upgrade dies on
+# "Permission denied .../Cursor.app/Contents/CodeResources" (the same story as
+# google-chrome there). This file is Ruby, so the condition lives here.
+unless File.exist?("/usr/local/jamf/bin/jamf")
+  cask "cursor"
+  cask "1password"
+end
 cask "visual-studio-code"
 cask "cmux"
 cask "t3-code@nightly"        # T3 Code (Nightly) — minimal GUI for AI code agents
@@ -105,7 +110,6 @@ cask "ollama-app"
 cask "obsidian"
 cask "chatgpt"                 # ChatGPT desktop app (Omarchy 4 Install > AI)
 cask "claude"                  # Claude desktop app
-# 1password NOT a cask here: same root-owned self-updater problem as cursor.
 cask "1password-cli"
 cask "moonlight"
 cask "steam"
