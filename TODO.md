@@ -43,6 +43,12 @@ hosted service).
 
 ## Done (Oct 2026, newest first)
 
+- `macup`'s lock, through Codex review rounds 2–10 (gpt-6.1-sol, xhigh) until
+  a round came back clean: now the standard shell lock (`exec 9>>file;
+  lockf -s -t 0 9`) held by macup itself. Killing macup stops it at once (no
+  traps); a step still running keeps the lock until it ends and a refused
+  run names it; setup errors show as themselves; no temp files. Drive
+  checks use brew's python3. Lessons in SKILL.md.
 - Upstream's agent CLIs via mise: crush, agy (antigravity-cli), copilot,
   ghui (approved past mise's low-download guard after checking its
   publisher), playwright, cf (npm, not Cloud Foundry). `a` knows the first
