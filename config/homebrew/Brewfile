@@ -94,6 +94,7 @@ cask "visual-studio-code"
 cask "cmux"
 cask "t3-code@nightly"        # T3 Code (Nightly) — minimal GUI for AI code agents
 cask "cleanshot"
+cask "linear"                  # issue tracker (was also listed as linear-linear, its old token)
 cask "ollama-app"
 cask "obsidian"
 cask "chatgpt"                 # ChatGPT desktop app (Omarchy 4 Install > AI)

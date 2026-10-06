@@ -10,8 +10,7 @@ file current whenever a request arrives mid-task.
   (Downloads ISOs/ROMs/firmware/movies, Xcode device data, Ollama and LM Studio
   models, caches, removed apps).
 - **Delete Hue Sync and Fits** in Finder: root-owned, `trash` can't.
-- **Casks installed but never declared** (Oct 6): linear and
-  linear-linear (one app, two casks), lm-studio, microsoft-365-copilot,
+- **Casks installed but never declared** (Oct 6): lm-studio, microsoft-365-copilot,
   microsoft-auto-update, microsoft-edge, microsoft-teams, opencode-desktop,
   rebased, retroarch-metal, stats. Declare or uninstall each; then `test.sh
   brew` can check casks the way it now checks formulae.
@@ -53,6 +52,9 @@ hosted service).
   declared; `test.sh brew` now fails on any undeclared formula. Docker's
   unused images pruned (35 GB). The six casks the Brewfile had dropped
   (libreoffice, kdenlive, obs, losslesscut, zed, betterdisplay) uninstalled.
+  linear is declared. `linear-linear` was its pre-rename token, not a second
+  install: brew resolves it to `linear`, so uninstalling it would have removed
+  Linear.app. Only the stale Caskroom symlink went.
 - Memory (Oct 6): swap was 50 of 52 GB on 36 GB. Docker's VM is capped at
   4 GB through `mac-defaults`, which now also edits apps' JSON settings files
   with plutil (Docker's VM had held ~19 GB with 25 MB of containers). Its
