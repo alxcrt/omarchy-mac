@@ -40,9 +40,13 @@ zstyle ':completion:*' menu select
 
 # ── keys (upstream default/bash/inputrc) ───────────────────────────────────
 bindkey -e
-# ↑/↓ search history for lines starting with what is already typed
-bindkey '^[[A' history-beginning-search-backward '^[OA' history-beginning-search-backward
-bindkey '^[[B' history-beginning-search-forward  '^[OB' history-beginning-search-forward
+# ↑/↓ search history for lines starting with what is already typed, cursor at
+# the end. (history-beginning-search-* leave it where it was: column 0 on an
+# empty prompt.)
+autoload -Uz up-line-or-beginning-search down-line-or-beginning-search
+zle -N up-line-or-beginning-search; zle -N down-line-or-beginning-search
+bindkey '^[[A' up-line-or-beginning-search   '^[OA' up-line-or-beginning-search
+bindkey '^[[B' down-line-or-beginning-search '^[OB' down-line-or-beginning-search
 bindkey '^[[H' beginning-of-line '^[[F' end-of-line '^[[3~' delete-char
 bindkey '^[[1;5C' forward-word '^[[1;5D' backward-word   # ⌃→ / ⌃←
 bindkey '^[[1;3C' forward-word '^[[1;3D' backward-word   # ⌥→ / ⌥←

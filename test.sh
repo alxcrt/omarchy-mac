@@ -931,7 +931,23 @@ SC="$HOME/.cache/zsh/starship.zsh"
 grep -q '^RPROMPT=' "$SC" && bad "starship cache" "keeps an RPROMPT (a starship process per prompt)" || ok "no per-prompt RPROMPT process"
 grep -q '^PROMPT2=.*%{' "$SC" && ok "PROMPT2 baked with zsh %{ %} escapes" || bad "starship cache" "PROMPT2 missing or unescaped"
 [ "$(zsh -ic 'whence -w try' 2>/dev/null | tail -1)" = "try: function" ] && ok "try is a lazy shell function" || bad "try" "not defined"
-zsh -ic 'bindkey "^[[A"' 2>/dev/null | grep -q history-beginning-search-backward && ok "↑ searches history by prefix (inputrc parity)" || bad "↑ binding" "not prefix search"
+# ↑ recalls by prefix with the cursor at the END. A real zsh in a pty: type
+# "print", press ↑, type X, Enter. Only the matching line with X appended
+# prints MARKERX (the cursor left at column 0 made it "Xprint ..."). History
+# goes to a temp file via a wrapper .zshrc, never ~/.zsh_history.
+mkdir -p "$T/zle"; printf 'source ~/.zshrc\nHISTFILE=%s/zle/hist\n' "$T" >"$T/zle/.zshrc"
+zle_res=$(ZDOTDIR="$T/zle" zsh -f <<'EOF' 2>&1
+zmodload zsh/zpty || exit 2
+zpty z 'zsh -i'
+upto() { local buf= c; for i in {1..100}; do zpty -rt z c && buf+=$c; [[ $buf == *$1* ]] && return 0; sleep 0.05; done; return 1; }
+zpty -w z 'print -r -- ${(U):-marker}'; upto MARKER || { echo "no first prompt"; exit 1; }
+zpty -w z 'echo ${(L):-OTHER}'; upto other || { echo "no second command"; exit 1; }
+zpty -wn z 'print'; zpty -wn z $'\e[A'; zpty -w z 'X'
+upto MARKERX && echo PASS || echo "cursor not at end, or not a prefix match"
+zpty -d z
+EOF
+)
+[ "$zle_res" = PASS ] && ok "↑ recalls by prefix with the cursor at the end" || bad "↑ history" "$zle_res"
 # An over-a-day-old dump gets the full compinit audit once, then is fresh
 # again (compinit alone leaves an unchanged dump's mtime alone, which made
 # every later shell re-audit). No half-written cache temp files may linger.

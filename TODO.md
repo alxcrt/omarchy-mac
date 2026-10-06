@@ -58,6 +58,10 @@ hosted service).
   Jamf/Microsoft-owned pkgs: only brew's records of them were removed (apps
   kept). LM Studio's PATH entry left ~/.zshrc.local. `test.sh brew` now also
   fails on any undeclared cask.
+- ↑/↓ history (Oct 6): prefix search now leaves the cursor at the end of the
+  recalled line (up/down-line-or-beginning-search, as oh-my-zsh had);
+  history-beginning-search-* kept it at column 0 on an empty prompt. The
+  test drives a real zsh in a pty instead of reading the binding's name.
 - Memory (Oct 6): swap was 50 of 52 GB on 36 GB. Docker's VM is capped at
   4 GB through `mac-defaults`, which now also edits apps' JSON settings files
   with plutil (Docker's VM had held ~19 GB with 25 MB of containers). Its
