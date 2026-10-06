@@ -23,8 +23,7 @@ file current whenever a request arrives mid-task.
   Trash in Finder (macOS protects it from scripts). The driver itself is gone (Oct 6):
   it survived a reboot, so pqrs's 8.6.0 pkg was reinstalled for its
   `deactivate_driver.sh`, which removed the dext and its files at once
-  despite printing "requires reboot". Optional: `sudo pkgutil --forget
-  org.pqrs.Karabiner-DriverKit-VirtualHIDDevice` (receipt only, no files).
+  despite printing "requires reboot"; its pkg receipt is forgotten too.
 - **Text snippets** (upstream's XCompose: `<Multi> m s` → 😄, two spaces →
   "—", name/email) as Raycast Snippets: Raycast has no scriptable import.
 - **Raycast hotkeys** for the SUPER launchers (macOS has no scriptable global
