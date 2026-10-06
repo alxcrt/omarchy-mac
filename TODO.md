@@ -10,6 +10,13 @@ file current whenever a request arrives mid-task.
   (Downloads ISOs/ROMs/firmware/movies, Xcode device data, Ollama and LM Studio
   models, caches, removed apps).
 - **Delete Hue Sync and Fits** in Finder: root-owned, `trash` can't.
+- **Casks installed but not in the Brewfile** (Oct 6): dropped from it on
+  purpose but still installed here: libreoffice, kdenlive, obs, losslesscut,
+  zed, betterdisplay (`brew uninstall --cask` them). Never declared: linear and
+  linear-linear (one app, two casks), lm-studio, microsoft-365-copilot,
+  microsoft-auto-update, microsoft-edge, microsoft-teams, opencode-desktop,
+  rebased, retroarch-metal, stats. Declare or uninstall each; then `test.sh
+  brew` can check casks the way it now checks formulae.
 - **`claude auth login`**: the Claude CLI's saved sign-in has expired, so
   `mac usage` shows the plan (Max 5x) but no limits. `grok login` too, if
   Grok is in use.
@@ -43,6 +50,10 @@ hosted service).
 
 ## Done (Oct 2026, newest first)
 
+- Brewfile drift (Oct 6): 15 formulae were installed but undeclared.
+  awscli, glab and exercism moved to mise (dev CLIs); the other 12 are
+  declared; `test.sh brew` now fails on any undeclared formula. Docker's
+  unused images pruned (35 GB).
 - Memory (Oct 6): swap was 50 of 52 GB on 36 GB. Docker's VM is capped at
   4 GB through `mac-defaults`, which now also edits apps' JSON settings files
   with plutil (Docker's VM had held ~19 GB with 25 MB of containers). Its

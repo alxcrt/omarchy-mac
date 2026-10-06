@@ -64,6 +64,18 @@ brew "radare2"      # reverse-engineering framework (iOS RE skill)
 brew "blacktop/tap/ipsw"  # iOS firmware / Mach-O analysis (iOS RE skill)
 brew "ipatool"      # search and download IPAs from the App Store
 brew "xcodegen"     # generate Xcode projects from a spec
+brew "chafa"        # images in the terminal
+brew "cloc"         # count lines of code
+brew "exiftool"     # read/write photo and video metadata
+brew "lesspipe"     # rich previews in less (LESSOPEN, ~/.zshrc.local)
+brew "libpq"        # Postgres client library and psql
+brew "p7zip"        # .7z archives
+brew "pngquant"     # lossy PNG compression
+brew "poppler"      # PDF tools (pdftotext, pdftoppm)
+brew "postgresql@18"  # nl-lms database (brew services)
+brew "redis"        # nl-lms cache; runs as a login service (brew services)
+brew "smartmontools"  # disk health (smartctl)
+brew "tree"
 brew "mateussiqueira/unleash/unleash"
 
 # --- GUI casks ---

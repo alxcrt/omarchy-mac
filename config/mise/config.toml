@@ -72,3 +72,10 @@ copilot = "latest"               # GitHub Copilot CLI
 
 # hunk: the diff viewer hds runs in its diff pane (`hunk diff --watch`).
 hunk = "latest"
+
+# Dev CLIs moved off Homebrew (Oct 2026). awscli by its registry alias, so the
+# both-layers test matches brew's formula of the same name; exercism has no
+# registry entry, so it comes from its GitHub releases.
+awscli = "latest"
+glab = "latest"
+"github:exercism/cli" = "latest"

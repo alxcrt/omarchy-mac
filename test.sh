@@ -971,6 +971,12 @@ done
 grep -qE '^\s*(cask|brew)\s+"(claude-code|codex|gh)"' ~/.config/homebrew/Brewfile \
   && bad "Brewfile" "declares an AI CLI that mise owns" || ok "Brewfile excludes mise-managed AI CLIs"
 brew list --cask claude-code >/dev/null 2>&1 && bad "layering" "claude-code cask still installed" || ok "no duplicate claude install"
+# The reverse: a formula installed by hand and never declared is lost on a
+# fresh Mac and never reconciled. Leaves only; dependencies come with them.
+undeclared=$(brew leaves --installed-on-request 2>/dev/null | while read -r f; do
+  grep -qE "^\s*brew\s+\"([^\"]*/)?${f##*/}\"" ~/.config/homebrew/Brewfile || echo "$f"; done)
+[ -z "$undeclared" ] && ok "every hand-installed formula is in the Brewfile" \
+  || bad "Brewfile" "installed but undeclared: $(echo $undeclared)"
 # THE core rule: nothing mise manages may also be installed by Homebrew.
 # `brew upgrade` reinstalled opencode from a tap once and shadowed the mise one.
 for t in $(mise ls --installed 2>/dev/null | awk '{print $1}' | sed 's|.*[:/]||'); do
