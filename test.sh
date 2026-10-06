@@ -948,6 +948,24 @@ zpty -d z
 EOF
 )
 [ "$zle_res" = PASS ] && ok "↑ recalls by prefix with the cursor at the end" || bad "↑ history" "$zle_res"
+# Autosuggestions and syntax highlighting, typed for real in the same kind of
+# pty: a prefix of an earlier command gets that command suggested (→ accepts
+# it, and only the full command prints SUGG2), and an unknown command is
+# drawn red. Each step waits for the next prompt (bracketed paste switching
+# on): autosuggest skips suggestions while typed input is still queued.
+plug_res=$(ZDOTDIR="$T/zle" zsh -f <<'EOF' 2>&1
+zmodload zsh/zpty || exit 2
+zpty z 'TERM=xterm-256color zsh -i'
+log=; upto() { local c; for i in {1..100}; do zpty -rt z c && log+=$c; [[ $log == *"$1"*${2:+$'\e[?2004h'}* ]] && return 0; sleep 0.05; done; return 1; }
+zpty -w z 'n=0'
+zpty -w z 'print -r -- ${(U):-sugg}$((++n))'; upto SUGG1 ready || { echo "no prompt"; exit 1; }
+log=; zpty -wn z 'print -r -- ${(U):-su'; upto 'gg}$((++n))' || echo "no suggestion drawn;"
+zpty -wn z $'\e[C'; zpty -wn z $'\r'; upto SUGG2 ready || echo "suggestion not accepted;"
+log=; zpty -wn z 'nosuchcmd-hl-test'; upto $'\e[31mn' || echo "unknown command not drawn red;"
+zpty -d z
+EOF
+)
+[ -z "$plug_res" ] && ok "autosuggestions (→ accepts) and syntax highlighting work" || bad "zsh plugins" "$(echo $plug_res)"
 # An over-a-day-old dump gets the full compinit audit once, then is fresh
 # again (compinit alone leaves an unchanged dump's mtime alone, which made
 # every later shell re-audit). No half-written cache temp files may linger.

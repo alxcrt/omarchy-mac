@@ -28,6 +28,8 @@ brew "bjarneo/cliamp/cliamp"  # Omarchy's music TUI (upstream base package)
 brew "btop"
 brew "fastfetch"
 brew "starship"
+brew "zsh-autosuggestions"      # grey history suggestions as you type (zshrc)
+brew "zsh-syntax-highlighting"  # command colouring (zshrc)
 brew "neovim"
 brew "lazygit"
 brew "lazydocker"

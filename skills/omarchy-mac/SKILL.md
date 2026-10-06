@@ -103,6 +103,14 @@ extensions.
   performKeyEquivalent only claims ⌘ chords, so don't blame Ghostty for
   swallowing ⌃ without proof; reading menus needs Accessibility, which this
   setup's agent does not have.
+- **Shell keys are tested by typing into a real zsh over `zpty`**, never by
+  grepping `bindkey` (that missed the ↑ cursor bug). Wait for each prompt
+  before typing (zle switching bracketed paste on, `\e[?2004h`): keys sent
+  early arrive as one queued burst, autosuggest skips suggesting while input
+  is queued, and zle skips the redraw that runs syntax highlighting. Assert
+  on output only the command can produce (`${(U):-x}` prints `X`; the echoed
+  line still shows `x`). `zpty -w z ''` sends nothing: use `$'\r'`. History
+  goes to a temp file through a wrapper `.zshrc` under `ZDOTDIR`.
 - **zsh arrays are 1-indexed.** Ports of Omarchy's bash functions must use
   `${arr[1]}`, not `${arr[0]}`.
 - **A function can't share a name with an alias in zsh** — it's a parse error

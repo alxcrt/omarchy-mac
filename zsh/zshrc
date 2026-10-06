@@ -119,6 +119,14 @@ if [[ -x /opt/homebrew/bin/try ]]; then
   }
 fi
 
+# Grey suggestions from history as you type (→ or End accepts) and command
+# colouring, from brew. Syntax highlighting wraps zle widgets, so it comes
+# after every binding above. MANUAL_REBIND binds autosuggest's widgets once
+# instead of re-binding them all before every prompt.
+ZSH_AUTOSUGGEST_MANUAL_REBIND=1
+[[ -r /opt/homebrew/share/zsh-autosuggestions/zsh-autosuggestions.zsh ]] && source /opt/homebrew/share/zsh-autosuggestions/zsh-autosuggestions.zsh
+[[ -r /opt/homebrew/share/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh ]] && source /opt/homebrew/share/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh
+
 # Machine-local additions (not tracked in the repo): PATH entries, ssh-add,
 # work-specific aliases. Keep anything host-specific there, not here.
 [[ -f ~/.zshrc.local ]] && source ~/.zshrc.local

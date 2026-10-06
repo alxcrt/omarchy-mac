@@ -62,6 +62,9 @@ hosted service).
   recalled line (up/down-line-or-beginning-search, as oh-my-zsh had);
   history-beginning-search-* kept it at column 0 on an empty prompt. The
   test drives a real zsh in a pty instead of reading the binding's name.
+- zsh-autosuggestions and zsh-syntax-highlighting (Oct 6), from brew; no
+  framework. Highlighting costs ~15 ms of startup, suggestions ~0; tested by
+  typing into a real zsh (→ accepts a suggestion, unknown commands are red).
 - Memory (Oct 6): swap was 50 of 52 GB on 36 GB. Docker's VM is capped at
   4 GB through `mac-defaults`, which now also edits apps' JSON settings files
   with plutil (Docker's VM had held ~19 GB with 25 MB of containers). Its
