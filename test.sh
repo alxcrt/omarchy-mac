@@ -977,6 +977,10 @@ undeclared=$(brew leaves --installed-on-request 2>/dev/null | while read -r f; d
   grep -qE "^\s*brew\s+\"([^\"]*/)?${f##*/}\"" ~/.config/homebrew/Brewfile || echo "$f"; done)
 [ -z "$undeclared" ] && ok "every hand-installed formula is in the Brewfile" \
   || bad "Brewfile" "installed but undeclared: $(echo $undeclared)"
+undeclared=$(brew list --cask -1 2>/dev/null | while read -r c; do
+  grep -qE "^\s*cask\s+\"([^\"]*/)?$c\"" ~/.config/homebrew/Brewfile || echo "$c"; done)
+[ -z "$undeclared" ] && ok "every installed cask is in the Brewfile" \
+  || bad "Brewfile" "cask installed but undeclared: $(echo $undeclared)"
 # THE core rule: nothing mise manages may also be installed by Homebrew.
 # `brew upgrade` reinstalled opencode from a tap once and shadowed the mise one.
 for t in $(mise ls --installed 2>/dev/null | awk '{print $1}' | sed 's|.*[:/]||'); do

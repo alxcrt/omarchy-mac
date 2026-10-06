@@ -10,14 +10,9 @@ file current whenever a request arrives mid-task.
   (Downloads ISOs/ROMs/firmware/movies, Xcode device data, Ollama and LM Studio
   models, caches, removed apps).
 - **Delete Hue Sync and Fits** in Finder: root-owned, `trash` can't.
-- **Casks installed but never declared** (Oct 6): lm-studio, microsoft-365-copilot,
-  microsoft-auto-update, microsoft-edge, microsoft-teams, opencode-desktop,
-  rebased, retroarch-metal, stats. Declare or uninstall each; then `test.sh
-  brew` can check casks the way it now checks formulae.
 - **`claude auth login`**: the Claude CLI's saved sign-in has expired, so
   `mac usage` shows the plan (Max 5x) but no limits. `grok login` too, if
   Grok is in use.
-- **Two LM Studio PATH lines** in `~/.zshrc.local` (harmless, point at nothing).
 - **Karabiner's last trace**: drag
   `~/Library/Containers/org.pqrs.Karabiner-VirtualHIDDevice-Manager` to the
   Trash in Finder (macOS protects it from scripts). The driver itself is gone (Oct 6):
@@ -57,6 +52,12 @@ hosted service).
   linear is declared. `linear-linear` was its pre-rename token, not a second
   install: brew resolves it to `linear`, so uninstalling it would have removed
   Linear.app. Only the stale Caskroom symlink went.
+- Casks (Oct 6): retroarch-metal declared; lm-studio, microsoft-edge,
+  opencode-desktop, rebased and stats uninstalled (untouched 5 weeks to a
+  year; no --zap, so settings remain). Teams, 365 Copilot and AutoUpdate are
+  Jamf/Microsoft-owned pkgs: only brew's records of them were removed (apps
+  kept). LM Studio's PATH entry left ~/.zshrc.local. `test.sh brew` now also
+  fails on any undeclared cask.
 - Memory (Oct 6): swap was 50 of 52 GB on 36 GB. Docker's VM is capped at
   4 GB through `mac-defaults`, which now also edits apps' JSON settings files
   with plutil (Docker's VM had held ~19 GB with 25 MB of containers). Its
