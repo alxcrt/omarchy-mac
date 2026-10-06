@@ -283,3 +283,9 @@ extensions.
   `~/omarchy-mac`, run the tests, and commit — `test.sh`'s `repo` section checks
   live configs against the committed copies and fails on drift.
 - Ask before installing anything new.
+- **This repo is public: keep work out of it.** Work-only Mac setup that names
+  internal hosts lives in the private `alxcrt/work-knowledge`
+  (`~/Developer/work-knowledge`, the `work-fleet` skill): the `pifty-ports`
+  preview tunnel and its launchd agent, the 10-minute pull of that repo, the
+  VS Code port settings for pifty, and anything about pifty, T3 or nl-lms.
+  Host-specific shell lines go in `~/.zshrc.local`.
