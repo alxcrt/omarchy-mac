@@ -21,7 +21,7 @@ step() { "$@" || FAILED+=("$*"); }
 # that step keeps running, and a new run must wait for it rather than collide
 # with it (the refusal names what still holds it). Only processes that are
 # not the update's own work get it closed: caffeinate, the softwareupdate
-# listing, and the user's hooks, which may leave daemons running.
+# listing (and its reader), and the user's hooks, which may leave daemons.
 # bash 3.2 detail: `exec cmd 9>&-` does NOT close it (bash keeps a copy in
 # case exec fails, and the copy leaks into cmd); close it in its own `exec`.
 # No traps in macup: bash 3.2 with one defers a kill until a running $(...)
@@ -171,7 +171,9 @@ section "Status"
 # `mac doctor` runs it on demand. mise doctor is fast and catches PATH breakage.
 mise doctor >/dev/null 2>&1 || echo "mise doctor reports problems — run: mise doctor"
 # Report available macOS updates — never auto-install them.
-swu=$(cat <&7); exec 7<&-   # EOF: softwareupdate has finished
+# fd 9 closed in the reader too: waiting on the listing is not update work,
+# so if macup is killed here, the listing must not keep the lock.
+swu=$(exec 9>&-; cat <&7); exec 7<&-   # EOF: softwareupdate has finished
 grep -q 'No new software available' <<<"$swu" && echo "macOS up to date" || tail -5 <<<"$swu"
 
 # User hooks (port of omarchy's hook system) — see ~/.config/omarchy-mac/hooks/

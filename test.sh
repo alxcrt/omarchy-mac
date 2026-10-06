@@ -733,13 +733,38 @@ XDG_STATE_HOME="$T/state" TMPDIR="$T/tmp" PATH="$STUB:/usr/bin:/bin" ~/.local/bi
 for i in $(seq 100); do [ -e "$T/in-mas" ] && break; sleep 0.1; done
 kill $first; wait $first 2>/dev/null
 pgrep -f "$STUB/mas outdated" >/dev/null; blocked=$?   # 0: macup died first
+# The stub is update work: until it ends, a rerun is refused and names it.
+out=$(XDG_STATE_HOME="$T/state" PATH="$STUB:/usr/bin:/bin" ~/.local/bin/macup </dev/null 2>&1); again=$?
 touch "$T/release"
 lockf -s -t 5 "$T/state/macup/macup.lock" true; free=$?
-[ -e "$T/in-mas" ] && [ $blocked = 0 ] && [ $free = 0 ] && ! grep -q '^mise ' "$LOG" \
-  && ok "killing macup inside a \$(...) ends it at once; the lock frees when the stub ends" || bad "macup lock" "kill in mas outdated: died-first=$((1-blocked)) lock-free rc=$free, later steps: $(grep -c '^mise ' "$LOG")"
+[ -e "$T/in-mas" ] && [ $blocked = 0 ] && [ $again = 75 ] && grep -q 'held by: .*mas outdated' <<<"$out" \
+  && [ $free = 0 ] && ! grep -q '^mise ' "$LOG" \
+  && ok "killing macup inside a \$(...) ends it at once; the stub holds the lock until it ends" \
+  || bad "macup lock" "kill in mas outdated: died-first=$((1-blocked)) rerun rc=$again freed rc=$free later steps=$(grep -c '^mise ' "$LOG"): $out"
+mv "$STUB/mas.real" "$STUB/mas"
+# The softwareupdate listing is not update work: killed while macup waits for
+# it at the end, the lock must be free at once, with the listing still running.
+cp "$STUB/softwareupdate" "$STUB/softwareupdate.real"
+cat >"$STUB/softwareupdate" <<EOF
+#!/bin/bash
+touch "$T/in-swu"; for i in \$(seq 100); do [ -e "$T/release" ] && break; sleep 0.1; done
+exec "$STUB/softwareupdate.real" "\$@"
+EOF
+chmod +x "$STUB/softwareupdate"; rm -f "$T/in-swu" "$T/release"; : >"$LOG"
+XDG_STATE_HOME="$T/state" TMPDIR="$T/tmp" PATH="$STUB:/usr/bin:/bin" ~/.local/bin/macup </dev/null >/dev/null 2>&1 & first=$!
+# The listing is read right after `mise doctor` (the last step before it), so
+# once that has logged, macup is waiting in the read.
+for i in $(seq 100); do grep -q '^mise doctor' "$LOG" && break; sleep 0.1; done; sleep 0.3
+kill $first; wait $first 2>/dev/null
+pgrep -f "$STUB/softwareupdate" >/dev/null; listing=$?   # 0: still running
+lockf -s -t 1 "$T/state/macup/macup.lock" true; free=$?
+touch "$T/release"
+[ -e "$T/in-swu" ] && [ $listing = 0 ] && [ $free = 0 ] && ! grep -q '^mac-hook' "$LOG" \
+  && ok "killed while reading the macOS update list: the lock is free at once" \
+  || bad "macup lock" "kill in the listing read: listing-running=$((1-listing)) lock-free rc=$free hook-ran=$(grep -c '^mac-hook' "$LOG")"
+mv "$STUB/softwareupdate.real" "$STUB/softwareupdate"
 # Normal and killed runs above all used TMPDIR=$T/tmp and the mktemp stub.
 [ -z "$(ls -A "$T/tmp")" ] && ok "macup leaves no temp files behind, even when killed" || bad "macup" "left temp files: $(ls -A "$T/tmp" | head -3)"
-mv "$STUB/mas.real" "$STUB/mas"
 fi
 
 # ── 13. hooks ──────────────────────────────────────────────────────────────
