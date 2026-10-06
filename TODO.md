@@ -20,11 +20,11 @@ file current whenever a request arrives mid-task.
 - **Two LM Studio PATH lines** in `~/.zshrc.local` (harmless, point at nothing).
 - **Karabiner's last trace**: drag
   `~/Library/Containers/org.pqrs.Karabiner-VirtualHIDDevice-Manager` to the
-  Trash in Finder (macOS protects it from scripts). The driver did NOT drop out
-  at the Oct 6 reboot: still `activated enabled` (1.8.0), and its uninstall
-  scripts went with its files. Reinstall pqrs's
-  Karabiner-DriverKit-VirtualHIDDevice pkg to get them back, then follow
-  SKILL.md's "orphaned system extension" steps (sudo), then reboot.
+  Trash in Finder (macOS protects it from scripts). The driver itself is gone (Oct 6):
+  it survived a reboot, so pqrs's 8.6.0 pkg was reinstalled for its
+  `deactivate_driver.sh`, which removed the dext and its files at once
+  despite printing "requires reboot". Optional: `sudo pkgutil --forget
+  org.pqrs.Karabiner-DriverKit-VirtualHIDDevice` (receipt only, no files).
 - **Text snippets** (upstream's XCompose: `<Multi> m s` → 😄, two spaces →
   "—", name/email) as Raycast Snippets: Raycast has no scriptable import.
 - **Raycast hotkeys** for the SUPER launchers (macOS has no scriptable global
