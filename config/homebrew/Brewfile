@@ -10,6 +10,7 @@
 tap "bjarneo/cliamp"
 tap "blacktop/tap"
 tap "mateussiqueira/unleash"
+tap "crmne/tap"
 
 # --- CLI: Omarchy's pacman set, ported ---
 brew "git"          # direct binary: /usr/bin/git is an xcrun stub that adds ~10ms per call
@@ -116,6 +117,7 @@ cask "steam"
 cask "docker-desktop"          # installed (needs admin password on install)
 cask "font-jetbrains-mono-nerd-font"
 cask "font-ia-writer-duo"
+cask "crmne/tap/spotifast"     # native Spotify client (spotifast.rocks)
 
 # NOTE: claude-code, codex (casks) and gh (formula) intentionally omitted —
 # migrated to mise so a single update verb bumps them. See mise config.toml.
