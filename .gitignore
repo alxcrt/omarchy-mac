@@ -1,2 +1,4 @@
 .DS_Store
 *.bak
+# `cmux config set` leaves its write lock beside cmux.json (here, via the symlink)
+config/cmux/*.cmux-write.lock
