@@ -1,0 +1,32 @@
+#!/bin/bash
+# cmux-fleet <host> [--print]
+# Connect the current terminal to a fleet machine. The fleet workspaces in
+# ~/.config/cmux/cmux.json run this; --print shows the connect command only.
+#
+# Inside cmux it also pins the workspace and records itself as the terminal's
+# resume command, so the fleet stays at the top of the sidebar and cmux can
+# reconnect it after a relaunch (cmux asks once to approve the command).
+#
+# herdr is the session layer, never tmux. `herdr --remote` runs the client
+# here (local keybindings, image paste bridged from the Mac's clipboard) and
+# leaves the panes running in houston's herdr server. The first attach after
+# a herdr update asks to install the matching version in houston's
+# ~/.local/bin; houston's packaged herdr lags behind mise's.
+
+case $1 in
+  houston) cmd='herdr --remote houston' ;;
+  # Unraid and the VPS have no xterm-ghostty terminfo ("unknown terminal type").
+  nasa | coolify) cmd="TERM=xterm-256color ssh $1" ;;
+  titan) cmd='ssh titan' ;;
+  *) echo "usage: cmux-fleet houston|nasa|coolify|titan [--print]" >&2; exit 2 ;;
+esac
+[ "$2" = --print ] && { echo "$cmd"; exit 0; }
+
+if [ -n "$CMUX_WORKSPACE_ID" ] && command -v cmux >/dev/null 2>&1; then
+  cmux workspace-action --action pin >/dev/null 2>&1
+  cmux surface resume set --name "$1" -- cmux-fleet "$1" >/dev/null 2>&1
+fi
+
+# Through an interactive zsh, so the ssh() wrapper in functions.zsh (terminal
+# cleanup, reconnect on a dropped link) applies as it does at the prompt.
+exec /bin/zsh -ic "$cmd"

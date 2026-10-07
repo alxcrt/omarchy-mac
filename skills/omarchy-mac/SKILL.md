@@ -47,8 +47,8 @@ into `~/.config` + `~/.local/bin`.
 | `~/.local/bin/mac-defaults` | the macOS preferences (key repeat, Finder hidden files + path bar + status bar, instant Dock autohide, Transmission prefs + magnet/`.torrent` handler, `~/Developer`) as one list; `--status` / `--apply` |
 | `~/.config/herdr/config.toml` | herdr (the multiplexer), keys mapped from Omarchy's tmux.conf. tmux itself was removed in Oct 2026; don't re-add it |
 | `~/.config/ghostty/config` | upstream Omarchy, macOS-adjusted |
-| `~/.config/cmux/cmux.json` | cmux (libghostty terminal with a workspace sidebar; reads the Ghostty config for font/theme/keys). Terminal links go to the real browser, ⌘⌥1-9 picks tabs, and one palette workspace per fleet machine |
-| `~/.local/bin/` | `mac`, `macup`, `mac-keys`, `mac-keyremap`, `mac-defaults`, `mac-hook`, `ghostty-run`, `transcode`, `webdl`, `weburl`, `browser-url`, `chrome-extensions`, `chromium-native-host`, `mise-install`, `agent-usage-*` |
+| `~/.config/cmux/cmux.json` | cmux (libghostty terminal with a workspace sidebar; reads the Ghostty config for font/theme/keys). Terminal links go to the real browser, ⌘⌥1-9 picks tabs, and one palette workspace per fleet machine (each runs `cmux-fleet <host>`) |
+| `~/.local/bin/` | `mac`, `cmux-fleet`, `macup`, `mac-keys`, `mac-keyremap`, `mac-defaults`, `mac-hook`, `ghostty-run`, `transcode`, `webdl`, `weburl`, `browser-url`, `chrome-extensions`, `chromium-native-host`, `mise-install`, `agent-usage-*` |
 
 ## Commands
 
@@ -119,9 +119,12 @@ extensions.
   `reload-config` and `list-workspaces` all fail with "Access denied". `cmux
   config get|validate|set` work without the socket, and `config set` writes
   through the symlink. (3) nasa and coolify have no `xterm-ghostty` terminfo
-  ("unknown terminal type"), so their fleet workspaces pass
-  `TERM=xterm-256color`. The `ssh()` wrapper never replays a remote command,
-  so houston's `tmux new -A` workspace re-attaches with ↑ Enter, not by itself.
+  ("unknown terminal type"), so `cmux-fleet` passes them
+  `TERM=xterm-256color`. The fleet workspaces all run `cmux-fleet <host>`,
+  which pins the workspace and registers itself as cmux's resume command.
+  houston uses `herdr --remote houston`: **never tmux**, on the Mac or the
+  fleet. The first attach after a herdr update asks to install the matching
+  herdr in houston's `~/.local/bin`, because its pacman herdr lags mise's.
 - **zsh arrays are 1-indexed.** Ports of Omarchy's bash functions must use
   `${arr[1]}`, not `${arr[0]}`.
 - **A function can't share a name with an alias in zsh** — it's a parse error

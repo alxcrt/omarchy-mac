@@ -380,6 +380,23 @@ if command -v cmux >/dev/null 2>&1; then
     "")     bad "cmux tab numbers" "no binding resolved" ;;
     *)      ok "cmux tab-by-number avoids the ⌃1-9 Desktop hotkeys ($(_cg shortcuts.bindings.selectSurfaceByNumber))" ;;
   esac
+  # Every fleet workspace must name a host cmux-fleet knows, or it opens to a
+  # usage error.
+  _hosts=$(grep -oE '"command": "cmux-fleet [a-z0-9-]+"' ~/.config/cmux/cmux.json | awk '{print $3}' | tr -d '"')
+  [ -n "$_hosts" ] && ok "cmux.json has fleet workspaces: $(echo $_hosts)" || bad "cmux fleet" "no cmux-fleet workspaces in cmux.json"
+  for h in $_hosts; do
+    cmux-fleet "$h" --print >/dev/null 2>&1 && ok "cmux-fleet knows $h" || bad "cmux-fleet" "unknown host $h"
+  done
+  cmux-fleet nosuchhost --print >/dev/null 2>&1; [ $? = 2 ] && ok "cmux-fleet rejects an unknown host" || bad "cmux-fleet" "accepted an unknown host"
+  # herdr is the session layer, never tmux.
+  [ "$(cmux-fleet houston --print)" = "herdr --remote houston" ] && ok "houston attaches its herdr server" \
+    || bad "cmux-fleet houston" "runs '$(cmux-fleet houston --print)'"
+  _all=$(for h in $_hosts; do cmux-fleet "$h" --print; done)
+  grep -q tmux <<<"$_all" && bad "cmux-fleet" "a fleet workspace runs tmux" || ok "no fleet workspace runs tmux"
+  # nasa and coolify lack xterm-ghostty terminfo; titan is Windows.
+  for h in nasa coolify; do
+    case $(cmux-fleet $h --print) in TERM=xterm-256color\ *) ok "$h gets a terminfo it has" ;; *) bad "cmux-fleet $h" "no TERM override" ;; esac
+  done
 else
   skip "cmux" "not installed"
 fi

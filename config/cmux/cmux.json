@@ -37,22 +37,18 @@
     }
   },
 
-  // The fleet, one workspace per machine: open from the command palette
-  // (⌘⇧P, type the name). "ignore" switches to the workspace when it is
-  // already open instead of opening a second one.
-  // - houston attaches a tmux session, the layer the fleet's dispatch already
-  //   uses there. It outlives a dropped link or a sleeping Mac; the ssh()
-  //   wrapper in functions.zsh never replays a remote command, so re-attach
-  //   with ↑ Enter in the same terminal.
-  // - nasa, coolify and titan are plain logins (Unraid has no tmux, titan is
-  //   Windows), which the ssh() wrapper reconnects by itself.
-  // - nasa and coolify have no xterm-ghostty terminfo ("unknown terminal
-  //   type"), so they get xterm-256color; houston (Omarchy) has it.
+  // The fleet, one workspace per machine: open each once from the command
+  // palette (⌘⇧P, type the name). cmux-fleet (~/.local/bin) holds the connect
+  // commands; inside cmux it pins the workspace and registers itself as the
+  // resume command, so the fleet stays in the sidebar across relaunches.
+  // houston attaches its herdr server (herdr --remote; never tmux). nasa,
+  // coolify and titan are plain logins, which the ssh() wrapper reconnects.
+  // "ignore" switches to the workspace when it's already open.
   "commands": [
     {
       "name": "houston",
-      "description": "Agent worker VM, persistent tmux session",
-      "keywords": ["fleet", "ssh", "worker", "tmux"],
+      "description": "Agent worker VM, its herdr server (herdr --remote)",
+      "keywords": ["fleet", "ssh", "worker", "herdr"],
       "restart": "ignore",
       "workspace": {
         "name": "houston",
@@ -64,7 +60,7 @@
               {
                 "type": "terminal",
                 "name": "houston",
-                "command": "ssh -t houston 'tmux new-session -A -s main'",
+                "command": "cmux-fleet houston",
                 "focus": true
               }
             ]
@@ -84,7 +80,7 @@
         "layout": {
           "pane": {
             "surfaces": [
-              { "type": "terminal", "name": "nasa", "command": "TERM=xterm-256color ssh nasa", "focus": true }
+              { "type": "terminal", "name": "nasa", "command": "cmux-fleet nasa", "focus": true }
             ]
           }
         }
@@ -102,7 +98,7 @@
         "layout": {
           "pane": {
             "surfaces": [
-              { "type": "terminal", "name": "coolify", "command": "TERM=xterm-256color ssh coolify", "focus": true }
+              { "type": "terminal", "name": "coolify", "command": "cmux-fleet coolify", "focus": true }
             ]
           }
         }
@@ -120,7 +116,7 @@
         "layout": {
           "pane": {
             "surfaces": [
-              { "type": "terminal", "name": "titan", "command": "ssh titan", "focus": true }
+              { "type": "terminal", "name": "titan", "command": "cmux-fleet titan", "focus": true }
             ]
           }
         }
