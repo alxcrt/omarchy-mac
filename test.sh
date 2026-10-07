@@ -356,6 +356,35 @@ out=$(HERDR_CONFIG="$T/herdr.toml" mac-keys 2>&1); rc=$?
   && ok "mac-keys survives a [[keys.command]] table in the herdr config" || bad "mac-keys" "rc=$rc with a [[keys.command]] table"
 fi
 
+# ── 7b. cmux ───────────────────────────────────────────────────────────────
+if want cmux; then
+sec "cmux"
+if command -v cmux >/dev/null 2>&1; then
+  # cmux's own validator, checked against a broken file too so an always-OK
+  # validator can't pass for a valid config.
+  cmux config validate >/dev/null 2>&1 && ok "cmux accepts ~/.config/cmux/cmux.json" || bad "cmux.json" "cmux config validate fails"
+  printf '{ "browser": { "openTerminalLinksInCmuxBrowser": "nope" } }' >"$T/cmux-bad.json"
+  cmux config validate --path "$T/cmux-bad.json" >/dev/null 2>&1 && bad "cmux validate" "accepted a wrong-typed setting" \
+    || ok "cmux's validator rejects a wrong-typed setting"
+  # Values as cmux resolves them (file, else Settings window, else default),
+  # not as the file reads.
+  _cg() { cmux config get "$1" 2>/dev/null | sed 's/^[^=]*= //'; }
+  for k in browser.openTerminalLinksInCmuxBrowser browser.interceptTerminalOpenCommandInCmuxBrowser \
+           sidebar.openPullRequestLinksInCmuxBrowser; do
+    [ "$(_cg "$k")" = false ] && ok "links stay out of the embedded browser: $k" || bad "cmux $k" "is $(_cg "$k")"
+  done
+  [ "$(_cg app.sendAnonymousTelemetry)" = false ] && ok "cmux telemetry off" || bad "cmux telemetry" "on"
+  # mac-wm hands ⌃1-9 to Mission Control, so a ⌃ binding here never fires.
+  case $(_cg shortcuts.bindings.selectSurfaceByNumber) in
+    *ctrl*) bad "cmux tab numbers" "bound to ⌃1-9, which Mission Control takes" ;;
+    "")     bad "cmux tab numbers" "no binding resolved" ;;
+    *)      ok "cmux tab-by-number avoids the ⌃1-9 Desktop hotkeys ($(_cg shortcuts.bindings.selectSurfaceByNumber))" ;;
+  esac
+else
+  skip "cmux" "not installed"
+fi
+fi
+
 # ── 8. git ─────────────────────────────────────────────────────────────────
 if want git; then
 sec "git config + worktree functions"

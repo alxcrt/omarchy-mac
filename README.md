@@ -24,6 +24,7 @@ config/homebrew/Brewfile     → ~/.config/homebrew/Brewfile    # the system + G
 config/zsh/aliases.zsh       → ~/.config/zsh/aliases.zsh      # ported Omarchy aliases (macOS-adjusted)
 config/starship.toml         → ~/.config/starship.toml        # Omarchy's prompt
 config/herdr/config.toml     → ~/.config/herdr/config.toml    # herdr: workspaces/tabs/panes (replaced tmux)
+config/cmux/cmux.json        → ~/.config/cmux/cmux.json       # cmux: link routing, fleet SSH workspaces
 config/launchd/com.omarchy.keyremap.plist → ~/Library/LaunchAgents/  # hidutil modifier remap at login
 local/bin/macup              → ~/.local/bin/macup             # update-everything command
 local/bin/mise-install       → ~/.local/bin/mise-install      # self-updating mise wrapper generator

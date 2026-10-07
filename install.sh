@@ -28,6 +28,7 @@ link config/herdr/config.toml  .config/herdr/config.toml
 link config/opencode/opencode.jsonc .config/opencode/opencode.jsonc
 link config/git/config         .config/git/config
 link config/ghostty/config     .config/ghostty/config
+link config/cmux/cmux.json     .config/cmux/cmux.json
 # Every script in local/bin — no hand-kept list to fall out of date.
 for f in "$REPO"/local/bin/*; do
   s=$(basename "$f")

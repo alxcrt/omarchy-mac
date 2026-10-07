@@ -47,6 +47,7 @@ into `~/.config` + `~/.local/bin`.
 | `~/.local/bin/mac-defaults` | the macOS preferences (key repeat, Finder hidden files + path bar + status bar, instant Dock autohide, Transmission prefs + magnet/`.torrent` handler, `~/Developer`) as one list; `--status` / `--apply` |
 | `~/.config/herdr/config.toml` | herdr (the multiplexer), keys mapped from Omarchy's tmux.conf. tmux itself was removed in Oct 2026; don't re-add it |
 | `~/.config/ghostty/config` | upstream Omarchy, macOS-adjusted |
+| `~/.config/cmux/cmux.json` | cmux (libghostty terminal with a workspace sidebar; reads the Ghostty config for font/theme/keys). Terminal links go to the real browser, ⌘⌥1-9 picks tabs, and one palette workspace per fleet machine |
 | `~/.local/bin/` | `mac`, `macup`, `mac-keys`, `mac-keyremap`, `mac-defaults`, `mac-hook`, `ghostty-run`, `transcode`, `webdl`, `weburl`, `browser-url`, `chrome-extensions`, `chromium-native-host`, `mise-install`, `agent-usage-*` |
 
 ## Commands
@@ -63,8 +64,8 @@ workspaces, `⌥W` close, `⌥⇧1..9` send window. Full generated list:
 
 `~/omarchy-mac/test.sh` is ~265 real functional tests (it executes things and
 checks effects; it does not assert files exist). Run a section with
-`./test.sh <name>`: `layering aliases functions cd transcode compress herdr git
-browser extensions mac scripts hooks wm keyremap defaults touchid shell brew repo`.
+`./test.sh <name>`: `layering aliases functions cd transcode compress herdr cmux
+git browser extensions mac scripts hooks wm keyremap defaults touchid shell brew repo`.
 
 **Run the relevant section after any change, and the full suite before
 committing.** Two skips are expected only if the user hasn't loaded the Chrome
@@ -111,6 +112,16 @@ extensions.
   on output only the command can produce (`${(U):-x}` prints `X`; the echoed
   line still shows `x`). `zpty -w z ''` sends nothing: use `$'\r'`. History
   goes to a temp file through a wrapper `.zshrc` under `ZDOTDIR`.
+- **cmux: three things that bite.** (1) Its default ⌃1-9 tab switch never
+  fires, because `mac-wm` gives ⌃1-9 to Mission Control, so `cmux.json` binds
+  ⌘⌥1-9. (2) Its control socket only answers processes started inside cmux
+  (`socketControlMode: cmuxOnly`): from an agent outside cmux, `cmux ping`,
+  `reload-config` and `list-workspaces` all fail with "Access denied". `cmux
+  config get|validate|set` work without the socket, and `config set` writes
+  through the symlink. (3) nasa and coolify have no `xterm-ghostty` terminfo
+  ("unknown terminal type"), so their fleet workspaces pass
+  `TERM=xterm-256color`. The `ssh()` wrapper never replays a remote command,
+  so houston's `tmux new -A` workspace re-attaches with ↑ Enter, not by itself.
 - **zsh arrays are 1-indexed.** Ports of Omarchy's bash functions must use
   `${arr[1]}`, not `${arr[0]}`.
 - **A function can't share a name with an alias in zsh** — it's a parse error
