@@ -397,6 +397,31 @@ if command -v cmux >/dev/null 2>&1; then
   for h in nasa coolify; do
     case $(cmux-fleet $h --print) in TERM=xterm-256color\ *) ok "$h gets a terminfo it has" ;; *) bad "cmux-fleet $h" "no TERM override" ;; esac
   done
+  # A restored fleet tab reconnects by itself: a real zsh in a pty, for a
+  # surface with a recorded host, runs cmux-fleet (a stub here) with nothing
+  # typed. An unrecorded surface, or a record that isn't a bare host name,
+  # must not run anything.
+  F="$T/fleet"; mkdir -p "$F/stub" "$F/state/cmux-fleet" "$F/z"
+  printf '#!/bin/sh\necho "FLEET-RAN-$1"\n' >"$F/stub/cmux-fleet"; chmod +x "$F/stub/cmux-fleet"
+  printf 'nasa\n' >"$F/state/cmux-fleet/surf-ok"
+  printf 'nasa; echo INJECTED\n' >"$F/state/cmux-fleet/surf-bad"
+  printf 'source ~/.zshrc\npath=(%s $path)\nHISTFILE=%s/hist\n' "$F/stub" "$F/z" >"$F/z/.zshrc"
+  _fleet_pty() {
+    CMUX_SURFACE_ID=$1 XDG_STATE_HOME="$F/state" ZDOTDIR="$F/z" zsh -f <<'EOF' 2>&1
+zmodload zsh/zpty || exit 2
+zpty z 'zsh -i'
+buf=; for i in {1..60}; do zpty -rt z c && buf+=$c; [[ $buf == *FLEET-RAN-* || $buf == *INJECTED* ]] && break; sleep 0.05; done
+print -r -- "$buf"
+zpty -d z
+EOF
+  }
+  _out=$(_fleet_pty surf-ok)
+  [[ $_out == *FLEET-RAN-nasa* ]] && ok "a restored fleet tab reconnects with nothing typed" || bad "fleet reconnect" "cmux-fleet never ran"
+  _out=$(_fleet_pty surf-none)
+  [[ $_out == *FLEET-RAN* ]] && bad "fleet reconnect" "ran in a tab with no recorded host" || ok "an ordinary cmux tab stays a local shell"
+  _out=$(_fleet_pty surf-bad)
+  [[ $_out == *FLEET-RAN* || $_out == *INJECTED* ]] && bad "fleet reconnect" "ran a record that isn't a bare host name" \
+    || ok "a malformed host record is ignored"
 else
   skip "cmux" "not installed"
 fi

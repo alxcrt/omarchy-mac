@@ -121,7 +121,21 @@ extensions.
   through the symlink. (3) nasa and coolify have no `xterm-ghostty` terminfo
   ("unknown terminal type"), so `cmux-fleet` passes them
   `TERM=xterm-256color`. The fleet workspaces all run `cmux-fleet <host>`,
-  which pins the workspace and registers itself as cmux's resume command.
+  which pins the workspace and writes the host to
+  `~/.local/state/cmux-fleet/$CMUX_SURFACE_ID`. A cmux relaunch restores
+  workspaces as **plain local shells**: it neither re-runs a workspace's
+  command nor `cmux surface resume` bindings (those are only stored). Surface
+  IDs do survive, so `zshrc` resubmits `cmux-fleet <host>` at the first
+  prompt of a recorded tab. cmux loads its integration from `.zshenv`, before
+  `.zshrc`, and keeps `TERM=xterm-ghostty` until the first command's
+  preexec. Submitting through zle (not running from precmd) lets that switch
+  happen. A restored tab also replays its old scrollback, so a doubled "Last
+  login" at the top is the previous session, not a shell bug.
+  (4) **The cmux app saves `cmux.json` by replacing it**, which breaks the
+  symlink, unlike `cmux config set`. It happened once, when `cmux surface
+  resume set` made it add `terminal.resumeCommands` records (policy
+  "manual", never re-run). `test.sh repo` flags it; diff the app's copy, then
+  `install.sh --links`.
   houston uses `herdr --remote houston`: **never tmux**, on the Mac or the
   fleet. The first attach after a herdr update asks to install the matching
   herdr in houston's `~/.local/bin`, because its pacman herdr lags mise's.

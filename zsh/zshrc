@@ -127,6 +127,26 @@ ZSH_AUTOSUGGEST_MANUAL_REBIND=1
 [[ -r /opt/homebrew/share/zsh-autosuggestions/zsh-autosuggestions.zsh ]] && source /opt/homebrew/share/zsh-autosuggestions/zsh-autosuggestions.zsh
 [[ -r /opt/homebrew/share/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh ]] && source /opt/homebrew/share/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh
 
+# A cmux fleet tab (see cmux-fleet) reconnects when cmux restores it after a
+# relaunch: cmux-fleet records the tab's host under its surface ID, which cmux
+# keeps. The command is submitted at the first prompt as if typed, so cmux's
+# own hooks (TERM, history, cwd) see an ordinary command. Costs nothing
+# outside cmux.
+if [[ -n $CMUX_SURFACE_ID && -r ${XDG_STATE_HOME:-$HOME/.local/state}/cmux-fleet/$CMUX_SURFACE_ID ]]; then
+  _cmux_fleet_reconnect() {
+    add-zle-hook-widget -d line-init _cmux_fleet_reconnect
+    (( _cmux_fleet_done++ )) && return
+    local host
+    read -r host <"${XDG_STATE_HOME:-$HOME/.local/state}/cmux-fleet/$CMUX_SURFACE_ID"
+    [[ $host =~ ^[a-z0-9-]+$ ]] || return
+    BUFFER="cmux-fleet $host"
+    zle accept-line
+  }
+  autoload -Uz add-zle-hook-widget
+  zle -N _cmux_fleet_reconnect
+  add-zle-hook-widget line-init _cmux_fleet_reconnect
+fi
+
 # Machine-local additions (not tracked in the repo): PATH entries, ssh-add,
 # work-specific aliases. Keep anything host-specific there, not here.
 [[ -f ~/.zshrc.local ]] && source ~/.zshrc.local

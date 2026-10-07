@@ -3,9 +3,11 @@
 # Connect the current terminal to a fleet machine. The fleet workspaces in
 # ~/.config/cmux/cmux.json run this; --print shows the connect command only.
 #
-# Inside cmux it also pins the workspace and records itself as the terminal's
-# resume command, so the fleet stays at the top of the sidebar and cmux can
-# reconnect it after a relaunch (cmux asks once to approve the command).
+# Inside cmux it also pins the workspace and records this tab's host under its
+# surface ID, which cmux keeps across relaunches; ~/.zshrc reads that record
+# and reconnects the tab when cmux restores it. (cmux's own `surface resume`
+# bindings are only stored, never re-run, and a restored workspace does not
+# re-run its command.)
 #
 # herdr is the session layer, never tmux. `herdr --remote` runs the client
 # here (local keybindings, image paste bridged from the Mac's clipboard) and
@@ -22,9 +24,10 @@ case $1 in
 esac
 [ "$2" = --print ] && { echo "$cmd"; exit 0; }
 
-if [ -n "$CMUX_WORKSPACE_ID" ] && command -v cmux >/dev/null 2>&1; then
-  cmux workspace-action --action pin >/dev/null 2>&1
-  cmux surface resume set --name "$1" -- cmux-fleet "$1" >/dev/null 2>&1
+if [ -n "$CMUX_SURFACE_ID" ]; then
+  state="${XDG_STATE_HOME:-$HOME/.local/state}/cmux-fleet"
+  mkdir -p "$state" && printf '%s\n' "$1" >"$state/$CMUX_SURFACE_ID"
+  command -v cmux >/dev/null 2>&1 && cmux workspace-action --action pin >/dev/null 2>&1
 fi
 
 # Through an interactive zsh, so the ssh() wrapper in functions.zsh (terminal
