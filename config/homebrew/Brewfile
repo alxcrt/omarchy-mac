@@ -14,6 +14,7 @@ tap "crmne/tap"
 
 # --- CLI: Omarchy's pacman set, ported ---
 brew "git"          # direct binary: /usr/bin/git is an xcrun stub that adds ~10ms per call
+brew "openssh"      # Apple's ssh is built without security-key support; this one does ed25519-sk (YubiKey SSH keys)
 brew "bat"          # cat with syntax highlighting; used as MANPAGER
 brew "eza"          # ls replacement, aliased over ls
 brew "fd"
