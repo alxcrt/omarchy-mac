@@ -1,0 +1,7 @@
+[
+  {"name": "GitHub Pull Requests", "link": "https://github.com/pulls"},
+  {"name": "GitHub Notifications", "link": "https://github.com/notifications"},
+  {"name": "Omarchy Mac Repository", "link": "https://github.com/alxcrt/omarchy-mac"},
+  {"name": "Developer Projects", "link": "~/Developer", "openWith": "Finder"},
+  {"name": "Omarchy Mac Files", "link": "~/omarchy-mac", "openWith": "Finder"}
+]

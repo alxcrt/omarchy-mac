@@ -60,6 +60,8 @@ Safe to re-run any time.
      `git config --global user.name "…"` and `git config --global user.email "…"`.
    - **Chrome extensions**: `chrome-extensions install` opens Load unpacked
      with the folders revealed; `chrome-extensions verify` checks them.
+   - **Raycast**: `mac raycast setup` prepares imports and shows the
+     Script Directory, extension, alias, and settings steps.
    - **Desktops**: add the ones you want per display in Mission Control
      (`mac wm --status` shows the current layout).
    - **A Jamf-managed Mac** skips the Cursor and 1Password casks (Jamf
@@ -131,6 +133,7 @@ mac transcode f.mov mp4 1080p     # also gif / jpg / png
 mac wm status|reload    # window manager state
 mac usage               # AI token usage + rate limits (from Omarchy)
 mac doctor              # mise + brew + window mgmt + keyremap health
+mac raycast setup       # prepare launcher/import files and show the in-app checklist
 mac edit aliases|functions|wm|mise|brew|herdr
 ```
 
@@ -190,6 +193,37 @@ shell: `mac term`, `mac keys`, `mac dl`, `mac transcode`, and so on.
 
 Two more things macOS will not let a script do: **creating Desktops** (add them
 by hand in Mission Control) and assigning Raycast hotkeys.
+
+## Raycast
+
+`mac raycast setup` prepares JSON imports and prints the exact setup steps in
+[config/raycast/SETUP.md](config/raycast/SETUP.md). The installer links 16
+Omarchy Script Commands into `~/.config/raycast/scripts`, preserving other
+scripts. Register that directory once in Raycast Settings → Script Commands.
+Commands include terminal launchers, `macup`, health checks, AI usage,
+keybindings, transcoding, btop/lazydocker/nvim, browser URL/download, and fleet
+connections through the existing `cmux-fleet` wrapper. They add no background
+polling; long-running terminal commands use the existing Ghostty instance.
+
+Import `~/.config/raycast/omarchy-snippets.json` with **Import Snippets**, and
+`~/.local/share/omarchy-mac/raycast/quicklinks.json` with **Import Quicklinks**.
+The snippet triggers start with `;;` so two spaces and ordinary code are safe.
+Add private dashboards to `~/.config/raycast/omarchy-quicklinks.local.json`, a
+JSON array of `{ "name": "…", "link": "…" }`, then run `mac raycast prepare`
+and re-import. The generated Quicklinks file is mode 600 and stays outside Git.
+
+`mac raycast status` checks local files; it cannot confirm Raycast's private
+command registration, settings, hotkeys, or sign-in. Store extension installs
+and removals, aliases, and settings remain in-app steps. Do not edit Raycast's
+encrypted databases or delete extension folders to simulate an uninstall.
+The setup guide covers Helium/GitHub/Tailscale, cleanup candidates, background
+commands, clipboard retention, and file indexing. Keep credential-bearing
+exports out of this public repository.
+
+`browser-url` now supports Helium and prefers the configured default browser
+when it is running, with fallback to another running supported browser.
+`OMARCHY_BROWSER` remains an explicit override. Raycast may require its own
+Automation grant on the first browser or Ghostty command.
 
 ## Touch ID in the terminal (Omarchy's fingerprint auth)
 

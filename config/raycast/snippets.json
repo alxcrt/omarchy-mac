@@ -1,0 +1,12 @@
+[
+  {"name": "Em dash", "text": "—", "keyword": ";;dash"},
+  {"name": "Omarchy smile", "text": "😄", "keyword": ";;ms"},
+  {"name": "Omarchy laugh", "text": "😂", "keyword": ";;mc"},
+  {"name": "Omarchy heart", "text": "❤️", "keyword": ";;mh"},
+  {"name": "Omarchy thumbs up", "text": "👍", "keyword": ";;my"},
+  {"name": "Omarchy celebration", "text": "🎉", "keyword": ";;mx"},
+  {"name": "Omarchy greeting", "text": "👋", "keyword": ";;mg"},
+  {"name": "Shrug", "text": "¯\\_(ツ)_/¯", "keyword": ";;shrug"},
+  {"name": "Update everything command", "text": "macup", "keyword": ";;macup"},
+  {"name": "Update developer tools command", "text": "mup", "keyword": ";;mup"}
+]

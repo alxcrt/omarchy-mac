@@ -6,15 +6,27 @@
 #
 #   ./test.sh            run everything
 #   ./test.sh <section>  run one section (e.g. ./test.sh herdr)
+#   ./test.sh --headless [section]  skip desktop automation and live key/window changes
 
 PASS=0; FAIL=0; SKIP=0
 ok()   { printf "  \033[0;32mPASS\033[0m %s\n" "$1"; PASS=$((PASS+1)); }
 bad()  { printf "  \033[0;31mFAIL\033[0m %s — %s\n" "$1" "$2"; FAIL=$((FAIL+1)); }
 skip() { printf "  \033[0;33mSKIP\033[0m %s — %s\n" "$1" "$2"; SKIP=$((SKIP+1)); }
 sec()  { printf "\n\033[1m── %s\033[0m\n" "$1"; }
-want() { [ -z "$ONLY" ] || [ "$ONLY" = "$1" ]; }
+want() {
+  [ -z "$ONLY" ] || [ "$ONLY" = "$1" ] || return 1
+  if [ "$HEADLESS" = 1 ]; then
+    case "$1" in
+      browser|extensions|wm|keyremap|notify)
+        skip "$1" '--headless: desktop automation or live keyboard/window state required'
+        return 1 ;;
+    esac
+  fi
+  return 0
+}
 
-ONLY="$1"
+ONLY="${1:-}"; HEADLESS=0
+[ "$ONLY" = --headless ] && { HEADLESS=1; ONLY="${2:-}"; }
 export PATH="$HOME/.local/bin:/opt/homebrew/bin:$PATH"
 T=$(mktemp -d); trap 'clip_restore; rm -rf "$T"' EXIT; export T
 trap 'exit 130' INT TERM   # so Ctrl-C still runs the EXIT cleanup
@@ -605,7 +617,7 @@ mac bogus >/dev/null 2>&1 && bad "mac bogus" "should exit nonzero" || ok "mac re
 mac edit bogus 2>&1 | grep -qi 'mac edit' && ok "mac edit validates target" || bad "mac edit" "no validation"
 # ghostty-run: a real window via Ghostty's AppleScript, in the caller's cwd,
 # running the command through the shell. Closed again by its name (the cwd).
-if [ "$(osascript -e 'application "Ghostty" is running' 2>/dev/null)" = true ] &&
+if [ "$HEADLESS" != 1 ] && [ "$(osascript -e 'application "Ghostty" is running' 2>/dev/null)" = true ] &&
    osascript -e 'tell application "Ghostty" to count windows' >/dev/null 2>&1; then
   G="$T/ghostty-run-test-$$"; mkdir -p "$G"; ( cd "$G" && ghostty-run 'pwd > marker' ) >/dev/null 2>&1
   for i in $(seq 40); do [ -s "$G/marker" ] && break; sleep 0.1; done
@@ -621,7 +633,7 @@ fi
 # ── 12. helper scripts ─────────────────────────────────────────────────────
 if want scripts; then
 sec "Helper scripts"
-for s in mac macup mise-install mac-keyremap mac-wm ghostty-run transcode webdl weburl browser-url \
+for s in mac mac-raycast macup mise-install mac-keyremap mac-wm ghostty-run transcode webdl weburl browser-url \
          chromium-native-host chrome-extensions mac-hook agent-usage-claude agent-usage-codex agent-usage-grok mac-notify mac-clip mac-defaults; do
   p="$HOME/.local/bin/$s"
   if [ ! -x "$p" ]; then bad "$s" "missing or not executable"; continue; fi
@@ -1302,6 +1314,15 @@ pkill -f "$YS/yt-dlp" 2>/dev/null
 osascript -l JavaScript -e 'ObjC.import("AppKit"); function run(a){ $.NSPasteboard.pasteboardWithName(a[0]).releaseGlobally; }' "$PB" 2>/dev/null
 fi
 
+# Raycast and browser selection are tested with isolated command stubs, never
+# by opening a real terminal/browser, signing in, updating, or contacting hosts.
+if want raycast; then
+sec "Raycast commands and browser selection"
+/opt/homebrew/bin/python3 "$HOME/omarchy-mac/tests/test_raycast.py" \
+  && ok "Raycast dispatch, imports, and browser selection" \
+  || bad "Raycast" "isolated functional tests failed"
+fi
+
 # ── 19. repo ───────────────────────────────────────────────────────────────
 if want repo; then
 sec "Repo integrity"
@@ -1325,7 +1346,8 @@ if [ -d "$R/.git" ]; then
     [ "$(readlink "$HOME/$dest")" = "$R/$src" ] && ok "linked: ~/$dest" \
       || bad "drift" "~/$dest is not a symlink to the repo (install.sh --links)"
   done < <(grep -E '^link ' "$R/install.sh" | awk '{print $2, $3}'
-           for f in "$R"/local/bin/*; do echo "local/bin/${f##*/} .local/bin/${f##*/}"; done)
+           for f in "$R"/local/bin/*; do echo "local/bin/${f##*/} .local/bin/${f##*/}"; done
+           for f in "$R"/config/raycast/scripts/*.sh; do echo "config/raycast/scripts/${f##*/} .config/raycast/scripts/${f##*/}"; done)
 else
   skip "repo tests" "~/omarchy-mac not a git repo"
 fi

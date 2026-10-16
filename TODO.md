@@ -19,14 +19,21 @@ file current whenever a request arrives mid-task.
   it survived a reboot, so pqrs's 8.6.0 pkg was reinstalled for its
   `deactivate_driver.sh`, which removed the dext and its files at once
   despite printing "requires reboot"; its pkg receipt is forgotten too.
-- **Text snippets** (upstream's XCompose: `<Multi> m s` → 😄, two spaces →
-  "—", name/email) as Raycast Snippets: Raycast has no scriptable import.
+- **Raycast registration/import and settings** (16 Oct): `mac raycast setup`
+  prepares the files and prints `config/raycast/SETUP.md`. Register the Script
+  Commands directory and import the Quicklinks/Snippets JSON in Raycast. JSON
+  snippet import is supported; the earlier "no scriptable import" note was
+  too broad. The pack uses explicit `;;` triggers rather than replacing two
+  spaces. Install Helium/GitHub/Tailscale; apply the cleanup/settings checklist.
+  Computer-use access to Raycast was denied, so none of those in-app steps is
+  recorded as done. The encrypted databases were left untouched.
 - **Raycast hotkeys** for the SUPER launchers (macOS has no scriptable global
   launch-hotkey system). Mind the ⌥ clash: SUPER = ⌥ = herdr's `alt` layer
   (`alt+enter`, `alt+1..9`, `alt+arrows`), so pick other chords or Raycast's
-  Hyper key. Candidates: `ghostty-run herdr`, `ghostty-run nvim`,
-  `ghostty-run btop`, `ghostty-run cliamp`, `ghostty-run lazydocker`,
-  `mac keys`, `transcode-pick`, plus upstream's 11 web apps as Quicklinks.
+  Hyper key on a key not already owned by hidutil. The new Script Commands
+  provide nvim, btop, lazydocker, keybindings, transcoding and fleet connections;
+  aliases/hotkeys still need assignment. Optional later: herdr/cliamp launchers
+  and any additional upstream web apps Alex actually uses.
 
 ## Queued
 

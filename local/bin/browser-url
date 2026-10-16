@@ -1,21 +1,52 @@
 #!/bin/bash
-# browser-url — print the URL of the frontmost tab of the active Chromium-family
-# browser. Shared by `weburl` and `webdl`.
+# browser-url — print the selected Chromium-family browser's current tab URL.
+# Shared by `weburl` and `webdl`; prefer the default browser when it is running.
 #
 # Omarchy uses Chromium on Arch; on macOS the same flow works with Chrome,
-# Chromium, Brave or Vivaldi — they all speak the same AppleScript dialect.
+# Helium, Chromium, Brave or Vivaldi — they speak the same AppleScript dialect.
 # Override the choice with:  export OMARCHY_BROWSER="Brave Browser"
 set -e
 
-candidates=("Google Chrome" "Chromium" "Brave Browser" "Vivaldi")
-[[ -n $OMARCHY_BROWSER ]] && candidates=("$OMARCHY_BROWSER")
+candidates=("Helium" "Google Chrome" "Chromium" "Brave Browser" "Vivaldi")
+if [[ -n ${OMARCHY_BROWSER:-} ]]; then
+  candidates=("$OMARCHY_BROWSER")
+else
+  # Read Launch Services without launching a browser or requiring Accessibility.
+  preferred=$(/opt/homebrew/bin/python3 - <<'PY' 2>/dev/null || true
+from pathlib import Path
+import plistlib
+p = Path.home() / 'Library/Preferences/com.apple.LaunchServices/com.apple.launchservices.secure.plist'
+names = {'net.imput.helium': 'Helium', 'com.google.chrome': 'Google Chrome',
+         'org.chromium.chromium': 'Chromium', 'com.brave.browser': 'Brave Browser',
+         'com.vivaldi.vivaldi': 'Vivaldi'}
+if p.exists():
+    handlers = plistlib.loads(p.read_bytes()).get('LSHandlers', [])
+    for scheme in ('https', 'http'):
+        for h in handlers:
+            if h.get('LSHandlerURLScheme') == scheme:
+                name = names.get(h.get('LSHandlerRoleAll', '').lower())
+                if name:
+                    print(name)
+                    raise SystemExit
+PY
+  )
+  if [[ -n $preferred ]]; then
+    ordered=("$preferred")
+    for candidate in "${candidates[@]}"; do
+      [[ $candidate = "$preferred" ]] || ordered+=("$candidate")
+    done
+    candidates=("${ordered[@]}")
+  fi
+fi
 
 # Prefer a browser that is actually running, so the "front window" is real.
 for app in "${candidates[@]}"; do
-  [[ -d "/Applications/$app.app" ]] || continue
-  running=$(osascript -e "application \"$app\" is running" 2>/dev/null || echo false)
+  [[ -d "${OMARCHY_BROWSER_APPLICATIONS_DIR:-/Applications}/$app.app" ]] || continue
+  # OMARCHY_BROWSER is data, even when the app's name contains quotes.
+  escaped=${app//\\/\\\\}; escaped=${escaped//\"/\\\"}
+  running=$(osascript -e "application \"$escaped\" is running" 2>/dev/null || echo false)
   [[ $running == true ]] || continue
-  url=$(osascript -e "tell application \"$app\" to return URL of active tab of front window" 2>/dev/null || true)
+  url=$(osascript -e "tell application \"$escaped\" to return URL of active tab of front window" 2>/dev/null || true)
   if [[ -n $url ]]; then
     printf '%s' "$url"
     exit 0

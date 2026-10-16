@@ -18,6 +18,7 @@ case "$cmd" in
   keyremap)    exec mac-keyremap "$@" ;;
   term)        exec ghostty-run "$@" ;;
   install)     exec mise-install "$@" ;;
+  raycast)     exec mac-raycast "$@" ;;
 
   usage)
     # Omarchy's agent usage records, rendered readable instead of raw JSON.
@@ -65,14 +66,15 @@ mac — Omarchy-style flows on macOS
   mac keys                every keybinding, read from the live configs
   mac keyremap [--show|--clear]   Caps Lock -> Escape, right ⌘ -> ⌥, via hidutil
 
-  mac dl [url]            download video on the current Chrome page -> ~/Movies
-  mac url                 copy the current Chrome tab URL
+  mac dl [url]            download video on the selected browser page -> ~/Movies
+  mac url                 copy the selected browser tab URL
   mac transcode <f> <fmt> [quality]   mp4 | gif | jpg | png
 
   mac term <cmd>          open a new Ghostty window running <cmd>
   mac wm [--status|--apply|--keys]  native tiling + Spaces settings
   mac defaults [--apply]  key repeat, Finder, Dock, Transmission
   mac doctor              health check across mise, brew, window mgmt
+  mac raycast setup|prepare|status  Omarchy launcher pack and Raycast setup
   mac edit <what>         open a config: aliases functions mise brew herdr
 
 Shell flows (from ~/.config/zsh/functions.zsh):

@@ -1,0 +1,108 @@
+#!/bin/bash
+# Repo-managed Raycast commands; private Raycast settings remain app-owned.
+set -euo pipefail
+export PATH="$HOME/.local/bin:/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin"
+SELF=$(cd "$(dirname "$0")" && pwd)/$(basename "$0")
+# Resolve the installed symlink without assuming this checkout's location.
+while [ -L "$SELF" ]; do
+  target=$(readlink "$SELF")
+  case "$target" in /*) SELF=$target ;; *) SELF=$(dirname "$SELF")/$target ;; esac
+done
+ROOT=$(cd "$(dirname "$SELF")/../.." && pwd)
+PROFILE="$ROOT/config/raycast"
+
+case "${1:-help}" in
+  run)
+    action=${2:-}; shift 2 || { echo 'mac raycast run <command>' >&2; exit 2; }
+    # Reject unexpected arguments rather than feeding them to a terminal shell.
+    [ "$#" = 0 ] || { echo 'These commands take no arguments.' >&2; exit 2; }
+    cd "$HOME/Developer" 2>/dev/null || cd "$HOME"
+    case "$action" in
+      terminal) exec /usr/bin/open -a cmux ;;
+      ghostty) exec /usr/bin/open -a Ghostty ;;
+      update) exec ghostty-run macup ;;
+      health) exec ghostty-run mac doctor ;;
+      usage) exec mac usage ;;
+      keys) exec mac keys ;;
+      transcode) exec transcode-pick ;;
+      monitor) exec ghostty-run btop ;;
+      docker) exec ghostty-run lazydocker ;;
+      editor) exec ghostty-run nvim ;;
+      copy-url) exec weburl ;;
+      download) exec ghostty-run webdl ;;
+      houston|nasa|coolify|titan) exec ghostty-run cmux-fleet "$action" ;;
+      *) echo "Unknown Raycast command: $action" >&2; exit 2 ;;
+    esac ;;
+  prepare)
+    /opt/homebrew/bin/python3 - "$PROFILE" <<'PY'
+import json, os, tempfile
+from pathlib import Path
+import sys
+profile = Path(sys.argv[1])
+links = json.loads((profile / 'quicklinks.json').read_text())
+private = Path.home() / '.config/raycast/omarchy-quicklinks.local.json'
+if private.exists():
+    links += json.loads(private.read_text())
+seen, merged = set(), []
+for link in links:
+    if not isinstance(link, dict) or not all(isinstance(link.get(k), str) and link[k] for k in ('name', 'link')):
+        raise SystemExit('Quicklinks must have nonempty string name and link fields.')
+    key = (link['name'], link['link'])
+    if key not in seen:
+        seen.add(key)
+        merged.append(link)
+out = Path.home() / '.local/share/omarchy-mac/raycast'
+out.mkdir(parents=True, exist_ok=True, mode=0o700)
+os.chmod(out, 0o700)
+fd, name = tempfile.mkstemp(prefix='.quicklinks-', dir=out)
+try:
+    with os.fdopen(fd, 'w') as f:
+        json.dump(merged, f, ensure_ascii=False, indent=2)
+        f.write('\n')
+    os.replace(name, out / 'quicklinks.json')
+finally:
+    if os.path.exists(name):
+        os.unlink(name)
+print(f"Prepared {len(merged)} Quicklinks: {out / 'quicklinks.json'}")
+print(f"Snippets: {profile / 'snippets.json'}")
+print('Prepared files are not yet imported into Raycast.')
+PY
+    ;;
+  setup)
+    "$SELF" prepare
+    cat "$PROFILE/SETUP.md" ;;
+  status)
+    /opt/homebrew/bin/python3 - "$PROFILE" <<'PY'
+import json
+from pathlib import Path
+import sys
+profile = Path(sys.argv[1])
+scripts = sorted((profile / 'scripts').glob('*.sh'))
+linked = sum((Path.home() / '.config/raycast/scripts' / p.name).resolve() == p.resolve()
+             for p in scripts)
+print(f'Omarchy Script Commands linked: {linked}/{len(scripts)}')
+for name in ('helium', 'github', 'tailscale'):
+    bundles = []
+    for p in (Path.home() / '.config/raycast/extensions').glob('*/package.json'):
+        if p.parent.name.startswith('.'):
+            continue
+        try:
+            if json.loads(p.read_text()).get('name') == name:
+                bundles.append(p.parent)
+        except (ValueError, OSError):
+            continue
+    print(f"{name}: {'bundle present' if bundles else 'bundle not found'}")
+print('Metadata cannot confirm command registration, enabled settings, hotkeys, or sign-in.')
+print('Run mac raycast setup for the remaining in-app steps.')
+PY
+    ;;
+  help|--help|-h)
+    cat <<'EOF'
+mac raycast setup    prepare JSON imports and print the in-app setup checklist
+mac raycast prepare  rebuild Quicklinks, including machine-local dashboard links
+mac raycast status   report local files without reading Raycast's encrypted settings
+mac raycast run <command>  dispatch a fixed Omarchy Script Command
+EOF
+    ;;
+  *) echo 'Usage: mac raycast setup|prepare|status' >&2; exit 2 ;;
+esac
