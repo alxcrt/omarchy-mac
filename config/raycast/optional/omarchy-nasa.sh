@@ -3,6 +3,7 @@
 # @raycast.title Connect to NASA
 # @raycast.mode silent
 # @raycast.packageName Omarchy
+# Optional standalone command; the default pack uses the single Omarchy menu.
 # @raycast.icon 🛰️
 # @raycast.description Open the NAS shell through the existing fleet wrapper
 

@@ -49,6 +49,7 @@ print('stub output')
     def test_dispatch_reuses_existing_commands(self):
         expected = {
             'update': ('ghostty-run', ['macup']),
+            'mise': ('ghostty-run', ['mac', 'mise']),
             'health': ('ghostty-run', ['mac', 'doctor']),
             'usage': ('mac', ['usage']), 'keys': ('mac', ['keys']),
             'transcode': ('transcode-pick', []),
@@ -72,12 +73,12 @@ print('stub output')
                 self.assertEqual(self.run_helper(*args).returncode, 2)
         self.assertFalse(self.log.exists())
 
-    def test_wrappers_pass_fixed_actions_and_do_not_start_background_jobs(self):
+    def test_optional_wrappers_pass_fixed_actions(self):
         # Replace only the dispatch executable in the isolated home. Even the
         # app-opening wrappers are now observed without contacting the desktop.
         self.write_executable(self.bin / 'mac-raycast',
                               (self.bin / 'ghostty-run').read_text())
-        scripts = sorted((ROOT / 'config/raycast/scripts').glob('*.sh'))
+        scripts = sorted((ROOT / 'config/raycast/optional').glob('*.sh'))
         self.assertEqual(len(scripts), 16)
         for script in scripts:
             with self.subTest(script=script.name):
@@ -87,6 +88,62 @@ print('stub output')
                 action = script.stem.removeprefix('omarchy-')
                 self.assertEqual(self.calls()[-1][1], ['run', action])
                 self.assertNotIn('@raycast.refreshTime', script.read_text())
+
+    def test_single_menu_has_valid_choices_and_forwards_them_as_data(self):
+        scripts = list((ROOT / 'config/raycast/scripts').glob('*.sh'))
+        self.assertEqual(len(scripts), 1)
+        script = scripts[0]
+        metadata = next(line.split('@raycast.argument1 ', 1)[1]
+                        for line in script.read_text().splitlines()
+                        if '@raycast.argument1 ' in line)
+        argument = json.loads(metadata)
+        self.assertEqual(argument['type'], 'dropdown')
+        choices = argument['data']
+        # A default/first selection must open reference information, not an update.
+        self.assertEqual(choices[0]['value'], 'keys')
+        self.assertEqual(len({c['value'] for c in choices}), len(choices))
+        self.assertNotIn('terminal', {c['value'] for c in choices})
+        self.assertNotIn('ghostty', {c['value'] for c in choices})
+        self.write_executable(self.bin / 'mac-raycast', (self.bin / 'ghostty-run').read_text())
+        for choice in choices:
+            with self.subTest(choice=choice['title']):
+                result = subprocess.run(['/bin/bash', str(script), choice['value']],
+                                        env=self.env, text=True, capture_output=True)
+                self.assertEqual(result.returncode, 0, result.stderr)
+                self.assertEqual(self.calls()[-1][1], ['menu', choice['value']])
+        self.assertNotIn('@raycast.refreshTime', script.read_text())
+
+    def test_menu_keeps_information_visible_and_rejects_extra_input(self):
+        for action in ('usage', 'keys'):
+            result = self.run_helper('menu', action)
+            self.assertEqual(result.returncode, 0, result.stderr)
+            self.assertEqual(self.calls()[-1][:2], ['ghostty-run', ['mac', action]])
+        result = self.run_helper('menu', 'update')
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual(self.calls()[-1][:2], ['ghostty-run', ['macup']])
+        count = len(self.calls())
+        for args in [('menu',), ('menu', 'usage', 'extra'), ('menu', '; touch unwanted')]:
+            self.assertEqual(self.run_helper(*args).returncode, 2)
+        self.assertEqual(len(self.calls()), count)
+
+    def test_installer_migrates_only_owned_links_and_is_idempotent(self):
+        scripts = self.home / '.config/raycast/scripts'
+        scripts.mkdir(parents=True)
+        old = scripts / 'omarchy-update.sh'
+        old.symlink_to(ROOT / 'config/raycast/scripts/omarchy-update.sh')
+        custom = scripts / 'omarchy-health.sh'
+        custom.write_text('user-owned script\n')
+        other = scripts / 'omarchy-keys.sh'
+        other.symlink_to(self.bin / 'mac')
+        for _ in range(2):
+            result = subprocess.run(['/bin/bash', str(ROOT / 'install.sh'), '--links'],
+                                    env=self.env, text=True, capture_output=True)
+            self.assertEqual(result.returncode, 0, result.stderr)
+            self.assertFalse(old.is_symlink())
+            self.assertEqual(custom.read_text(), 'user-owned script\n')
+            self.assertEqual(other.resolve(), (self.bin / 'mac').resolve())
+            self.assertEqual((scripts / 'omarchy.sh').resolve(),
+                             (ROOT / 'config/raycast/scripts/omarchy.sh').resolve())
 
     def test_prepare_merges_private_links_without_publishing_them(self):
         private = self.home / '.config/raycast/omarchy-quicklinks.local.json'
@@ -120,7 +177,7 @@ print('stub output')
     def test_status_distinguishes_files_from_app_configuration(self):
         result = self.run_helper('status')
         self.assertEqual(result.returncode, 0, result.stderr)
-        self.assertIn('0/16', result.stdout)
+        self.assertIn('0/1', result.stdout)
         self.assertIn('Metadata cannot confirm', result.stdout)
 
     def browser_fixture(self, default, state):

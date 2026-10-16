@@ -12,6 +12,16 @@ ROOT=$(cd "$(dirname "$SELF")/../.." && pwd)
 PROFILE="$ROOT/config/raycast"
 
 case "${1:-help}" in
+  menu)
+    [ "$#" = 2 ] || { echo 'Choose one Omarchy menu action.' >&2; exit 2; }
+    # The one menu closes after selection. Show informational output in the
+    # existing terminal, so usage/keybindings remain visible after Raycast closes.
+    case "$2" in
+      usage|keys)
+        cd "$HOME/Developer" 2>/dev/null || cd "$HOME"
+        exec ghostty-run mac "$2" ;;
+      *) exec "$SELF" run "$2" ;;
+    esac ;;
   run)
     action=${2:-}; shift 2 || { echo 'mac raycast run <command>' >&2; exit 2; }
     # Reject unexpected arguments rather than feeding them to a terminal shell.
@@ -21,6 +31,7 @@ case "${1:-help}" in
       terminal) exec /usr/bin/open -a cmux ;;
       ghostty) exec /usr/bin/open -a Ghostty ;;
       update) exec ghostty-run macup ;;
+      mise) exec ghostty-run mac mise ;;
       health) exec ghostty-run mac doctor ;;
       usage) exec mac usage ;;
       keys) exec mac keys ;;
@@ -69,7 +80,6 @@ print('Prepared files are not yet imported into Raycast.')
 PY
     ;;
   setup)
-    "$SELF" prepare
     cat "$PROFILE/SETUP.md" ;;
   status)
     /opt/homebrew/bin/python3 - "$PROFILE" <<'PY'
@@ -80,28 +90,19 @@ profile = Path(sys.argv[1])
 scripts = sorted((profile / 'scripts').glob('*.sh'))
 linked = sum((Path.home() / '.config/raycast/scripts' / p.name).resolve() == p.resolve()
              for p in scripts)
-print(f'Omarchy Script Commands linked: {linked}/{len(scripts)}')
-for name in ('helium', 'github', 'tailscale'):
-    bundles = []
-    for p in (Path.home() / '.config/raycast/extensions').glob('*/package.json'):
-        if p.parent.name.startswith('.'):
-            continue
-        try:
-            if json.loads(p.read_text()).get('name') == name:
-                bundles.append(p.parent)
-        except (ValueError, OSError):
-            continue
-    print(f"{name}: {'bundle present' if bundles else 'bundle not found'}")
+print(f'Omarchy menu linked: {linked}/{len(scripts)}')
+print('No Store extensions are required by this pack.')
 print('Metadata cannot confirm command registration, enabled settings, hotkeys, or sign-in.')
 print('Run mac raycast setup for the remaining in-app steps.')
 PY
     ;;
   help|--help|-h)
     cat <<'EOF'
-mac raycast setup    prepare JSON imports and print the in-app setup checklist
-mac raycast prepare  rebuild Quicklinks, including machine-local dashboard links
+mac raycast setup    show how to use the single Omarchy command
+mac raycast prepare  optionally rebuild Quicklinks for import
 mac raycast status   report local files without reading Raycast's encrypted settings
-mac raycast run <command>  dispatch a fixed Omarchy Script Command
+mac raycast menu <action>  run a selection from the Omarchy dropdown
+mac raycast run <command>  dispatch an optional standalone command
 EOF
     ;;
   *) echo 'Usage: mac raycast setup|prepare|status' >&2; exit 2 ;;

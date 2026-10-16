@@ -196,32 +196,27 @@ by hand in Mission Control) and assigning Raycast hotkeys.
 
 ## Raycast
 
-`mac raycast setup` prepares JSON imports and prints the exact setup steps in
-[config/raycast/SETUP.md](config/raycast/SETUP.md). The installer links 16
-Omarchy Script Commands into `~/.config/raycast/scripts`, preserving other
-scripts. Register that directory once in Raycast Settings → Script Commands.
-Commands include terminal launchers, `macup`, health checks, AI usage,
-keybindings, transcoding, btop/lazydocker/nvim, browser URL/download, and fleet
-connections through the existing `cmux-fleet` wrapper. They add no background
-polling; long-running terminal commands use the existing Ghostty instance.
+The default pack adds one **Omarchy** command. Search it, choose an action
+from its dropdown, and press Return. Choices are grouped by Update, Learn,
+System, Developer, Media and Fleet. Raycast's normal app search handles app
+launching. No Store extension or JSON import is required for this menu.
 
-Import `~/.config/raycast/omarchy-snippets.json` with **Import Snippets**, and
-`~/.local/share/omarchy-mac/raycast/quicklinks.json` with **Import Quicklinks**.
-The snippet triggers start with `;;` so two spaces and ordinary code are safe.
-Add private dashboards to `~/.config/raycast/omarchy-quicklinks.local.json`, a
-JSON array of `{ "name": "…", "link": "…" }`, then run `mac raycast prepare`
-and re-import. The generated Quicklinks file is mode 600 and stays outside Git.
+The installer links `config/raycast/scripts/omarchy.sh` into
+`~/.config/raycast/scripts`; register that Script Directory once in Raycast.
+It migrates the earlier 16-command pack by removing only its own old symlinks,
+preserving other scripts. Standalone commands remain in `config/raycast/optional`
+for any individual hotkeys you want later. Terminal tools, keybindings and AI
+usage open in the existing Ghostty instance; fleet entries use `cmux-fleet`.
 
-`mac raycast status` checks local files; it cannot confirm Raycast's private
-command registration, settings, hotkeys, or sign-in. Store extension installs
-and removals, aliases, and settings remain in-app steps. Do not edit Raycast's
-encrypted databases or delete extension folders to simulate an uninstall.
-The setup guide covers Helium/GitHub/Tailscale, cleanup candidates, background
-commands, clipboard retention, and file indexing. Keep credential-bearing
-exports out of this public repository.
+`mac raycast setup` prints the short [setup guide](config/raycast/SETUP.md).
+`mac raycast status` checks the menu's link without claiming private settings
+or registration are verified. Optional: `mac raycast prepare` builds the
+Quicklinks JSON for import, merging public defaults with the private
+`~/.config/raycast/omarchy-quicklinks.local.json`. Snippets are also optional.
+Private links, credentials and full Raycast exports stay outside this repo.
 
-`browser-url` now supports Helium and prefers the configured default browser
-when it is running, with fallback to another running supported browser.
+`browser-url` supports Helium and prefers the configured supported default
+browser when it is running, with fallback to another running supported browser.
 `OMARCHY_BROWSER` remains an explicit override. Raycast may require its own
 Automation grant on the first browser or Ghostty command.
 

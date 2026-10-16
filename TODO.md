@@ -19,21 +19,16 @@ file current whenever a request arrives mid-task.
   it survived a reboot, so pqrs's 8.6.0 pkg was reinstalled for its
   `deactivate_driver.sh`, which removed the dext and its files at once
   despite printing "requires reboot"; its pkg receipt is forgotten too.
-- **Raycast registration/import and settings** (16 Oct): `mac raycast setup`
-  prepares the files and prints `config/raycast/SETUP.md`. Register the Script
-  Commands directory and import the Quicklinks/Snippets JSON in Raycast. JSON
-  snippet import is supported; the earlier "no scriptable import" note was
-  too broad. The pack uses explicit `;;` triggers rather than replacing two
-  spaces. Install Helium/GitHub/Tailscale; apply the cleanup/settings checklist.
-  Computer-use access to Raycast was denied, so none of those in-app steps is
-  recorded as done. The encrypted databases were left untouched.
-- **Raycast hotkeys** for the SUPER launchers (macOS has no scriptable global
-  launch-hotkey system). Mind the ⌥ clash: SUPER = ⌥ = herdr's `alt` layer
-  (`alt+enter`, `alt+1..9`, `alt+arrows`), so pick other chords or Raycast's
-  Hyper key on a key not already owned by hidutil. The new Script Commands
-  provide nvim, btop, lazydocker, keybindings, transcoding and fleet connections;
-  aliases/hotkeys still need assignment. Optional later: herdr/cliamp launchers
-  and any additional upstream web apps Alex actually uses.
+- **Raycast** (16 Oct): simplified to one **Omarchy** command with a grouped
+  action dropdown, following current Omarchy's shared-menu approach. If the
+  Script Directory is already registered, the file change should be picked up
+  automatically; live UI verification is still unavailable. `mac raycast setup`
+  prints the short guide. Quicklink/Snippet imports and extra Store extensions
+  are optional. Existing extension cleanup and aliases remain in-app steps.
+  The earlier 16 individual launchers remain under `config/raycast/optional`.
+- **Raycast hotkeys**: assign only frequently used actions. Keep the existing
+  hidutil mapping and avoid Option/herdr and Control-number/Mission Control
+  conflicts. No new Hyper mapping is needed for the default menu.
 
 ## Queued
 

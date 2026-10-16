@@ -31,6 +31,14 @@ link config/ghostty/config     .config/ghostty/config
 link config/cmux/cmux.json     .config/cmux/cmux.json
 # Link individual files so existing third-party Script Commands are preserved.
 mkdir -p "$HOME/.config/raycast/scripts"
+# Migrate the earlier 16-command pack. Remove only symlinks that we installed;
+# standalone sources remain optional, and user files/other symlinks stay put.
+for f in "$REPO"/config/raycast/optional/*.sh; do
+  old="$HOME/.config/raycast/scripts/${f##*/}"
+  if [ -L "$old" ] && [ "$(readlink "$old")" = "$REPO/config/raycast/scripts/${f##*/}" ]; then
+    rm "$old"
+  fi
+done
 for f in "$REPO"/config/raycast/scripts/*.sh; do
   link "config/raycast/scripts/${f##*/}" ".config/raycast/scripts/${f##*/}"
   chmod +x "$f"
