@@ -82,6 +82,7 @@ print('stub output')
         self.assertEqual(len(scripts), 16)
         for script in scripts:
             with self.subTest(script=script.name):
+                self.assertTrue(os.access(script, os.X_OK))
                 result = subprocess.run(['/bin/bash', str(script)], env=self.env,
                                         text=True, capture_output=True)
                 self.assertEqual(result.returncode, 0, result.stderr)
