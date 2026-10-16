@@ -7,4 +7,3 @@
 # @raycast.description Open btop in Ghostty
 
 exec "$HOME/.local/bin/mac-raycast" run monitor "$@"
-

@@ -7,4 +7,3 @@
 # @raycast.description Open Neovim in the Developer folder
 
 exec "$HOME/.local/bin/mac-raycast" run editor "$@"
-

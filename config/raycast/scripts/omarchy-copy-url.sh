@@ -7,4 +7,3 @@
 # @raycast.description Copy the selected browser tab URL
 
 exec "$HOME/.local/bin/mac-raycast" run copy-url "$@"
-

@@ -7,4 +7,3 @@
 # @raycast.description Run mac doctor in Ghostty
 
 exec "$HOME/.local/bin/mac-raycast" run health "$@"
-

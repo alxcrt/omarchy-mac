@@ -7,4 +7,3 @@
 # @raycast.description Bring the existing Ghostty app forward
 
 exec "$HOME/.local/bin/mac-raycast" run ghostty "$@"
-

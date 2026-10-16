@@ -7,4 +7,3 @@
 # @raycast.description Read the keybindings from the current configs
 
 exec "$HOME/.local/bin/mac-raycast" run keys "$@"
-

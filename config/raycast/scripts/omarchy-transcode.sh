@@ -7,4 +7,3 @@
 # @raycast.description Choose a file and output format
 
 exec "$HOME/.local/bin/mac-raycast" run transcode "$@"
-

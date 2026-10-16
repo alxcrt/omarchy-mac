@@ -7,4 +7,3 @@
 # @raycast.description Open lazydocker in Ghostty
 
 exec "$HOME/.local/bin/mac-raycast" run docker "$@"
-

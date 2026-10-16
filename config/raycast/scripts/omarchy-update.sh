@@ -7,4 +7,3 @@
 # @raycast.description Run macup in Ghostty with normal prompts and logs
 
 exec "$HOME/.local/bin/mac-raycast" run update "$@"
-

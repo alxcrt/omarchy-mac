@@ -7,4 +7,3 @@
 # @raycast.description Run webdl in Ghostty using the selected browser
 
 exec "$HOME/.local/bin/mac-raycast" run download "$@"
-

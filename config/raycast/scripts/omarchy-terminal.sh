@@ -7,4 +7,3 @@
 # @raycast.description Bring cmux forward
 
 exec "$HOME/.local/bin/mac-raycast" run terminal "$@"
-

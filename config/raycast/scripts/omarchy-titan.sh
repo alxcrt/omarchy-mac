@@ -7,4 +7,3 @@
 # @raycast.description Open the gaming VM shell through the existing fleet wrapper
 
 exec "$HOME/.local/bin/mac-raycast" run titan "$@"
-

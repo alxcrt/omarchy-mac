@@ -7,4 +7,3 @@
 # @raycast.description Attach houston through the existing fleet and herdr wrapper
 
 exec "$HOME/.local/bin/mac-raycast" run houston "$@"
-
