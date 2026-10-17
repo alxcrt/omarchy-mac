@@ -238,16 +238,16 @@ mac wm --keys       # the native shortcuts
 | `⌃ ←/→` | previous / next Desktop |
 | `⌃ ↑` | Mission Control — add Desktops here with **+** |
 
-**What this costs, stated plainly.** Omarchy's `SUPER+<key>` app launchers
-(`⌥Enter` terminal, `⌥⇧B` browser, `⌥⇧N` nvim, `⌥⌃T` btop, the `⌥⌃` system
-panels, `⌥K` cheat sheet…) were AeroSpace binds and **are gone** — macOS has no
-native global launch-hotkey system. Raycast is installed and is the natural
-home for them (Raycast → Extensions → assign a hotkey, or a Script Command
-pointing at `ghostty-run <cmd>`). The flows themselves all still work from the
-shell: `mac term`, `mac keys`, `mac dl`, `mac transcode`, and so on.
+Global app shortcuts now live in Raycast: **Hyper+T** Ghostty, **Hyper+B**
+Helium, **Hyper+V** clipboard, **Hyper+O** Omarchy menu and **Hyper+K** shortcut
+guide. Ghostty already binds **Command + backtick** to its quick terminal.
+The [Raycast setup guide](config/raycast/SETUP.md#everyday-shortcuts) lists all
+assignments and the Corne mapping. These were configured through Raycast's UI;
+the file installer cannot register them. The generated `mac keys` list includes
+the desired assignments and labels their registration as app-owned.
 
-Two more things macOS will not let a script do: **creating Desktops** (add them
-by hand in Mission Control) and assigning Raycast hotkeys.
+Option remains the herdr modifier (`⌥Enter` splits a pane). Native Spaces and
+tiling remain macOS-owned; add Desktops by hand in Mission Control.
 
 ## Raycast
 

@@ -48,6 +48,20 @@ raise SystemExit({exit_code})
         return subprocess.run(['/bin/bash', str(ROOT / 'local/bin/mac-keys'), *args],
                               env=self.env, text=True, capture_output=True)
 
+    def test_raycast_guide_is_distinguished_from_live_registration(self):
+        self.ghostty_output('keybind = super+n=new_window')
+        absent = self.run_keys('--md')
+        self.assertNotIn('Raycast (setup guide;', absent.stdout)
+        guide = self.home / '.config/raycast/omarchy-hotkeys.tsv'
+        guide.parent.mkdir()
+        guide.write_text('# comment\nHyper+V\tClipboard | History\n')
+        result = self.run_keys('--md')
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertIn('Raycast (setup guide; verify in Settings > Shortcuts)', result.stdout)
+        self.assertIn('assignments are app-owned, not read live', result.stdout)
+        self.assertIn('| `Hyper+V` | Clipboard \\| History |', result.stdout)
+        self.assertNotIn('# comment', result.stdout)
+
     def test_effective_defaults_symbols_equals_plus_and_global_scope(self):
         self.config.joinpath('config').write_text(
             'keybind = global:command+grave_accent=toggle_quick_terminal\n')

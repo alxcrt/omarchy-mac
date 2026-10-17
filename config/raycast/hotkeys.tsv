@@ -1,0 +1,15 @@
+# Desired Raycast assignments. Set in Settings > Shortcuts; files do not register them.
+# Verified in Raycast UI on 2026-10-18. Re-check after importing/resetting app settings.
+⌘Space	Raycast launcher
+Hyper+V	Clipboard History
+Hyper+B	Helium browser
+Hyper+T	Ghostty terminal
+Hyper+W	cmux workspaces
+Hyper+A	ChatGPT
+Hyper+C	Claude
+Hyper+E	Visual Studio Code
+Hyper+L	Linear
+Hyper+P	Bitwarden
+Hyper+M	IINA
+Hyper+O	Omarchy menu
+Hyper+K	Omarchy Keybindings

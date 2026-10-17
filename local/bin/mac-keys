@@ -49,6 +49,18 @@ if not pairs:
     print("(none)\tno remap loaded — run: mac-keyremap")
 ' | while IFS=$'\t' read -r k d; do row "$k" "$d"; done
 
+# Raycast owns registration privately; this is the repeatable setup guide,
+# not a claim that reading this file confirms the running app's hotkeys.
+RAYCAST_KEYS="${XDG_CONFIG_HOME:-$HOME/.config}/raycast/omarchy-hotkeys.tsv"
+if [ -f "$RAYCAST_KEYS" ]; then
+  section "Raycast (setup guide; verify in Settings > Shortcuts)"
+  row "Hyper" "Left ⌃⌥⇧⌘ together; assignments are app-owned, not read live"
+  while IFS=$'\t' read -r k d; do
+    case "$k" in ''|\#*) continue ;; esac
+    row "$k" "$d"
+  done < "$RAYCAST_KEYS"
+fi
+
 # ---- Native window management ----
 # macOS's own tiling/Spaces shortcuts. There is no config file to read, so the
 # table lives in mac-wm and is pulled from it here rather than duplicated.

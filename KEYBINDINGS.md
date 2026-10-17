@@ -12,6 +12,25 @@ Caps Lock is Escape and the right ⌘ is ⌥, remapped by hidutil (`mac-keyremap
 | `Caps Lock` | Escape |
 | `Right ⌘` | ⌥  (SUPER) |
 
+## Raycast (setup guide; verify in Settings > Shortcuts)
+
+| Keys | Action |
+|---|---|
+| `Hyper` | Left ⌃⌥⇧⌘ together; assignments are app-owned, not read live |
+| `⌘Space` | Raycast launcher |
+| `Hyper+V` | Clipboard History |
+| `Hyper+B` | Helium browser |
+| `Hyper+T` | Ghostty terminal |
+| `Hyper+W` | cmux workspaces |
+| `Hyper+A` | ChatGPT |
+| `Hyper+C` | Claude |
+| `Hyper+E` | Visual Studio Code |
+| `Hyper+L` | Linear |
+| `Hyper+P` | Bitwarden |
+| `Hyper+M` | IINA |
+| `Hyper+O` | Omarchy menu |
+| `Hyper+K` | Omarchy Keybindings |
+
 ## Tiling (Window > Move & Resize)
 
 | Keys | Action |

@@ -44,6 +44,7 @@ for f in "$REPO"/config/raycast/scripts/*.sh; do
   chmod +x "$f"
 done
 link config/raycast/snippets.json .config/raycast/omarchy-snippets.json
+link config/raycast/hotkeys.tsv .config/raycast/omarchy-hotkeys.tsv
 # Every script in local/bin — no hand-kept list to fall out of date.
 for f in "$REPO"/local/bin/*; do
   s=$(basename "$f")
