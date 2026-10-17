@@ -18,6 +18,14 @@ go = "latest"
 rust = "latest"
 bun = "latest"
 uv = "latest"
+# Project Python. Homebrew retains Python dependencies for system utilities
+# and the helper scripts whose shebangs explicitly select Homebrew's Python.
+python = "latest"
+pnpm = "latest"
+
+# Shell tooling for the scripts this setup and web projects use.
+shellcheck = "latest"
+shfmt = "latest"
 
 # Local LLMs on Apple Silicon (mlx_lm.chat / .generate / .server)
 "pipx:mlx-lm" = "latest"

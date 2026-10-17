@@ -53,7 +53,15 @@ into `~/.config` + `~/.local/bin`.
 ## Commands
 
 `mac` is the discoverable entry point (`omarchy <verb>` equivalent):
-`mac update|mise|install|usage|keys|dl|url|transcode|term|wm|doctor|edit`.
+`mac update|mise|install|usage|keys|dl|url|transcode|term|wm|defaults|doctor|edit|dev|raycast`.
+
+`mac dev` checks the installed web/full-stack toolchain without contacting
+services. `mac dev git`, `docker`, `db`, `api` and `ports` group existing tools;
+`mac dev help` lists each route. Project Python/pnpm/ShellCheck/shfmt use mise;
+Homebrew retains Python dependencies needed by its system utilities. The
+declared keg-only libpq clients are appended to PATH after mise. Bruno,
+DBeaver Community and Keka use normal Raycast app search; the single Omarchy
+menu includes developer checks, Git selection, Docker and CLIamp.
 
 **SUPER = ⌥ (Option)**, matching Omarchy. `⌥Enter` terminal, `⌥1..9`
 workspaces, `⌥W` close, `⌥⇧1..9` send window. Full generated list:
@@ -185,6 +193,10 @@ extensions.
   disable the guard globally.
 - **opencode's config schema has no `theme` key** any more (upstream still
   sets one); verify settings with `opencode debug config`, not the file.
+  OpenCode 2 returns ordered configuration sources rather than a merged
+  object; its parsed document normalizes `autoupdate: false` to
+  `info.update: "disable"`. Inspect the last explicit update policy instead
+  of assuming the old top-level `.autoupdate` shape.
 - **`/usr/bin/git` is an xcrun stub** that adds ~10ms per call (every prompt in
   a repo pays it via starship). The Brewfile installs git so /opt/homebrew/bin
   wins on PATH.
@@ -303,7 +315,8 @@ extensions.
 
 ## Working rules
 
-- Check upstream before porting: clone `basecamp/omarchy` and read the real
+- Check upstream before porting: clone `omacom/omarchy` (the current official
+  source linked by omarchy.org) and read the real
   file rather than reconstructing it from the manual. Delete the clone after.
 - Prefer **behaviour parity** over cosmetic parity; the user does not care about
   theming. Where macOS forces a deviation, keep it and comment *why* in the file.

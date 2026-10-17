@@ -19,6 +19,7 @@ case "$cmd" in
   term)        exec ghostty-run "$@" ;;
   install)     exec mise-install "$@" ;;
   raycast)     exec mac-raycast "$@" ;;
+  dev)         exec mac-dev "$@" ;;
 
   usage)
     # Omarchy's agent usage records, rendered readable instead of raw JSON.
@@ -37,12 +38,25 @@ case "$cmd" in
   defaults)    exec mac-defaults "$@" ;;
 
   doctor)
-    echo "== mise ==";  mise doctor 2>&1 | tail -3
-    echo "== brew ==";  brew doctor 2>&1 | head -3
-    echo "== window mgmt =="; mac-wm --status | sed -n "2,6p"
-    echo "== keyremap ==";  mac-keyremap --show 2>/dev/null | grep -q 30064771298 \
-      && echo "modifier remap loaded" || echo "modifier remap MISSING (run: mac-keyremap)"
-    echo "== macOS defaults =="; mac-defaults --status || echo "drift (run: mac defaults --apply)"
+    # Keep every diagnostic and check every layer, even after a failure.
+    # Piping through head/tail hid warnings and replaced the check's status.
+    health_status=0
+    health_check() {
+      echo "== $1 =="; shift
+      "$@" || health_status=1
+    }
+    health_check mise mise doctor
+    health_check brew brew doctor
+    health_check "window mgmt" mac-wm --status
+    echo "== keyremap =="
+    if remap=$(mac-keyremap --show 2>/dev/null) && grep -q 30064771298 <<<"$remap"; then
+      echo "modifier remap loaded"
+    else
+      echo "modifier remap MISSING (run: mac-keyremap)"
+      health_status=1
+    fi
+    health_check "macOS defaults" mac-defaults --status
+    exit "$health_status"
     ;;
 
   edit)
@@ -75,6 +89,7 @@ mac — Omarchy-style flows on macOS
   mac defaults [--apply]  key repeat, Finder, Dock, Transmission
   mac doctor              health check across mise, brew, window mgmt
   mac raycast setup|prepare|status  Omarchy launcher pack and Raycast setup
+  mac dev [help|doctor]    runtimes, Git, Docker, database, API and port workflows
   mac edit <what>         open a config: aliases functions mise brew herdr
 
 Shell flows (from ~/.config/zsh/functions.zsh):

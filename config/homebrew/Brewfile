@@ -14,6 +14,7 @@ tap "crmne/tap"
 
 # --- CLI: Omarchy's pacman set, ported ---
 brew "git"          # direct binary: /usr/bin/git is an xcrun stub that adds ~10ms per call
+brew "git-filter-repo"  # existing Git history maintenance tool
 brew "openssh"      # Apple's ssh is built without security-key support; this one does ed25519-sk (YubiKey SSH keys)
 brew "bat"          # cat with syntax highlighting; used as MANPAGER
 brew "eza"          # ls replacement, aliased over ls
@@ -118,6 +119,9 @@ cask "yubico-authenticator"     # YubiKey companion app
 cask "moonlight"
 cask "steam"
 cask "docker-desktop"          # installed (needs admin password on install)
+cask "bruno"                   # API collections stored alongside project code
+cask "dbeaver-community"       # database browser for local and remote development
+cask "keka"                    # native archive app; extracts RAR, creates ZIP/7z
 cask "font-jetbrains-mono-nerd-font"
 cask "font-ia-writer-duo"
 cask "crmne/tap/spotifast"     # native Spotify client (spotifast.rocks)

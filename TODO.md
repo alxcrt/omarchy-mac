@@ -1,12 +1,17 @@
 # Tracker
 
 The running list of what is queued, what only Alex can do, and what landed.
-Last full upstream audit: basecamp/omarchy `81145eb` (2026-10-05). Keep this
-file current whenever a request arrives mid-task.
+Latest command/package comparison: official `omacom/omarchy` `f4357a3`
+(2026-10-17), verified through omarchy.org. The shell aliases and three usage
+collectors retain upstream behavior with the documented macOS adaptations.
+Linux desktop/system commands and optional development environments are not
+automatically installed on macOS. Keep this file current when scope changes.
 
 ## Needs Alex (cannot be scripted)
 
-- **Empty the Trash.** ~375 GB of the Oct 2026 declutter sits there
+- **Review and empty the Trash.** The earlier estimate was ~375 GB; the
+  Oct 17 audit could not measure its current contents because macOS privacy
+  permissions denied access. The Oct 2026 declutter included
   (Downloads ISOs/ROMs/firmware/movies, Xcode device data, Ollama and LM Studio
   models, caches, removed apps).
 - **Delete Hue Sync and Fits** in Finder: root-owned, `trash` can't.
@@ -46,6 +51,22 @@ hosted service).
 
 ## Done (Oct 2026, newest first)
 
+- Oct 17 maintenance: pulled the repo and official upstream reference; ran
+  `mac update` successfully (12 Homebrew packages/apps and four AI CLIs).
+  Added the approved Python, pnpm, ShellCheck and shfmt through mise, and
+  Bruno, DBeaver Community and Keka through Homebrew. CLIamp was already
+  installed at 2.3.0. Keka is Alex's chosen native archive app; the official
+  Mac RAR cask is disabled by Homebrew for Gatekeeper failures.
+- `mac doctor` now retains all diagnostic output, finishes every layer, and
+  reports failure correctly. Docker completions register before the cached
+  completion setup, with no hardcoded home or second `compinit` run.
+- The single Raycast Omarchy menu now includes developer checks, a Git
+  repository picker and CLIamp. `mac dev` groups existing Git/Docker/API/DB
+  tools and listening-port checks; no services start during its status check.
+  PostgreSQL's keg-only clients now work in a fresh shell. Declared the
+  existing git-filter-repo installation; adjusted the OpenCode check for its
+  version 2 parsed configuration format. Standard uv cache pruning reclaimed
+  4.7 GiB; downloads and the stopped Docker VM were preserved.
 - Brewfile drift (Oct 6): 15 formulae were installed but undeclared.
   awscli, glab and exercism moved to mise (dev CLIs); the other 12 are
   declared; `test.sh brew` now fails on any undeclared formula. Docker's

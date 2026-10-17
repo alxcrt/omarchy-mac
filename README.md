@@ -16,6 +16,10 @@ the operating philosophy and the userland, not the tiling WM.
    else — mise's config sets `minimum_release_age = "0"` so they track today's
    release, not the cooldown-delayed one.
 
+Homebrew keeps runtime dependencies needed by its system utilities; project
+runtimes take precedence through mise. For example, Homebrew's Python remains
+for its own packages while `python` and `python3` in a dev shell use mise.
+
 ## Layout
 
 ```
@@ -110,10 +114,10 @@ macup    # everything: brew, casks, Mac App Store, mise, cleanup
 See **[KEYBINDINGS.md](KEYBINDINGS.md)** for every keybinding (generated from the
 live configs with `mac keys`).
 
-## Claude Code skill
+## Shared agent skill
 
-`skills/omarchy-mac/SKILL.md` is a Claude Code skill (linked to
-`~/.claude/skills/`). It teaches a Claude session the layering rules, the flow
+`skills/omarchy-mac/SKILL.md` is linked into both `~/.claude/skills/` and
+`~/.codex/skills/`. It teaches future sessions the layering rules, the flow
 commands, how to run `test.sh`, and the gotchas that have already cost time —
 cursor-warp focus jumps, `open -na` spawning duplicate app instances, zsh
 1-indexed arrays, why aliases and functions can't share a name, and why tests must assert
@@ -127,15 +131,28 @@ Omarchy's *behaviours*, ported — not its looks. One entry point:
 mac                     # discoverable list of everything below
 mac update              # brew + casks + mas + mise + cleanup   (= omarchy update)
 mac mise                # just mise tools + AI CLIs             (= mup)
-mac dl [url]            # yt-dlp the video on the current Chrome tab -> ~/Movies
-mac url                 # copy current Chrome tab URL
+mac dl [url]            # yt-dlp the selected browser video -> ~/Movies
+mac url                 # copy selected browser tab URL
 mac transcode f.mov mp4 1080p     # also gif / jpg / png
-mac wm status|reload    # window manager state
+mac wm --status         # native tiling / Mission Control state
 mac usage               # AI token usage + rate limits (from Omarchy)
 mac doctor              # mise + brew + window mgmt + keyremap health
 mac raycast setup       # prepare launcher/import files and show the in-app checklist
-mac edit aliases|functions|wm|mise|brew|herdr
+mac dev doctor          # runtimes, Git, containers, database and API clients
+mac dev git ui          # lazygit here, or pick a repository in ~/Developer
+mac dev ports 3000      # inspect a listening development server
+mac edit aliases|functions|mise|brew|herdr
 ```
+
+For web/full-stack work, mise also manages Python, pnpm, ShellCheck and shfmt.
+Bruno keeps API collections with project code; DBeaver Community browses
+databases. Keka opens RAR archives and creates ZIP/7z archives on macOS.
+`mac doctor` prints complete diagnostics, checks every layer, and exits
+nonzero when any health check fails.
+See [Developer workflows](config/dev/README.md) for the Git, Docker, database,
+API and port commands. Raycast's single **Omarchy** menu includes the
+environment check, Git repository picker, Docker and CLIamp music; Bruno,
+DBeaver and Keka appear in normal app search.
 
 Shell flows in `config/zsh/functions.zsh` (zsh ports of Omarchy's bash fns):
 

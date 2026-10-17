@@ -350,10 +350,16 @@ for f in hdl hdlm; do
 done
 ZRUN 'unset HERDR_PANE_ID; hsl 3 x' 2>&1 | grep -qi 'must start herdr' && ok "hsl refuses outside herdr" || bad "hsl guard" "no guard"
 ZRUN 'unset HERDR_PANE_ID; hds' 2>&1 | grep -qi 'must start herdr' && ok "hds refuses outside herdr" || bad "hds guard" "no guard"
-# opencode is mise's: its own updater must stay off (as opencode resolves its
-# config, not as the file reads).
-[ "$(gtimeout 20 opencode debug config 2>/dev/null | jq -r .autoupdate)" = false ] \
-  && ok "opencode's self-update is off (mise owns it)" || bad "opencode" "autoupdate not false in its resolved config"
+# Ask the installed CLI to parse its actual configuration. OpenCode 1 returns
+# the merged object; 2 returns ordered sources and normalizes autoupdate:false
+# to info.update:"disable". The last explicit update policy takes precedence.
+opencode_policy='def disabled: if has("update") then .update == "disable" else .autoupdate == false end;
+  if type == "array" then
+    ([.[] | select(.type == "document") | .info |
+      select(type == "object" and (has("update") or has("autoupdate")))] | last // {}) | disabled
+  elif type == "object" then disabled else false end'
+[ "$(gtimeout 20 opencode debug config 2>/dev/null | jq -r "$opencode_policy")" = true ] \
+  && ok "opencode's parsed self-update policy is disabled (mise owns it)" || bad "opencode" "self-update policy is not disabled in the parsed config"
 # herdr's built-in bindings show (from herdr --default-config) and the
 # user's [keys] override them.
 hk=$(mac-keys 2>/dev/null | sed -n '/herdr (prefix/,/Ghostty/p')
@@ -606,7 +612,7 @@ fi
 if want mac; then
 sec "mac CLI"
 mac help >/dev/null 2>&1 && ok "mac help" || bad "mac help" "nonzero exit"
-for s in update mise dl url transcode term wm doctor edit usage install; do
+for s in update mise dl url transcode term wm doctor edit usage install dev; do
   mac help 2>/dev/null | grep -q "mac $s" && ok "mac help documents '$s'" || bad "mac help" "missing '$s'"
 done
 mac wm --status 2>/dev/null | grep -q 'EnableTiledWindowMargins' \
@@ -615,6 +621,10 @@ mac usage 2>/dev/null | grep -q CLAUDE && ok "mac usage reads Claude data" || ba
 mac usage 2>/dev/null | grep -q CODEX && ok "mac usage reads Codex data" || bad "mac usage" "no codex data"
 mac bogus >/dev/null 2>&1 && bad "mac bogus" "should exit nonzero" || ok "mac rejects unknown subcommand"
 mac edit bogus 2>&1 | grep -qi 'mac edit' && ok "mac edit validates target" || bad "mac edit" "no validation"
+/opt/homebrew/bin/python3 "$HOME/omarchy-mac/tests/test_mac_doctor.py" \
+  && ok "mac doctor preserves diagnostics and reports failures" || bad "mac doctor" "health-check regressions"
+/opt/homebrew/bin/python3 "$HOME/omarchy-mac/tests/test_mac_dev.py" \
+  && ok "mac dev routes and diagnostics work in isolation" || bad "mac dev" "developer workflow regressions"
 # ghostty-run: a real window via Ghostty's AppleScript, in the caller's cwd,
 # running the command through the shell. Closed again by its name (the cwd).
 if [ "$HEADLESS" != 1 ] && [ "$(osascript -e 'application "Ghostty" is running' 2>/dev/null)" = true ] &&
@@ -633,7 +643,7 @@ fi
 # ── 12. helper scripts ─────────────────────────────────────────────────────
 if want scripts; then
 sec "Helper scripts"
-for s in mac mac-raycast macup mise-install mac-keyremap mac-wm ghostty-run transcode webdl weburl browser-url \
+for s in mac mac-dev mac-raycast macup mise-install mac-keyremap mac-wm ghostty-run transcode webdl weburl browser-url \
          chromium-native-host chrome-extensions mac-hook agent-usage-claude agent-usage-codex agent-usage-grok mac-notify mac-clip mac-defaults; do
   p="$HOME/.local/bin/$s"
   if [ ! -x "$p" ]; then bad "$s" "missing or not executable"; continue; fi
@@ -1005,6 +1015,10 @@ sec "Prompt + environment"
 # No oh-my-zsh: zshrc sets what it used to provide, at ~half the startup cost.
 [ -z "$(zsh -ic 'echo ${ZSH:-}' 2>/dev/null | tail -1)" ] && ok "oh-my-zsh not loaded" || bad "zshrc" "oh-my-zsh still loaded"
 [ -e "$HOME/.oh-my-zsh" ] && bad "cleanup" "~/.oh-my-zsh still present" || ok "~/.oh-my-zsh removed"
+if [ -r "$HOME/.docker/completions/_docker" ]; then
+  zsh -ic '[[ ${_comps[docker]} == _docker ]]' 2>/dev/null \
+    && ok "Docker completion registered in the cached shell" || bad "Docker completion" "not registered"
+fi
 # Startup budget: the median of 7 interactive starts must stay under 100ms
 # (oh-my-zsh + uncached inits was ~132ms; this zshrc is ~70ms).
 ms=$(for i in 1 2 3 4 5 6 7; do /usr/bin/python3 -c 'import subprocess,time;t=time.time();subprocess.run(["zsh","-i","-c","exit"],capture_output=True);print(int((time.time()-t)*1000))'; done | sort -n | sed -n 4p)
@@ -1061,6 +1075,8 @@ fi
 [ "$(zsh -ic 'whence -p git' 2>/dev/null | tail -1)" = /opt/homebrew/bin/git ] && ok "git is brew's (no xcrun stub)" || bad "git" "resolves to $(zsh -ic 'whence -p git' 2>/dev/null | tail -1)"
 [ "$(zsh -ic 'echo $EDITOR' 2>/dev/null | tail -1)" = nvim ] && ok "EDITOR=nvim" || bad "EDITOR" "not nvim"
 [ "$(zsh -ic 'echo $BAT_THEME' 2>/dev/null | tail -1)" = ansi ] && ok "BAT_THEME=ansi" || bad "BAT_THEME" "not ansi"
+zsh -ic 'psql --version && pg_dump --version' >/dev/null 2>&1 \
+  && ok "PostgreSQL clients are available in a dev shell" || bad "PostgreSQL clients" "psql or pg_dump missing from PATH"
 zsh -ic 'echo $MANPAGER' 2>/dev/null | grep -q bat && ok "MANPAGER uses bat" || bad "MANPAGER" "not bat"
 zsh -ic 'echo $PATH' 2>/dev/null | tr ':' '\n' | grep -qx "$HOME/.local/bin" && ok "~/.local/bin on PATH" || bad "PATH" "~/.local/bin missing"
 # ~/.bun/bin is the old curl installer. ~/.bun/install/cache is fine: it is the
@@ -1106,7 +1122,14 @@ for t in $(mise ls --installed 2>/dev/null | awk '{print $1}' | sed 's|.*[:/]||'
   # Code CLI. The dangerous cask is claude-code, checked separately above.
   [ "$t" = claude ] && continue
   if brew list "$t" >/dev/null 2>&1 || brew list --cask "$t" >/dev/null 2>&1; then
-    bad "layering" "$t is installed by BOTH brew and mise"
+    # Homebrew's system utilities require its Python formula. Project Python
+    # must still resolve through mise; deleting the formula breaks those tools.
+    if [ "$t" = python ] && [ -n "$(brew uses --installed python 2>/dev/null)" ] &&
+       [[ "$(mise which python 2>/dev/null)" == "${MISE_DATA_DIR:-$HOME/.local/share/mise}/installs/python/"* ]]; then
+      ok "project Python uses mise; Homebrew Python is required by system utilities"
+    else
+      bad "layering" "$t is installed by BOTH brew and mise"
+    fi
   fi
 done
 ok "no tool installed by both brew and mise"

@@ -1,4 +1,4 @@
-# ~/.zshrc — Omarchy's shell layer (basecamp/omarchy default/bash/*), in zsh.
+# ~/.zshrc — Omarchy's shell layer (omacom/omarchy default/bash/*), in zsh.
 #
 # No oh-my-zsh: it cost ~20ms of startup for features this file sets directly.
 # Upstream's bash layer is rc -> envs, shell, aliases, functions, init, inputrc;
@@ -16,6 +16,9 @@ setopt interactive_comments auto_cd auto_pushd pushd_ignore_dups
 unsetopt hash_cmds hash_dirs  # upstream `set +h` — stops stale mise shim paths
 
 # ── completion ─────────────────────────────────────────────────────────────
+# Docker Desktop supplies completions outside Homebrew. Add them before the
+# single cached compinit, using this Mac's home instead of a tracked username.
+[[ -d $HOME/.docker/completions ]] && fpath=("$HOME/.docker/completions" $fpath)
 # Full compinit security scan at most once a day; otherwise trust the dump
 # (-C) and load its zcompiled copy.
 _zcache=${XDG_CACHE_HOME:-$HOME/.cache}/zsh
@@ -33,6 +36,12 @@ else
   compinit -C -d $_zcache/zcompdump
 fi
 [[ $_zcache/zcompdump.zwc -nt $_zcache/zcompdump ]] || zcompile $_zcache/zcompdump
+# An existing cached dump may predate Docker Desktop. Register its completion
+# without running compinit a second time or writing a second dump in $HOME.
+if [[ -r $HOME/.docker/completions/_docker ]] && (( ! ${+_comps[docker]} )); then
+  autoload -Uz _docker
+  compdef _docker docker
+fi
 # upstream inputrc: completion-ignore-case, colored-stats
 zstyle ':completion:*' matcher-list 'm:{a-zA-Z}={A-Za-z}'
 zstyle ':completion:*' list-colors ''
@@ -63,6 +72,14 @@ case ":$PATH:" in
   *":$HOME/.local/bin:"*) ;;
   *) export PATH="$PATH:$HOME/.local/bin" ;;
 esac
+# libpq is keg-only: expose the declared Postgres clients without linking a
+# second server or putting Homebrew ahead of project runtimes from mise.
+if [[ -d /opt/homebrew/opt/libpq/bin ]]; then
+  case ":$PATH:" in
+    *":/opt/homebrew/opt/libpq/bin:"*) ;;
+    *) export PATH="$PATH:/opt/homebrew/opt/libpq/bin" ;;
+  esac
+fi
 
 source ~/.config/zsh/aliases.zsh
 source ~/.config/zsh/functions.zsh
@@ -150,8 +167,3 @@ fi
 # Machine-local additions (not tracked in the repo): PATH entries, ssh-add,
 # work-specific aliases. Keep anything host-specific there, not here.
 [[ -f ~/.zshrc.local ]] && source ~/.zshrc.local
-# The following lines have been added by Docker Desktop to enable Docker CLI completions.
-fpath=(/Users/alex/.docker/completions $fpath)
-autoload -Uz compinit
-(( ${+_comps[docker]} )) || compinit
-# End of Docker CLI completions

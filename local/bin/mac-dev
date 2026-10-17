@@ -1,0 +1,264 @@
+#!/bin/bash
+# Developer routes for the mac CLI. Omarchy uses mise runtimes + lazygit /
+# lazydocker; macOS uses Docker Desktop, Bruno and DBeaver rather than installing
+# upstream's persistent database containers with shared development passwords.
+set -uo pipefail
+
+usage() {
+  cat <<'EOF'
+mac dev — everyday development tools
+
+  mac dev [status|doctor]             installed tool versions and GUI apps
+  mac dev git [status|diff|log|worktrees] [directory]
+  mac dev git ui [directory]          lazygit; picks a repo in ~/Developer if needed
+  mac dev docker [status|ps|compose]  read the selected Docker engine
+  mac dev docker ui                  lazydocker (interactive container management)
+  mac dev db [clients|open]           client versions / open DBeaver
+  mac dev api [status|open]           xh version / open Bruno
+  mac dev ports [port]               listening TCP ports; optional port 1–65535
+
+Status does not contact Docker, databases or APIs. Docker diagnostics use your
+current Docker context; they never start Docker Desktop or create containers.
+Git diagnostics are local. The interactive UIs allow changes you request there.
+
+Project commands remain native: pnpm dev, pnpm test, uv run, docker compose,
+xh GET <url>, psql. Use project lockfiles/configs for reproducible dependencies.
+EOF
+}
+
+fail() {
+  printf '%s\n' "$*" >&2
+  return 2
+}
+
+need() {
+  command -v "$1" >/dev/null 2>&1 || {
+    printf '%s is unavailable; check mac dev status and the declared brew/mise tools.\n' "$1" >&2
+    return 127
+  }
+}
+
+client_path() {
+  command -v "$1" 2>/dev/null && return
+  # libpq is keg-only: do not globally change PATH or start a Postgres service.
+  if [[ $1 == psql ]]; then
+    local candidate
+    for candidate in /opt/homebrew/opt/libpq/bin/psql /usr/local/opt/libpq/bin/psql; do
+      [[ -x $candidate ]] && {
+        printf '%s\n' "$candidate"
+        return
+      }
+    done
+  fi
+  return 1
+}
+
+version() {
+  local name=$1 path output result line
+  shift
+  path=$(client_path "$1") || {
+    printf '  %-14s MISSING\n' "$name"
+    return 1
+  }
+  shift
+  # Avoid discovering a project config through cwd. PATH may already select a
+  # project runtime; a mise shim must not install a missing tool for a check.
+  output=$(cd / && MISE_AUTO_INSTALL=0 "$path" "$@" 2>&1)
+  result=$?
+  if ((result)); then
+    printf '  %-14s FAILED (exit %s): %s\n' "$name" "$result" "${output%%$'\n'*}"
+    return 1
+  fi
+  line=${output%%$'\n'*}
+  if [[ $name == ShellCheck && $output == *$'\nversion: '* ]]; then
+    line=${output#*$'\nversion: '}
+    line=${line%%$'\n'*}
+  fi
+  printf '  %-14s %s\n' "$name" "$line"
+}
+
+app_status() {
+  local app=$1
+  local apps=${MAC_DEV_APPLICATIONS_DIR:-/Applications}
+  if [[ -f $apps/$app.app/Contents/Info.plist ]]; then
+    printf '  %-14s installed\n' "$app"
+  else
+    printf '  %-14s MISSING (%s/%s.app)\n' "$app" "$apps" "$app"
+    return 1
+  fi
+}
+
+db_clients() {
+  local result=0
+  version Postgres psql --version || result=1
+  version Redis redis-cli --version || result=1
+  version SQLite sqlite3 --version || result=1
+  return "$result"
+}
+
+status() {
+  local result=0
+  printf 'Runtimes and shell tools (installed versions on current PATH)\n'
+  version Node node --version || result=1
+  version pnpm pnpm --version || result=1
+  version Bun bun --version || result=1
+  version Python python --version || result=1
+  version uv uv --version || result=1
+  version Go go version || result=1
+  version Rust rustc --version || result=1
+  version ShellCheck shellcheck --version || result=1
+  version shfmt shfmt --version || result=1
+  printf '\nGit, containers and APIs (client checks only)\n'
+  version Git git --version || result=1
+  version GitHub gh --version || result=1
+  version lazygit lazygit --version || result=1
+  version Docker docker --version || result=1
+  version Compose docker compose version --short || result=1
+  version lazydocker lazydocker --version || result=1
+  version xh xh --version || result=1
+  printf '\nDatabase clients (no connection attempts)\n'
+  db_clients || result=1
+  printf '\nApplications\n'
+  app_status Docker || result=1
+  app_status Bruno || result=1
+  app_status DBeaver || result=1
+  printf '\nRun mac dev help for Git, Docker, database, API and port workflows.\n'
+  return "$result"
+}
+
+pick_repository() {
+  local entry root=${HOME}/Developer
+  [[ -d $root ]] || {
+    fail "No ~/Developer directory. Supply: mac dev git ui <directory>"
+    return
+  }
+  need fd && need fzf || return
+  # .git can be a directory or a worktree file. No shell-evaluated previews;
+  # NUL-delimited paths preserve spaces, quotes and newlines as plain data.
+  IFS= read -r -d '' selected_repository < <(
+    fd --hidden --no-ignore --absolute-path --max-depth 4 --print0 '^\.git$' "$root" |
+      while IFS= read -r -d '' entry; do
+        entry=${entry%/}
+        printf '%s\0' "${entry%/.git}"
+      done |
+      fzf --read0 --print0 --height=70% --reverse --prompt='Git repository > ' \
+        --header='Repositories under ~/Developer (up to 3 directory levels)'
+  )
+}
+
+is_worktree() {
+  [[ $(git --no-optional-locks -C "$1" rev-parse --is-inside-work-tree 2>/dev/null) == true ]]
+}
+
+git_route() {
+  local action=${1:-status} directory=${2:-.}
+  (($# <= 2)) || {
+    fail "Usage: mac dev git [status|diff|log|worktrees|ui] [directory]"
+    return
+  }
+  case "$action" in status | diff | log | worktrees | ui) ;; *)
+    fail "Unknown Git action: $action"
+    return
+    ;;
+  esac
+  need git || return
+  if ! is_worktree "$directory"; then
+    if [[ $action == ui && $# -lt 2 ]]; then
+      local selected_repository
+      pick_repository || return 1
+      directory=$selected_repository
+      is_worktree "$directory" || {
+        fail "Selected directory is no longer a Git worktree."
+        return
+      }
+    else
+      fail "Not a Git worktree: $directory"
+      return
+    fi
+  fi
+  case "$action" in
+    status) exec git --no-optional-locks -C "$directory" status --short --branch ;;
+    diff) exec git --no-optional-locks -C "$directory" --no-pager diff --no-ext-diff --no-textconv ;;
+    log) exec git --no-optional-locks -C "$directory" --no-pager log -15 --oneline --decorate ;;
+    worktrees) exec git --no-optional-locks -C "$directory" worktree list ;;
+    ui)
+      need lazygit || return
+      cd -- "$directory" && exec lazygit
+      ;;
+  esac
+}
+
+cmd=${1:-status}
+(($# == 0)) || shift
+case "$cmd" in
+  help | --help | -h)
+    (($# == 0)) || {
+      fail 'Usage: mac dev help'
+      exit $?
+    }
+    usage
+    ;;
+  status | doctor)
+    (($# == 0)) || {
+      fail 'Usage: mac dev status'
+      exit $?
+    }
+    status
+    ;;
+  git) git_route "$@" ;;
+  docker)
+    (($# <= 1)) || {
+      fail 'Usage: mac dev docker [status|ps|compose|ui]'
+      exit $?
+    }
+    case "${1:-status}" in
+      status) need docker && exec docker version ;;
+      ps) need docker && exec docker ps --all --format 'table {{.Names}}\t{{.Image}}\t{{.Status}}\t{{.Ports}}' ;;
+      compose) need docker && exec docker compose ls ;;
+      ui) need lazydocker && exec lazydocker ;;
+      *) fail "Unknown Docker action: $1" ;;
+    esac
+    ;;
+  db)
+    (($# <= 1)) || {
+      fail 'Usage: mac dev db [clients|open]'
+      exit $?
+    }
+    case "${1:-clients}" in
+      clients) db_clients ;;
+      open) need open && exec open -a DBeaver ;;
+      *) fail "Unknown database action: $1" ;;
+    esac
+    ;;
+  api)
+    (($# <= 1)) || {
+      fail 'Usage: mac dev api [status|open]'
+      exit $?
+    }
+    case "${1:-status}" in
+      status) version xh xh --version ;;
+      open) need open && exec open -a Bruno ;;
+      *) fail "Unknown API action: $1" ;;
+    esac
+    ;;
+  ports)
+    (($# <= 1)) || {
+      fail 'Usage: mac dev ports [port]'
+      exit $?
+    }
+    if (($#)); then
+      # Bound the length before arithmetic, and force base 10 for 08080.
+      if [[ ! $1 =~ ^[0-9]{1,5}$ ]]; then
+        fail 'Port must be a number from 1 to 65535.'
+        exit $?
+      elif ((10#$1 < 1 || 10#$1 > 65535)); then
+        fail 'Port must be a number from 1 to 65535.'
+        exit $?
+      fi
+      need lsof && exec lsof -nP "-iTCP:$((10#$1))" -sTCP:LISTEN
+    else
+      need lsof && exec lsof -nP -iTCP -sTCP:LISTEN
+    fi
+    ;;
+  *) fail "Unknown developer command: $cmd (try 'mac dev help')" ;;
+esac

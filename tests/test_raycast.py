@@ -32,8 +32,9 @@ with open(os.environ['RAYCAST_TEST_LOG'], 'a') as f:
     f.write(json.dumps([Path(sys.argv[0]).name, sys.argv[1:], os.getcwd()]) + '\\n')
 print('stub output')
 '''
-        for name in ('ghostty-run', 'mac', 'weburl', 'transcode-pick'):
+        for name in ('ghostty-run', 'mac', 'weburl', 'transcode-pick', 'open'):
             self.write_executable(self.bin / name, stub)
+        self.env['MAC_RAYCAST_OPEN_BIN'] = str(self.bin / 'open')
 
     def write_executable(self, path, text):
         path.write_text(text)
@@ -54,8 +55,17 @@ print('stub output')
             'usage': ('mac', ['usage']), 'keys': ('mac', ['keys']),
             'transcode': ('transcode-pick', []),
             'monitor': ('ghostty-run', ['btop']),
-            'docker': ('ghostty-run', ['lazydocker']),
+            'dev-doctor': ('ghostty-run', ['mac', 'dev', 'doctor']),
+            'git': ('ghostty-run', ['mac', 'dev', 'git', 'ui']),
+            'docker': ('ghostty-run', ['mac', 'dev', 'docker', 'ui']),
+            'api': ('mac', ['dev', 'api', 'open']),
+            'database': ('mac', ['dev', 'db', 'open']),
             'editor': ('ghostty-run', ['nvim']),
+            'music': ('ghostty-run', ['cliamp']),
+            'music-setup': ('ghostty-run', ['cliamp', 'setup']),
+            'terminal': ('open', ['-a', 'cmux']),
+            'ghostty': ('open', ['-a', 'Ghostty']),
+            'archive': ('open', ['-a', 'Keka']),
             'copy-url': ('weburl', []), 'download': ('ghostty-run', ['webdl']),
             **{h: ('ghostty-run', ['cmux-fleet', h])
                for h in ('houston', 'nasa', 'coolify', 'titan')},
@@ -79,7 +89,7 @@ print('stub output')
         self.write_executable(self.bin / 'mac-raycast',
                               (self.bin / 'ghostty-run').read_text())
         scripts = sorted((ROOT / 'config/raycast/optional').glob('*.sh'))
-        self.assertEqual(len(scripts), 16)
+        self.assertEqual(len(scripts), 23)
         for script in scripts:
             with self.subTest(script=script.name):
                 self.assertTrue(os.access(script, os.X_OK))
@@ -105,6 +115,15 @@ print('stub output')
         self.assertEqual(len({c['value'] for c in choices}), len(choices))
         self.assertNotIn('terminal', {c['value'] for c in choices})
         self.assertNotIn('ghostty', {c['value'] for c in choices})
+        # GUI apps stay in Raycast's normal app search. CLIamp and the dev
+        # workflows need a terminal, so they belong in the one Omarchy menu.
+        values = {c['value'] for c in choices}
+        self.assertTrue({'dev-doctor', 'git', 'docker', 'music'} <= values)
+        self.assertTrue({'api', 'database', 'archive'}.isdisjoint(values))
+        for choice in choices:
+            with self.subTest(dispatch=choice['value']):
+                result = self.run_helper('menu', choice['value'])
+                self.assertEqual(result.returncode, 0, result.stderr)
         self.write_executable(self.bin / 'mac-raycast', (self.bin / 'ghostty-run').read_text())
         for choice in choices:
             with self.subTest(choice=choice['title']):
@@ -180,6 +199,7 @@ print('stub output')
         self.assertEqual(result.returncode, 0, result.stderr)
         self.assertIn('0/1', result.stdout)
         self.assertIn('Metadata cannot confirm', result.stdout)
+        self.assertIn('Bruno (API), DBeaver (databases), Keka (archives)', result.stdout)
 
     def browser_fixture(self, default, state):
         apps = self.base / 'Applications'

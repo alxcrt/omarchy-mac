@@ -2,6 +2,8 @@
 # Repo-managed Raycast commands; private Raycast settings remain app-owned.
 set -euo pipefail
 export PATH="$HOME/.local/bin:/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin"
+# Tests substitute a recorder so app launch dispatch never contacts the desktop.
+OPEN_BIN=${MAC_RAYCAST_OPEN_BIN:-/usr/bin/open}
 SELF=$(cd "$(dirname "$0")" && pwd)/$(basename "$0")
 # Resolve the installed symlink without assuming this checkout's location.
 while [ -L "$SELF" ]; do
@@ -28,8 +30,8 @@ case "${1:-help}" in
     [ "$#" = 0 ] || { echo 'These commands take no arguments.' >&2; exit 2; }
     cd "$HOME/Developer" 2>/dev/null || cd "$HOME"
     case "$action" in
-      terminal) exec /usr/bin/open -a cmux ;;
-      ghostty) exec /usr/bin/open -a Ghostty ;;
+      terminal) exec "$OPEN_BIN" -a cmux ;;
+      ghostty) exec "$OPEN_BIN" -a Ghostty ;;
       update) exec ghostty-run macup ;;
       mise) exec ghostty-run mac mise ;;
       health) exec ghostty-run mac doctor ;;
@@ -37,8 +39,15 @@ case "${1:-help}" in
       keys) exec mac keys ;;
       transcode) exec transcode-pick ;;
       monitor) exec ghostty-run btop ;;
-      docker) exec ghostty-run lazydocker ;;
+      dev-doctor) exec ghostty-run mac dev doctor ;;
+      git) exec ghostty-run mac dev git ui ;;
+      docker) exec ghostty-run mac dev docker ui ;;
+      api) exec mac dev api open ;;
+      database) exec mac dev db open ;;
       editor) exec ghostty-run nvim ;;
+      music) exec ghostty-run cliamp ;;
+      music-setup) exec ghostty-run cliamp setup ;;
+      archive) exec "$OPEN_BIN" -a Keka ;;
       copy-url) exec weburl ;;
       download) exec ghostty-run webdl ;;
       houston|nasa|coolify|titan) exec ghostty-run cmux-fleet "$action" ;;
@@ -92,6 +101,8 @@ linked = sum((Path.home() / '.config/raycast/scripts' / p.name).resolve() == p.r
              for p in scripts)
 print(f'Omarchy menu linked: {linked}/{len(scripts)}')
 print('No Store extensions are required by this pack.')
+print('App search: Bruno (API), DBeaver (databases), Keka (archives).')
+print('Omarchy menu: developer environment check, Git, Docker, and CLIamp music.')
 print('Metadata cannot confirm command registration, enabled settings, hotkeys, or sign-in.')
 print('Run mac raycast setup for the remaining in-app steps.')
 PY

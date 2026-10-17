@@ -52,8 +52,9 @@ for f in "$REPO"/local/bin/*; do
 done
 # .zshrc is linked separately so you can opt out (it is a self-contained zsh config).
 link zsh/zshrc                 .zshrc
-# Claude Code skill: teaches future sessions how this setup works.
+# Both agents read the same setup skill, keeping package and workflow rules in sync.
 link skills/omarchy-mac/SKILL.md .claude/skills/omarchy-mac/SKILL.md
+link skills/omarchy-mac/SKILL.md .codex/skills/omarchy-mac/SKILL.md
 
 # --links: just repair the symlinks (live files drift into plain copies after
 # --zap, installers appending to .zshrc, or editors that write via rename).
