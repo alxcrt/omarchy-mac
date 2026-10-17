@@ -62,17 +62,37 @@ in Raycast Settings → Shortcuts after reinstalling or importing app settings.
 | `Hyper+O` | Omarchy menu |
 | `Hyper+K` | Omarchy Keybindings |
 
-Hyper is **left Control + Option + Shift + Command** on the Corne. Both top
-outer keys provide it: the left key taps Raycast and holds Hyper; the right key
-is an immediate Hyper modifier. Left modifiers avoid the existing hidutil
+Hyper is **left Control + Option + Shift + Command** on the Corne. Both bottom
+outer keys provide it: left-bottom taps Raycast and holds Hyper; right-bottom
+taps one-shot Hyper and holds ordinary Hyper. After tapping and releasing
+right-bottom, press the shortcut within 1.5 seconds. It applies to one key
+press and times out unused; it does not lock on. Left modifiers avoid hidutil's
 right-Command-to-Option remap. Caps Lock stays Escape. A regular Mac keyboard
 can press the four left modifiers together; no new key-remapping tool is needed.
 
-The Corne's other outer keys are clipboard history, quick terminal, browser,
-and area capture (hold capture for the Clicks layer). Its host mode maps the
-same positions to Omarchy's menu, clipboard, scratchpad, browser and screenshot.
-Hold its Escape thumb, then Q for Mac or W for Linux. See the
-[firmware guide](https://github.com/alxcrt/miryoku-chocofi-layout/tree/dongle).
+The Corne's outer keys are arranged as follows on Mac:
+
+| Row | Left | Right |
+| --- | --- | --- |
+| Top | Quick terminal | Capture menu; hold Clicks |
+| Middle | Caps Word | Clipboard History |
+| Bottom | Raycast; hold Hyper | One-shot Hyper; hold Hyper |
+
+Clicks turns the thumbs into mouse buttons while capture is held: Space or
+Backspace = left click, Tab or Enter = right click, Escape or Delete = middle
+click. Release capture to return to typing. The Mouse layer (hold Tab) moves
+the pointer and scrolls.
+
+Caps Word uppercases a word or identifier (`MY_VARIABLE`), then turns off at
+a space or other separator. It uses Shift and avoids the Caps-Lock-to-Escape
+remap. Both host modes use it. Browser access remains Hyper+B / System + L;
+Helium's saved Raycast assignment and the default browser are unchanged.
+
+Hold Escape + Y for an area screenshot. Linux uses the same positions for its
+scratchpad, capture menu, Caps Word, clipboard, menu and one-shot Super. Hold
+Escape + Q for Mac or Escape + W for Linux. See the
+[firmware guide](https://github.com/alxcrt/miryoku-chocofi-layout/tree/dongle)
+and [printable cheat sheet](https://github.com/alxcrt/miryoku-chocofi-layout/blob/dongle/output/pdf/corne-cheatsheet.pdf).
 
 `Hyper+K` uses the existing optional script enabled by this symlink:
 `~/.config/raycast/scripts/omarchy-keys.sh` →
@@ -94,8 +114,10 @@ keyboard test; synthesized Hyper input in Computer Use did not launch it.
 The full headless run passed 426 functional checks, with six desktop checks
 skipped; its only failure was the expected uncommitted-work check. After the
 commit, all 56 repository/link checks passed. Firmware build
-[`39071637435`](https://github.com/alxcrt/miryoku-chocofi-layout/actions/runs/39071637435)
-passed all six targets; no keyboard has been flashed by this task.
+[`39072857398`](https://github.com/alxcrt/miryoku-chocofi-layout/actions/runs/39072857398)
+passed all six targets for the final arrangement (commit `a23b537`), including
+Caps Word, the 1.5-second one-shot Hyper behavior and both host modes. No
+keyboard has been flashed by this task.
 
 This keeps the useful Omarchy workflows while respecting Mac shortcuts:
 Command for native app actions, Hyper for global app launchers, and Option for
