@@ -150,3 +150,8 @@ fi
 # Machine-local additions (not tracked in the repo): PATH entries, ssh-add,
 # work-specific aliases. Keep anything host-specific there, not here.
 [[ -f ~/.zshrc.local ]] && source ~/.zshrc.local
+# The following lines have been added by Docker Desktop to enable Docker CLI completions.
+fpath=(/Users/alex/.docker/completions $fpath)
+autoload -Uz compinit
+(( ${+_comps[docker]} )) || compinit
+# End of Docker CLI completions
