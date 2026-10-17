@@ -87,6 +87,16 @@ Ghostty in this environment. Do not infer missing Accessibility permission from
 that restriction. On Linux, `Super+backtick` toggles the scratchpad rather than
 creating a terminal; put a terminal there with `Super+Shift+backtick` first.
 
+Validation: all assignments above were read back in Raycast Settings. The
+Omarchy Keybindings command was also run from search and rendered the new
+shortcut guide inside Raycast. Global Hyper activation still needs a physical
+keyboard test; synthesized Hyper input in Computer Use did not launch it.
+The full headless run passed 426 functional checks, with six desktop checks
+skipped; its only failure was the expected uncommitted-work check. After the
+commit, all 56 repository/link checks passed. Firmware build
+[`39071637435`](https://github.com/alxcrt/miryoku-chocofi-layout/actions/runs/39071637435)
+passed all six targets; no keyboard has been flashed by this task.
+
 This keeps the useful Omarchy workflows while respecting Mac shortcuts:
 Command for native app actions, Hyper for global app launchers, and Option for
 herdr. In particular, `⌥Enter` still splits a herdr pane, and Ghostty's existing
