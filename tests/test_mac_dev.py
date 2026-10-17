@@ -10,6 +10,7 @@ import unittest
 ROOT = Path(__file__).resolve().parents[1]
 REAL_GIT = shutil.which('git')
 PYTHON = '/opt/homebrew/bin/python3'
+BASH = os.environ.get('MAC_DEV_TEST_BASH', '/bin/bash')
 
 
 class DeveloperTests(unittest.TestCase):
@@ -61,7 +62,7 @@ else:
             path.chmod(0o755)
 
     def run_dev(self, *args, cwd=None, **env):
-        return subprocess.run(['/bin/bash', str(ROOT / 'local/bin/mac-dev'), *args],
+        return subprocess.run([BASH, str(ROOT / 'local/bin/mac-dev'), *args],
                               cwd=cwd or self.base, env=dict(self.env, **env),
                               text=True, capture_output=True)
 
@@ -97,6 +98,15 @@ else:
         self.assertIn('FAILED (exit 7): diagnostic failure', result.stdout)
         self.assertIn('DBeaver        installed', result.stdout)
         self.assertIn('sqlite3', [call[0] for call in self.calls()])
+
+    def test_relative_project_path_is_resolved_before_version_probe_changes_directory(self):
+        relative = self.base / 'relative tools'
+        relative.mkdir()
+        (self.bin / 'pnpm').rename(relative / 'pnpm')
+        result = self.run_dev('status', PATH=f'relative tools:{self.env["PATH"]}')
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        self.assertRegex(result.stdout, r'pnpm\s+pnpm fixture-version')
+        self.assertEqual([call[2] for call in self.calls() if call[0] == 'pnpm'], ['/'])
 
     def test_missing_command_and_app_are_reported(self):
         (self.bin / 'pnpm').unlink()
@@ -192,6 +202,15 @@ else:
         result = self.run_dev('docker', 'ps', DEV_TEST_FAIL='docker')
         self.assertEqual(result.returncode, 7)
         self.assertIn('diagnostic failure', result.stderr)
+
+    @unittest.skipUnless(os.access('/usr/sbin/lsof', os.X_OK), 'macOS system lsof required')
+    def test_ports_uses_system_lsof_when_gui_path_omits_sbin(self):
+        (self.bin / 'lsof').unlink()
+        result = self.run_dev('ports', '65535')
+        # lsof returns 1 when no process listens on this port. Either outcome
+        # proves the installed utility ran instead of failing tool resolution.
+        self.assertIn(result.returncode, (0, 1), result.stderr)
+        self.assertNotIn('unavailable', result.stderr)
 
 
 if __name__ == '__main__':

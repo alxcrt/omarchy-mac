@@ -36,7 +36,7 @@ case "${1:-list}" in
     echo "Staged in $EXT_DIR:"
     for d in "$EXT_DIR"/*/; do
       [ -d "$d" ] || continue
-      python3 - "$d" <<'PY'
+      /opt/homebrew/bin/python3 - "$d" <<'PY'
 import json,sys,os
 d=sys.argv[1]
 m=json.load(open(os.path.join(d,"manifest.json")))
@@ -47,12 +47,15 @@ PY
     done
     echo
     echo "Native messaging hosts:"
-    for f in "$NMH"/com.omarchy.*.json; do [ -f "$f" ] && echo "  ✓ $(basename "$f")"; done
+    for f in "$NMH"/com.omarchy.*.json; do
+      [ -f "$f" ] || continue
+      echo "  ✓ $(basename "$f")"
+    done
     ;;
 
   verify)
     # Look through every Chrome profile for our extension IDs.
-    python3 - "$CHROME_DIR" <<'PY'
+    /opt/homebrew/bin/python3 - "$CHROME_DIR" <<'PY'
 import json,os,sys
 root=sys.argv[1]
 want={"dedjgknigfeelejglamclffonmophnfl":"Download Video",

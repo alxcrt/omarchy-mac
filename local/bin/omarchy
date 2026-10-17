@@ -1,0 +1,93 @@
+#!/bin/bash
+# Selected omacom/omarchy command routes, backed by this Mac's existing flows.
+# Keep the shell and platform differences in those helpers, not a second setup.
+set -u
+
+usage() {
+  cat <<'EOF'
+omarchy — shared everyday commands on macOS
+
+  omarchy update|up [-y]              update this Mac's brew/mise/app layers
+  omarchy mise install <package> [command-name [bin-name]]
+  omarchy launch terminal [command...]    Ghostty in the current directory
+  omarchy menu keybindings [--print|-p]   show this Mac's live shortcuts
+  omarchy transcode                   open the native media picker
+  omarchy transcode <input> <format> <quality>
+      mp4: 4k|1080p|720p   gif: 1080p|720p   jpg/png: high|medium|low
+
+  omarchy keys|dev|doctor|raycast|usage [args...]   existing mac commands
+  omarchy help                       show these supported routes
+
+This Mac provides the routes above; Linux system/menu commands are unavailable.
+Launchers and encoding settings use the existing Mac helpers. Use mac help for
+all Mac flows. Put -- after 'launch terminal' to pass a child's --help literally.
+EOF
+}
+
+unsupported() {
+  printf 'Unsupported Omarchy route on macOS: %s\n\n' "$*" >&2
+  usage >&2
+  exit 2
+}
+
+# Like upstream's dispatcher, help is resolved before a helper can mutate state.
+# A -- boundary allows terminal child arguments such as `python --help`.
+for argument in "$@"; do
+  [[ $argument == -- ]] && break
+  case "$argument" in -h | --help)
+    usage
+    exit 0
+    ;;
+  esac
+done
+
+cmd=${1:-help}
+(($# == 0)) || shift
+case "$cmd" in
+  help) usage ;;
+  update | up)
+    if (($#)); then
+      (($# == 1)) || unsupported "$cmd $*"
+      [[ $1 == -y ]] || unsupported "$cmd $*"
+    fi
+    exec mac update "$@"
+    ;;
+  mise)
+    [[ ${1:-} == install ]] || unsupported "mise $*"
+    shift
+    (($# >= 1 && $# <= 3)) || unsupported 'mise install (requires a package)'
+    [[ -n $1 && $1 != -* ]] || unsupported "mise install $*"
+    exec mac install "$@"
+    ;;
+  launch)
+    [[ ${1:-} == terminal ]] || unsupported "launch $*"
+    shift
+    case "${1:-}" in
+      --pid | --pid=*) unsupported 'launch terminal --pid (Linux terminal process IDs)' ;;
+      --) shift ;;
+    esac
+    exec mac term "$@"
+    ;;
+  menu)
+    [[ ${1:-} == keybindings ]] || unsupported "menu $*"
+    shift
+    if (($#)); then
+      (($# == 1)) || unsupported "menu keybindings $*"
+      case "$1" in --print | -p) ;; *) unsupported "menu keybindings $*" ;; esac
+    fi
+    exec mac keys
+    ;;
+  transcode)
+    if (($#)); then
+      (($# == 3)) || unsupported 'transcode (use explicit input, format and quality, or no arguments)'
+      case "$2:$3" in
+        mp4:4k | mp4:1080p | mp4:720p | gif:1080p | gif:720p | jpg:high | jpg:medium | jpg:low | png:high | png:medium | png:low) ;;
+        *) unsupported "transcode $*" ;;
+      esac
+      [[ -n $1 && $1 != --* ]] || unsupported "transcode $*"
+    fi
+    exec mac transcode "$@"
+    ;;
+  keys | dev | doctor | raycast | usage) exec mac "$cmd" "$@" ;;
+  *) unsupported "$cmd $*" ;;
+esac

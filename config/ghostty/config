@@ -1,8 +1,9 @@
 # ~/.config/ghostty/config
-# Omarchy's Ghostty config (basecamp/omarchy config/ghostty/config), adapted
-# for macOS. Upstream deliberately ships NO split-navigation binds — Omarchy
-# uses multiplexer panes for that (herdr here: Alt+Enter / Alt+Shift+Enter,
-# Ctrl+Alt+arrows).
+# Omarchy's Ghostty config (omacom/omarchy config/ghostty/config), adapted
+# for macOS. Upstream adds no custom split-navigation bindings — Omarchy uses
+# multiplexer panes (herdr here: Alt+Enter / Alt+Shift+Enter, Ctrl+Alt+arrows).
+# Ghostty's built-in Command split/tab shortcuts remain available. In Ghostty
+# syntax `super`/`cmd` means Command, while Omarchy's SUPER means Option here.
 
 # ── Font ──
 # Upstream uses size 9, which is a Linux/HiDPI value; 15 is the macOS equivalent.
@@ -36,6 +37,10 @@ shell-integration-features = no-cursor,ssh-env
 # ── Keybindings (upstream) ──
 keybind = shift+insert=paste_from_clipboard
 keybind = control+insert=copy_to_clipboard
+# Keep modified-arrow sequences intact for herdr's Alt+Left/Right tab keys.
+# zsh already binds CSI 1;3D/C to word movement outside the multiplexer.
+keybind = alt+arrow_left=unbind
+keybind = alt+arrow_right=unbind
 # Send Shift+Enter as CSI-u so TUIs can distinguish it from Enter.
 keybind = shift+enter=csi:13;2u
 # Legacy encoding sends Alt+Shift+Enter the same as Alt+Enter; send CSI-u so

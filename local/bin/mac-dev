@@ -39,7 +39,14 @@ need() {
 }
 
 client_path() {
-  command -v "$1" 2>/dev/null && return
+  local path
+  if path=$(command -v "$1" 2>/dev/null); then
+    # A project's PATH can contain relative entries (for example .venv/bin).
+    # Keep that selection usable after version() switches to / for its probe.
+    [[ $path == /* ]] || path=$PWD/$path
+    printf '%s\n' "$path"
+    return
+  fi
   # libpq is keg-only: do not globally change PATH or start a Postgres service.
   if [[ $1 == psql ]]; then
     local candidate
@@ -246,6 +253,11 @@ case "$cmd" in
       fail 'Usage: mac dev ports [port]'
       exit $?
     }
+    ports_lsof=lsof
+    if ! command -v lsof >/dev/null 2>&1 && [[ -x /usr/sbin/lsof ]]; then
+      # Raycast/launchd may omit /usr/sbin; keep a PATH override injectable.
+      ports_lsof=/usr/sbin/lsof
+    fi
     if (($#)); then
       # Bound the length before arithmetic, and force base 10 for 08080.
       if [[ ! $1 =~ ^[0-9]{1,5}$ ]]; then
@@ -255,9 +267,9 @@ case "$cmd" in
         fail 'Port must be a number from 1 to 65535.'
         exit $?
       fi
-      need lsof && exec lsof -nP "-iTCP:$((10#$1))" -sTCP:LISTEN
+      need "$ports_lsof" && exec "$ports_lsof" -nP "-iTCP:$((10#$1))" -sTCP:LISTEN
     else
-      need lsof && exec lsof -nP -iTCP -sTCP:LISTEN
+      need "$ports_lsof" && exec "$ports_lsof" -nP -iTCP -sTCP:LISTEN
     fi
     ;;
   *) fail "Unknown developer command: $cmd (try 'mac dev help')" ;;

@@ -2,7 +2,8 @@
 # ghostty-run [command...]
 # Open a new window in the already-running Ghostty, in the current directory,
 # and optionally run <command...> in it through your normal shell (as if
-# typed, so the shell stays open after the command exits).
+# typed, so the shell stays open after the command exits). One argument is a
+# raw shell command; multiple arguments preserve argv, including spaces.
 #
 # Ghostty's own AppleScript does this: `new window with configuration`, whose
 # `initial input` is fed to the new terminal. The previous version faked it:
@@ -13,7 +14,13 @@
 set -uo pipefail
 
 input=""
-(($# > 0)) && input="$*"$'\n'
+if (($# == 1)); then
+  input=$1$'\n'
+elif (($# > 1)); then
+  # %q escapes data for Bash and zsh, including quotes and embedded newlines.
+  printf -v input '%q ' "$@"
+  input=${input% }$'\n'
+fi
 
 osascript - "$PWD" "$input" >/dev/null <<'AS'
 on run argv

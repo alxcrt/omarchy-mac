@@ -54,6 +54,10 @@ into `~/.config` + `~/.local/bin`.
 
 `mac` is the discoverable entry point (`omarchy <verb>` equivalent):
 `mac update|mise|install|usage|keys|dl|url|transcode|term|wm|defaults|doctor|edit|dev|raycast`.
+`omarchy help` lists the supported Linux-compatible routes, including
+`update`, `mise install`, `launch terminal`, `menu keybindings` and explicit
+media conversions. It dispatches to existing Mac helpers. Do not copy Linux
+system commands into the Mac or imply that all upstream routes are available.
 
 `mac dev` checks the installed web/full-stack toolchain without contacting
 services. `mac dev git`, `docker`, `db`, `api` and `ports` group existing tools;
@@ -63,21 +67,24 @@ declared keg-only libpq clients are appended to PATH after mise. Bruno,
 DBeaver Community and Keka use normal Raycast app search; the single Omarchy
 menu includes developer checks, Git selection, Docker and CLIamp.
 
-**SUPER = ⌥ (Option)**, matching Omarchy. `⌥Enter` terminal, `⌥1..9`
-workspaces, `⌥W` close, `⌥⇧1..9` send window. Full generated list:
+**Omarchy SUPER = ⌥ (Option)** is the port's convention. Inside herdr,
+`⌥Enter` splits a pane and `⌥1..9` selects a tab. Native macOS Desktops use
+`⌃1..9`; global app launchers need Raycast hotkeys configured in its UI.
+Ghostty's own `super`/`cmd` means **⌘**, not Omarchy SUPER. Full generated list:
 `mac keys`, or `KEYBINDINGS.md` in the repo — **regenerate it, never hand-edit**:
 `mac keys --md > ~/omarchy-mac/KEYBINDINGS.md`.
 
 ## Testing — always run this
 
-`~/omarchy-mac/test.sh` is ~265 real functional tests (it executes things and
+`~/omarchy-mac/test.sh` has over 400 functional checks (it executes things and
 checks effects; it does not assert files exist). Run a section with
 `./test.sh <name>`: `layering aliases functions cd transcode compress herdr cmux
 git browser extensions mac scripts hooks wm keyremap defaults touchid shell brew repo`.
 
 **Run the relevant section after any change, and the full suite before
-committing.** Two skips are expected only if the user hasn't loaded the Chrome
-extensions.
+committing.** Use `./test.sh --headless` from an agent runner to skip desktop
+automation and live key/window changes. Six desktop skips were expected at the
+October 2026 audit; report actual results and any unverified UI steps.
 
 ## Hard-won gotchas — read before "fixing" these again
 
@@ -88,6 +95,14 @@ extensions.
   Assert on **behaviour and machine-readable status**, not prose or process names.
 - **`open -na <App>` spawns a whole new application instance** (its own Dock
   icon). Use `ghostty-run`, which drives the existing instance via AppleScript.
+  One argument is a raw shell command; multiple arguments are shell-escaped
+  individually so paths, quotes and newlines survive. Do not flatten argv.
+- **Ghostty defaults can consume multiplexer keys.** Its macOS Option-arrow
+  defaults send Esc+B/F rather than modified-arrow sequences. Keep those two
+  bindings unbound so herdr can receive Alt+Left/Right; zsh already maps
+  CSI 1;3D/C to word movement. `mac keys` reads effective defaults with
+  `ghostty +list-keybinds` and annotates scope from config; running-app reload
+  and Accessibility registration still require separate verification.
 - **There is no tiling WM any more.** AeroSpace was removed along with Karabiner;
   window management is macOS 26's own tiling (`fn+⌃+arrows`, Window > Move &
   Resize) plus Mission Control Spaces (`⌃1-9`). `mac-wm` turns on what Apple

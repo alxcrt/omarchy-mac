@@ -285,7 +285,7 @@ mk() { ffmpeg -hide_banner -loglevel error -y -f lavfi -i "testsrc=duration=1:si
 vp9=(-c:v libvpx-vp9 -deadline realtime -cpu-used 8 -c:a libopus)
 mk s-vp9.mp4 640x360 "${vp9[@]}"; mk s-h264.mp4 640x360 -c:v libx264 -preset ultrafast -pix_fmt yuv420p -c:a aac
 mk s-wide.mp4 2560x1440 "${vp9[@]}"; mk s-tall.mp4 1080x1920 "${vp9[@]}"
-moovfirst() { /usr/bin/python3 - "$1" <<'PY2'
+moovfirst() { /opt/homebrew/bin/python3 - "$1" <<'PY2'
 import struct, sys
 f = open(sys.argv[1], 'rb'); seen = []
 while True:
@@ -625,6 +625,10 @@ mac edit bogus 2>&1 | grep -qi 'mac edit' && ok "mac edit validates target" || b
   && ok "mac doctor preserves diagnostics and reports failures" || bad "mac doctor" "health-check regressions"
 /opt/homebrew/bin/python3 "$HOME/omarchy-mac/tests/test_mac_dev.py" \
   && ok "mac dev routes and diagnostics work in isolation" || bad "mac dev" "developer workflow regressions"
+/opt/homebrew/bin/python3 "$HOME/omarchy-mac/tests/test_ghostty_run.py" \
+  && ok "Ghostty launcher preserves commands and arguments" || bad "ghostty-run" "launcher regressions"
+/opt/homebrew/bin/python3 "$HOME/omarchy-mac/tests/test_omarchy.py" \
+  && ok "Omarchy command routes preserve arguments and status" || bad "omarchy" "compatibility command regressions"
 # ghostty-run: a real window via Ghostty's AppleScript, in the caller's cwd,
 # running the command through the shell. Closed again by its name (the cwd).
 if [ "$HEADLESS" != 1 ] && [ "$(osascript -e 'application "Ghostty" is running' 2>/dev/null)" = true ] &&
@@ -643,7 +647,7 @@ fi
 # ── 12. helper scripts ─────────────────────────────────────────────────────
 if want scripts; then
 sec "Helper scripts"
-for s in mac mac-dev mac-raycast macup mise-install mac-keyremap mac-wm ghostty-run transcode webdl weburl browser-url \
+for s in mac omarchy mac-dev mac-raycast macup mise-install mac-keyremap mac-wm ghostty-run transcode webdl weburl browser-url \
          chromium-native-host chrome-extensions mac-hook agent-usage-claude agent-usage-codex agent-usage-grok mac-notify mac-clip mac-defaults; do
   p="$HOME/.local/bin/$s"
   if [ ! -x "$p" ]; then bad "$s" "missing or not executable"; continue; fi
@@ -654,6 +658,10 @@ for s in mac mac-dev mac-raycast macup mise-install mac-keyremap mac-wm ghostty-
     *)         bash -n "$p" 2>/dev/null && ok "$s (bash) syntax ok" || bad "$s" "bash syntax error";;
   esac
 done
+/opt/homebrew/bin/python3 "$HOME/omarchy-mac/tests/test_browser_helpers.py" \
+  && ok "Browser helpers work with a GUI PATH" || bad "browser helpers" "interpreter bootstrap regressions"
+/opt/homebrew/bin/python3 "$HOME/omarchy-mac/tests/test_mac_keys.py" \
+  && ok "Keybinding guide reads effective bindings and scopes" || bad "mac keys" "shortcut documentation regressions"
 # Usage collectors print one JSON record (mac usage parses it with jq).
 for t in claude codex grok; do
   agent-usage-$t --limits-only 2>/dev/null | /usr/bin/jq -e '.id' >/dev/null 2>&1 \
@@ -1021,7 +1029,7 @@ if [ -r "$HOME/.docker/completions/_docker" ]; then
 fi
 # Startup budget: the median of 7 interactive starts must stay under 100ms
 # (oh-my-zsh + uncached inits was ~132ms; this zshrc is ~70ms).
-ms=$(for i in 1 2 3 4 5 6 7; do /usr/bin/python3 -c 'import subprocess,time;t=time.time();subprocess.run(["zsh","-i","-c","exit"],capture_output=True);print(int((time.time()-t)*1000))'; done | sort -n | sed -n 4p)
+ms=$(for i in 1 2 3 4 5 6 7; do /opt/homebrew/bin/python3 -c 'import subprocess,time;t=time.time();subprocess.run(["zsh","-i","-c","exit"],capture_output=True);print(int((time.time()-t)*1000))'; done | sort -n | sed -n 4p)
 [ "${ms:-999}" -lt 100 ] && ok "interactive zsh starts in ${ms}ms (<100)" || bad "startup" "${ms}ms (budget 100ms)"
 SC="$HOME/.cache/zsh/starship.zsh"
 [ -s "$SC" ] && ok "starship init is cached" || bad "starship cache" "missing"
@@ -1045,6 +1053,21 @@ zpty -d z
 EOF
 )
 [ "$zle_res" = PASS ] && ok "↑ recalls by prefix with the cursor at the end" || bad "↑ history" "$zle_res"
+# Ghostty now passes native modified arrows to herdr. In a plain shell the
+# same sequences must still edit by words; inspect expanded command output.
+word_res=$(ZDOTDIR="$T/zle" zsh -f <<'EOF' 2>&1
+zmodload zsh/zpty || exit 2
+zpty z 'TERM=xterm-256color zsh -i'
+log=; upto() { local c; for i in {1..100}; do zpty -rt z c && log+=$c; [[ $log == *"$1"*$'\e[?2004h'* ]] && return 0; sleep 0.05; done; return 1; }
+zpty -w z 'print -r -- ${(U):-ready}'; upto READY || { echo "no prompt"; exit 1; }
+log=; zpty -wn z 'print -r -- ${(U):-left} right'; zpty -wn z $'\e[1;3D'; zpty -wn z $'zz\r'
+upto 'LEFT zzright' || echo "Option-left did not move to word start"
+log=; zpty -wn z 'print -r -- ${(U):-left} right'; zpty -wn z $'\e[1;3D\e[1;3C'; zpty -wn z $'zz\r'
+upto 'LEFT rightzz' || echo "Option-right did not move to word end"
+zpty -d z
+EOF
+)
+[ -z "$word_res" ] && ok "Option arrows retain word movement outside herdr" || bad "Option arrows" "$word_res"
 # Autosuggestions and syntax highlighting, typed for real in the same kind of
 # pty: a prefix of an earlier command gets that command suggested (→ accepts
 # it, and only the full command prints SUGG2), and an unknown command is

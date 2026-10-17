@@ -73,6 +73,7 @@ case "$cmd" in
     cat <<'EOF'
 mac — Omarchy-style flows on macOS
 
+  omarchy help            familiar Linux command routes supported on this Mac
   mac update              update everything (brew, casks, mas, mise, cleanup)
   mac mise                update mise tools + AI CLIs only (fast)
   mac install <pkg>       create a self-updating mise-backed wrapper

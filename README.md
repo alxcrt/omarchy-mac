@@ -114,6 +114,44 @@ macup    # everything: brew, casks, Mac App Store, mise, cleanup
 See **[KEYBINDINGS.md](KEYBINDINGS.md)** for every keybinding (generated from the
 live configs with `mac keys`).
 
+## Moving between Omarchy and this Mac
+
+The prompt uses the same Starship configuration as official
+[omacom/omarchy](https://github.com/omacom/omarchy). The Mac keeps its native
+zsh, with Omarchy's everyday aliases and shell functions ported into it.
+Bash helpers work with both Apple's Bash 3.2 and Homebrew Bash 5.
+
+`omarchy` also accepts these familiar Linux command routes on the Mac:
+
+| Command on either machine | Mac behavior |
+|---|---|
+| `omarchy update` / `omarchy up` | Run `macup` across the Mac's package layers |
+| `omarchy mise install <package>` | Create the existing mise-backed tool wrapper |
+| `omarchy launch terminal [command...]` | Open Ghostty in the caller's directory |
+| `omarchy menu keybindings` | Show the generated Mac shortcut guide |
+| `omarchy transcode input.mov mp4 1080p` | Use the Mac media converter |
+
+Run `omarchy help` for supported routes; Linux system commands remain
+platform-specific. `mac help` lists the complete Mac command set. A terminal
+launch accepts one quoted shell command or multiple arguments with spaces
+preserved. Use `omarchy launch terminal -- python --help` to pass child help.
+
+Keep using `a`, `c`, `cx`, `cy`, `h`, `ic`, `ix`, `icx`, `n`, `ff`, `ga`,
+`gd` and `mup`, plus ordinary project commands such as `pnpm dev`, `uv run`,
+`git` and `docker compose`. `mac dev` groups the installed developer tools.
+
+Inside herdr, `⌥Enter` / `⌥⇧Enter` split panes, `⌥←/→` changes tabs and
+`⌥1..9` selects a tab. Ghostty passes Option arrows through; outside herdr
+they still move by words in zsh. Reload Ghostty config with `⌃⇧R` after pulling
+these changes. Its built-in Command shortcuts remain available: `⌘T` new tab,
+`⌘D` split, and `⌘⇧D` split in the other direction.
+
+Desktop controls use macOS keys: `⌃1..9` for existing Mission Control Desktops
+and `fn⌃` arrows for tiling. Global Omarchy app shortcuts can be assigned in
+Raycast; their registration needs the in-app step in the
+[setup guide](config/raycast/SETUP.md). Ghostty's `super` means **Command**;
+the port's Omarchy SUPER convention means **Option**.
+
 ## Shared agent skill
 
 `skills/omarchy-mac/SKILL.md` is linked into both `~/.claude/skills/` and
