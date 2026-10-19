@@ -1153,6 +1153,20 @@ undeclared=$(brew list --cask -1 2>/dev/null | while read -r c; do
   grep -qE "^\s*cask\s+\"([^\"]*/)?$c\"" ~/.config/homebrew/Brewfile || echo "$c"; done)
 [ -z "$undeclared" ] && ok "every installed cask is in the Brewfile" \
   || bad "Brewfile" "cask installed but undeclared: $(echo $undeclared)"
+# Root-owned apps are not brew's: a cask whose /Applications copy this user
+# does not own must not resolve into the bundle (it fails every run on
+# `sudo chgrp`); one that is missing or user-owned must. Assert on what the
+# Brewfile resolves to, in both directions.
+resolved=$(brew bundle list --cask --file="$HOME/.config/homebrew/Brewfile" 2>/dev/null)
+for pair in "google-chrome:Google Chrome" "cursor:Cursor" "1password:1Password"; do
+  c=${pair%%:*}; app="/Applications/${pair#*:}.app"
+  listed=0; echo "$resolved" | grep -qx "$c" && listed=1
+  if [ -e "$app" ] && [ "$(stat -f %u "$app")" != "$(id -u)" ]; then
+    [ $listed = 0 ] && ok "Brewfile skips root-owned $c" || bad "Brewfile" "$c resolves although $app is root-owned"
+  else
+    [ $listed = 1 ] && ok "Brewfile keeps $c (not root-owned)" || bad "Brewfile" "$c skipped although $app is missing or user-owned"
+  fi
+done
 # THE core rule: nothing mise manages may also be installed by Homebrew.
 # `brew upgrade` reinstalled opencode from a tap once and shadowed the mise one.
 for t in $(mise ls --installed 2>/dev/null | awk '{print $1}' | sed 's|.*[:/]||'); do

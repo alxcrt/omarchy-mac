@@ -284,10 +284,14 @@ October 2026 audit; report actual results and any unverified UI steps.
 - **Never run two brew bundles at once.** A second run collides with the
   first's download locks and both report spurious failures. Check
   `pgrep -fl brew` before assuming a bundle died.
-- **On a Jamf/MDM-managed Mac, apps the MDM owns are root-owned** (Chrome
-  here) and self-update outside brew. Brew's cask metadata goes stale and
-  greedy upgrades fail forever on them — drop such casks from the Brewfile
-  and let the MDM/vendor updater own them (see the google-chrome note there).
+- **Root-owned apps are not brew's** (Chrome, Cursor and 1Password here,
+  also on this non-Jamf Mac). A Jamf/MDM pkg or a sudo installer leaves them
+  `root:wheel`, and brew then dies on `sudo chgrp` ("Operation not permitted")
+  on every install and greedy upgrade, failing the whole `brew bundle`. The
+  Brewfile's `brew_owns` lambda declares those casks only while
+  `/Applications/<App>.app` is missing or owned by the user; check
+  `brew bundle list --cask` for what it resolves to. Microsoft apps stay out
+  of the Brewfile entirely.
 - **Karabiner is gone — the modifier remap is `mac-keyremap` (hidutil).** It was
   removed because its DriverKit extension kept breaking on Tahoe ("code
   signature invalid", error 8) and needed re-approval after every macOS bump.

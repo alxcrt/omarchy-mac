@@ -84,8 +84,19 @@ brew "tree"
 brew "mateussiqueira/unleash/unleash"
 
 # --- GUI casks ---
+# A root-owned app is not brew's to manage: a Jamf/MDM pkg or an installer run
+# with sudo leaves /Applications/<App>.app root:wheel, and brew then dies on
+# `sudo chgrp` ("Operation not permitted") or "Permission denied ...
+# CodeResources" on every install and greedy upgrade, failing the whole bundle.
+# So a cask is declared only while /Applications has no copy of its app that
+# this user could not replace. A fresh install, or a user-owned app, stays
+# brew's. This file is Ruby, so the condition lives here.
+brew_owns = lambda do |app|
+  path = "/Applications/#{app}.app"
+  !File.exist?(path) || File.stat(path).uid == Process.uid
+end
 cask "ghostty@tip"             # terminal (tip builds)
-cask "google-chrome"           # primary browser (Phase 7 webapp target)
+cask "google-chrome" if brew_owns.call("Google Chrome")  # primary browser (Phase 7 webapp target); see brew_owns above
 cask "helium-browser"          # Helium (ungoogled Chromium); not "helium", an unrelated Gatekeeper-disabled Intel app
 cask "iina"                    # media player (macOS-native mpv)
 cask "plex-htpc"               # Plex TV-style player for the nasa library
@@ -94,13 +105,12 @@ cask "localsend"
 cask "tailscale-app"           # mesh VPN (menu-bar app; ships its own CLI)
 cask "transmission"            # replaced qbittorrent (Gatekeeper-deprecated, disabled 2026-09-01)
 cask "raycast"                 # launcher
-# Cursor and 1Password: brew's, except on a Jamf-managed Mac (the work Mac),
-# where they are root-owned and self-updating, so every greedy upgrade dies on
-# "Permission denied .../Cursor.app/Contents/CodeResources" (the same story as
-# google-chrome there). This file is Ruby, so the condition lives here.
+# Cursor and 1Password: also skipped on a Jamf-managed Mac (the work Mac), even
+# before Jamf has installed them, since Jamf owns them there (the same story as
+# google-chrome).
 unless File.exist?("/usr/local/jamf/bin/jamf")
-  cask "cursor"
-  cask "1password"
+  cask "cursor" if brew_owns.call("Cursor")
+  cask "1password" if brew_owns.call("1Password")
 end
 cask "visual-studio-code"
 cask "cmux"
