@@ -15,10 +15,12 @@ automatically installed on macOS. Keep this file current when scope changes.
   (Downloads ISOs/ROMs/firmware/movies, Xcode device data, Ollama and LM Studio
   models, caches, removed apps).
 - **Delete Hue Sync, Fits, Checkm8.info and Run Receipt** in Finder (needs your
-  password): root-owned, `trash` can't. Adobe's ARMDC helpers in
-  `/Library/PrivilegedHelperTools` are leftovers of an uninstalled Acrobat.
-- **macOS 27.2 Release Candidate** is offered (4 GB, needs a restart):
-  install it from System Settings > Software Update when convenient.
+  password): root-owned, `trash` can't. (Adobe's ARMDC helpers belong to the
+  installed Adobe Acrobat DC; not leftovers.)
+- **macOS 27.2 Release Candidate** (26B118) is downloaded; staging it needs
+  your password, so finish it in System Settings > Software Update and
+  restart. This Mac runs beta 26B5112a, whose nsattributedstringagent logged
+  49 faults in a week; the RC should clear them.
 - **1Password in Helium**: open 1Password > Settings > Browser
   and check the Helium extension connects to the app (Touch ID unlock).
 - **`claude auth login`**: the Claude CLI's saved sign-in has expired, so
@@ -56,6 +58,15 @@ lock would stay custom anyway); keep `install.sh` links over GNU stow;
 hosted service).
 
 ## Done (Oct 2026, newest first)
+
+- Oct 26 health pass: brew doctor, mac doctor and SMART clean; nothing
+  outdated in brew, casks or the App Store; no failing launch agents; the
+  stale Bitwarden login item removed. Compared with upstream `4601078`:
+  every Omarchy app has a Mac equivalent here except Superwhisper,
+  tesseract/qrencode/zbar, mpv and the web apps (Alex: not wanted now). The
+  rest of upstream's agent CLIs are declared in mise as `lazy` tools
+  (installed on first run; devin and kiro-cli skipped, Linux-only URLs);
+  `test.sh` ignores mise doctor's "not installed" for unused lazy tools.
 
 - Oct 26 cleanup: removed Sideloadly (and its login daemon), PlayTorrio,
   Hopper, RustRover, Telegram, Hermes and calibre with their leftovers;

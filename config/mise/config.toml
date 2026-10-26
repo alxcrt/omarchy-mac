@@ -83,6 +83,30 @@ copilot = "latest"               # GitHub Copilot CLI
 # hunk: the diff viewer hds runs in its diff pane (`hunk diff --watch`).
 hunk = "latest"
 
+# The rest of upstream Omarchy's agent CLIs (etc/mise/conf.d/omarchy-tools.toml,
+# Oct 2026), lazy as upstream ships them: declared, but nothing downloads until
+# the command is first run (lazy_bins names the command where mise has no
+# registry metadata). Each was trial-installed on macOS arm64 first.
+# Upstream's devin and kiro-cli are left out: their http: URLs are Linux-only.
+amp = { version = "latest", lazy = true, lazy_bins = ["amp"] }                     # Sourcegraph's Amp
+cursor-agent = { version = "latest", lazy = true }            # Cursor's CLI agent
+qwen = { version = "latest", lazy = true }                    # Qwen Code
+muse = { version = "latest", lazy = true }
+ori = { version = "latest", lazy = true }                     # OpenRouter's agent
+"npm:@kilocode/cli" = { version = "latest", lazy = true, lazy_bins = ["kilo"] }
+"npm:@moonshot-ai/kimi-code" = { version = "latest", lazy = true, lazy_bins = ["kimi"] }
+"npm:command-code" = { version = "latest", lazy = true, lazy_bins = ["commandcode"] }
+"npm:freebuff" = { version = "latest", lazy = true, lazy_bins = ["freebuff"] }
+# Low-download approvals, checked Oct 26 (npm's stats read 0 for both): dsh is
+# DeepSeek's own (deepseek.com maintainer, deepseek-ai/deepseek-harness);
+# @minimax-ai/code has a minimax.io maintainer but no repo listed. Both ship
+# in upstream Omarchy.
+"npm:@deepseek-ai/dsh" = { version = "latest", lazy = true, lazy_bins = ["dsh"], allow_low_downloads = true }
+"npm:@minimax-ai/code" = { version = "latest", lazy = true, lazy_bins = ["mcode"], allow_low_downloads = true }
+# 37signals' CLIs (Omarchy's HEY and Basecamp integrations)
+hey-cli = { version = "latest", lazy = true }
+basecamp = { version = "latest", lazy = true }
+
 # Dev CLIs moved off Homebrew (Oct 2026). awscli by its registry alias, so the
 # both-layers test matches brew's formula of the same name; exercism has no
 # registry entry, so it comes from its GitHub releases.

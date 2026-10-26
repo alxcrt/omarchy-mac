@@ -205,7 +205,13 @@ October 2026 audit; report actual results and any unverified UI steps.
 - **mise's supply-chain guard** refuses npm packages under 1000 weekly
   downloads. Check the publisher and repo, then approve that one package with
   `{ version = "latest", allow_low_downloads = true }` (ghui is). Never
-  disable the guard globally.
+  disable the guard globally. In Oct 2026 npm's stats API returned stale
+  (June) numbers, so even official packages (opencode, dsh) read 0.
+- **Lazy mise tools** (`lazy = true`, as upstream ships its many agent CLIs)
+  install on first run through a shim; `mise up` skips them until then. A
+  tool with no registry bin metadata (npm:, amp) gets no shim unless
+  `lazy_bins = ["cmd"]` names it. `mise doctor` reports unused ones as "not
+  installed"; `test.sh brew` filters exactly those.
 - **opencode's config schema has no `theme` key** any more (upstream still
   sets one); verify settings with `opencode debug config`, not the file.
   OpenCode 2 returns ordered configuration sources rather than a merged

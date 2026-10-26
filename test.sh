@@ -1118,7 +1118,23 @@ brew list --formula >/dev/null 2>&1 && ok "brew responds" || bad "brew" "not wor
 for f in git bat eza fd fzf ripgrep zoxide jq gum try cliamp btop fastfetch starship neovim lazygit gifski mas pam-reattach; do
   brew list "$f" >/dev/null 2>&1 && ok "formula $f installed" || bad "formula $f" "missing"
 done
-mise doctor 2>&1 | grep -q 'No problems found' && ok "mise doctor clean" || bad "mise doctor" "problems reported"
+# mise doctor lists a lazy tool nobody has run yet as "not installed", which
+# is lazy's whole point. Drop exactly those (matched on the version mise
+# resolves for each lazy = true tool) and fail on any other problem.
+lazy_versions=$(/opt/homebrew/bin/python3 -c '
+import json, subprocess, tomllib, os
+cfg = tomllib.load(open(os.path.expanduser("~/.config/mise/config.toml"), "rb"))["tools"]
+lazy = [k for k, v in cfg.items() if isinstance(v, dict) and v.get("lazy")]
+ls = json.loads(subprocess.run(["mise", "ls", "--json"], capture_output=True, text=True).stdout)
+for k in lazy:
+    for e in ls.get(k, []):
+        if not e["installed"]: print("@" + e["version"] + " is not installed")
+')
+# PATH order is judged by the fresh-login-shell check below: this script
+# prepends ~/.local/bin itself, which mise doctor would report here.
+doctor_problems=$(mise doctor 2>&1 | grep -E '^[0-9]+\. ' | grep -v 'not first in PATH' | grep -vF -- "${lazy_versions:-@@none@@}")
+[ -z "$doctor_problems" ] && ok "mise doctor clean (unused lazy tools aside)" \
+  || bad "mise doctor" "problems reported: $(echo "$doctor_problems" | head -2 | tr '\n' ' ')"
 for t in claude codex gh opencode bun node go; do
   # tolerate a backend prefix (codex is npm:@openai/codex, not the aqua shortname)
   mise ls 2>/dev/null | grep -qE "(^|[:/])$t " && ok "mise manages $t" || bad "mise" "$t not managed"
