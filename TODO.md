@@ -17,6 +17,8 @@ automatically installed on macOS. Keep this file current when scope changes.
 - **Delete Hue Sync, Fits, Checkm8.info and Run Receipt** in Finder (needs your
   password): root-owned, `trash` can't. Adobe's ARMDC helpers in
   `/Library/PrivilegedHelperTools` are leftovers of an uninstalled Acrobat.
+- **macOS 27.2 Release Candidate** is offered (4 GB, needs a restart):
+  install it from System Settings > Software Update when convenient.
 - **Raycast `Hyper+P`**: repoint it from Bitwarden to 1Password (Settings >
   Extensions > 1Password, or the app). Then open 1Password > Settings > Browser
   and check the Helium extension connects to the app (Touch ID unlock).
@@ -60,7 +62,12 @@ hosted service).
   Hopper, RustRover, Telegram, Hermes and calibre with their leftovers;
   CuaDriver kept (OpenAI's computer-use service, still in use). 1Password is
   the only password manager (Bitwarden uninstalled). Plex HTPC, Plexamp,
-  Raspberry Pi Imager and AppCleaner adopted into the Brewfile. Purged
+  Raspberry Pi Imager and AppCleaner moved under brew (`--adopt` is blocked
+  by macOS App Management protection even with sudo, so brew reinstalled them
+  with `--force`; settings in ~/Library kept). `macup` completed: opencode
+  2.1.4 was held by mise's low-downloads guard (npm's stats API reports 0 for
+  `@opencode/cli`), so that official package is approved in mise's config;
+  the interactive guard prompt is what stalled the earlier run. Purged
   pnpm/npm/go/Playwright, Hugging Face + whisper models and Chrome/Helium disk
   caches; Docker build cache and unused images pruned and the VM trimmed
   (45 → 20 GB, volumes and containers kept). The uv cache was left: a

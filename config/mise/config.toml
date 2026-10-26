@@ -42,7 +42,9 @@ claude = "latest"
 # `mise up` resolves "latest" to an older release than codex's own updater
 # reports. npm's dist-tag is the vendor's channel and is instant.
 "npm:@openai/codex" = "latest"
-opencode = "latest"
+# allow_low_downloads: @opencode/cli is the official package (thdxr, anomalyco/opencode);
+# npm's download stats for it read 0 (stale), which trips the guard (Oct 26).
+opencode = { version = "latest", allow_low_downloads = true }
 gh = "latest"
 
 # From your Linux config
