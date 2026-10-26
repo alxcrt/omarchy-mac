@@ -1,5 +1,5 @@
 # Desired Raycast assignments. Set in Settings > Shortcuts; files do not register them.
-# Verified in Raycast UI on 2026-10-18. Re-check after importing/resetting app settings.
+# Verified in Raycast UI on 2026-10-18; Hyper+P → 1Password on 2026-10-26. Re-check after importing/resetting app settings.
 ⌘Space	Raycast launcher
 Hyper+V	Clipboard History
 Hyper+B	Helium browser

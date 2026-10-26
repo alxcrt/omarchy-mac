@@ -19,8 +19,7 @@ automatically installed on macOS. Keep this file current when scope changes.
   `/Library/PrivilegedHelperTools` are leftovers of an uninstalled Acrobat.
 - **macOS 27.2 Release Candidate** is offered (4 GB, needs a restart):
   install it from System Settings > Software Update when convenient.
-- **Raycast `Hyper+P`**: repoint it from Bitwarden to 1Password (Settings >
-  Extensions > 1Password, or the app). Then open 1Password > Settings > Browser
+- **1Password in Helium**: open 1Password > Settings > Browser
   and check the Helium extension connects to the app (Touch ID unlock).
 - **`claude auth login`**: the Claude CLI's saved sign-in has expired, so
   `mac usage` shows the plan (Max 5x) but no limits. `grok login` too, if
@@ -69,7 +68,7 @@ hosted service).
   `@opencode/cli`), so that official package is approved in mise's config;
   the interactive guard prompt is what stalled the earlier run. Purged
   pnpm/npm/go/Playwright, Hugging Face + whisper models and Chrome/Helium disk
-  caches; Docker build cache and unused images pruned and the VM trimmed
+  caches (Raycast Hyper+P now opens 1Password, set by Alex); Docker build cache and unused images pruned and the VM trimmed
   (45 → 20 GB, volumes and containers kept). The uv cache was left: a
   long-running `uv run targ serve` holds its lock. `mac-defaults` now sets
   ⌃⌘-drag-anywhere to move windows: Helium/Chrome windows seemed "stuck" on
