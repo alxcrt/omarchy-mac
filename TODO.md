@@ -59,6 +59,15 @@ hosted service).
 
 ## Done (Oct 2026, newest first)
 
+- Oct 26 lag pass: WindowServer was the hot process (spikes to ~90% CPU).
+  The portrait Dell S2721QS rendered 3780x6720 ("looks like 1890x3360", 3x
+  its native 4K) and the ZQE ultrawide ran 165 Hz. Set the Dell to "looks
+  like 1440x2560" (renders 2880x5120) and the ultrawide to 120 Hz, both
+  saved as permanent display modes: WindowServer's 15 s average fell from 33%
+  to 25%. Reduce transparency is Alex's switch (scripts can't write
+  com.apple.universalaccess). Codex Computer Use (SkyComputerUseService) keeps
+  replayd capturing the screens from login; left running by choice.
+
 - Oct 26 health pass: brew doctor, mac doctor and SMART clean; nothing
   outdated in brew, casks or the App Store; no failing launch agents; the
   stale Bitwarden login item removed. Compared with upstream `4601078`:
