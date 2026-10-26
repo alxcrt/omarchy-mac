@@ -244,6 +244,13 @@ October 2026 audit; report actual results and any unverified UI steps.
   reverse, an app installed outside brew (Claude.app), makes `brew bundle`
   fail on "already an App at"; `brew install --cask --adopt <c>` takes it
   over in place without replacing the app, which matters when it's running.
+  `--adopt` runs `sudo chgrp -R admin` on the bundle, which macOS's App
+  Management protection refuses even as root ("Operation not permitted", Oct
+  26); for an app that isn't running, `brew install --cask --force <c>`
+  replaces it instead and keeps its ~/Library settings.
+- **A stalled `macup` may be a mise prompt.** mise's low-downloads guard asks
+  interactively, so `mise up` sits idle in the terminal (no children, stack in
+  `demand`/stdin read). Run `mise up <tool> </dev/null` to see the refusal.
 - **Locks: use `lockf`, never a hand-rolled one.** `macup` uses the standard
   shell lock: `exec 9>>file; lockf -s -t 0 9` (lockf's descriptor mode,
   ships with macOS). The lock lives in macup itself, so it can't be dropped
