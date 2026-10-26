@@ -28,7 +28,7 @@ config/homebrew/Brewfile     → ~/.config/homebrew/Brewfile    # the system + G
 config/zsh/aliases.zsh       → ~/.config/zsh/aliases.zsh      # ported Omarchy aliases (macOS-adjusted)
 config/starship.toml         → ~/.config/starship.toml        # Omarchy's prompt
 config/herdr/config.toml     → ~/.config/herdr/config.toml    # herdr: workspaces/tabs/panes (replaced tmux)
-config/cmux/cmux.json        → ~/.config/cmux/cmux.json       # cmux: link routing, fleet SSH workspaces
+config/cmux/cmux.json        → ~/.config/cmux/cmux.json       # cmux: fleet workspaces and NASA Hermes chat
 config/launchd/com.omarchy.keyremap.plist → ~/Library/LaunchAgents/  # hidutil modifier remap at login
 local/bin/macup              → ~/.local/bin/macup             # update-everything command
 local/bin/mise-install       → ~/.local/bin/mise-install      # self-updating mise wrapper generator
@@ -262,6 +262,10 @@ It migrates the earlier 16-command pack by removing only its own old symlinks,
 preserving other scripts. Standalone commands remain in `config/raycast/optional`
 for any individual hotkeys you want later. Terminal tools, keybindings and AI
 usage open in the existing Ghostty instance; fleet entries use `cmux-fleet`.
+The cmux Command Palette also has `hermes`: it opens NASA's existing tailnet
+Hermes chat in a browser workspace. Sign in there with the existing dashboard
+password, then paste an image with ⌘V or drop it into chat. This uses NASA's
+agent, memory and skills, rather than starting the Mac's separate Hermes CLI.
 
 `mac raycast setup` prints the short [setup guide](config/raycast/SETUP.md).
 `mac raycast status` checks the menu's link without claiming private settings

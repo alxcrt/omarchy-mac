@@ -46,6 +46,29 @@
   // "ignore" switches to the workspace when it's already open.
   "commands": [
     {
+      "name": "hermes",
+      "description": "NASA Hermes chat with image paste",
+      "keywords": ["agent", "homelab", "nasa", "images"],
+      "restart": "ignore",
+      "workspace": {
+        "name": "hermes",
+        "cwd": "~",
+        "color": "Orange",
+        "layout": {
+          "pane": {
+            "surfaces": [
+              {
+                "type": "browser",
+                "name": "Hermes",
+                "url": "https://nasa.tail55ddb6.ts.net:9119/chat",
+                "focus": true
+              }
+            ]
+          }
+        }
+      }
+    },
+    {
       "name": "houston",
       "description": "Agent worker VM, its herdr server (herdr --remote)",
       "keywords": ["fleet", "ssh", "worker", "herdr"],
