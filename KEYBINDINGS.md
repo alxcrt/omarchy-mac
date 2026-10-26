@@ -26,7 +26,7 @@ Caps Lock is Escape and the right ⌘ is ⌥, remapped by hidutil (`mac-keyremap
 | `Hyper+C` | Claude |
 | `Hyper+E` | Visual Studio Code |
 | `Hyper+L` | Linear |
-| `Hyper+P` | Bitwarden |
+| `Hyper+P` | 1Password |
 | `Hyper+M` | IINA |
 | `Hyper+O` | Omarchy menu |
 | `Hyper+K` | Omarchy Keybindings |

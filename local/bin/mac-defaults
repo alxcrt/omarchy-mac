@@ -14,8 +14,12 @@ set -e
 #   InitialKeyRepeat 15 is the shortest delay the Settings slider allows;
 #   KeyRepeat 1 is faster than its fastest stop (2).
 #   autohide is on so the two Dock timings have something to speed up.
+#   NSWindowShouldDragOnGesture: ⌃⌘-drag anywhere moves a window, for
+#   Chromium browsers (Helium, Chrome) whose tab strip leaves no free title
+#   bar to grab. Apps read it at launch.
 SETTINGS='-g|InitialKeyRepeat|int|15|short delay before key repeat
 -g|KeyRepeat|int|1|fastest key repeat
+-g|NSWindowShouldDragOnGesture|bool|true|⌃⌘-drag anywhere in a window moves it
 com.apple.finder|AppleShowAllFiles|bool|true|Finder shows hidden files
 com.apple.finder|ShowPathbar|bool|true|Finder shows the full path at the bottom
 com.apple.finder|ShowStatusBar|bool|true|Finder shows item count and free disk space

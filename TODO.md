@@ -14,7 +14,12 @@ automatically installed on macOS. Keep this file current when scope changes.
   permissions denied access. The Oct 2026 declutter included
   (Downloads ISOs/ROMs/firmware/movies, Xcode device data, Ollama and LM Studio
   models, caches, removed apps).
-- **Delete Hue Sync and Fits** in Finder: root-owned, `trash` can't.
+- **Delete Hue Sync, Fits, Checkm8.info and Run Receipt** in Finder (needs your
+  password): root-owned, `trash` can't. Adobe's ARMDC helpers in
+  `/Library/PrivilegedHelperTools` are leftovers of an uninstalled Acrobat.
+- **Raycast `Hyper+P`**: repoint it from Bitwarden to 1Password (Settings >
+  Extensions > 1Password, or the app). Then open 1Password > Settings > Browser
+  and check the Helium extension connects to the app (Touch ID unlock).
 - **`claude auth login`**: the Claude CLI's saved sign-in has expired, so
   `mac usage` shows the plan (Max 5x) but no limits. `grok login` too, if
   Grok is in use.
@@ -50,6 +55,19 @@ lock would stay custom anyway); keep `install.sh` links over GNU stow;
 hosted service).
 
 ## Done (Oct 2026, newest first)
+
+- Oct 26 cleanup: removed Sideloadly (and its login daemon), PlayTorrio,
+  Hopper, RustRover, Telegram, Hermes and calibre with their leftovers;
+  CuaDriver kept (OpenAI's computer-use service, still in use). 1Password is
+  the only password manager (Bitwarden uninstalled). Plex HTPC, Plexamp,
+  Raspberry Pi Imager and AppCleaner adopted into the Brewfile. Purged
+  pnpm/npm/go/Playwright, Hugging Face + whisper models and Chrome/Helium disk
+  caches; Docker build cache and unused images pruned and the VM trimmed
+  (45 → 20 GB, volumes and containers kept). The uv cache was left: a
+  long-running `uv run targ serve` holds its lock. `mac-defaults` now sets
+  ⌃⌘-drag-anywhere to move windows: Helium/Chrome windows seemed "stuck" on
+  the built-in display because a full tab strip leaves no title bar to grab
+  (moving them by script worked, so macOS was not blocking them).
 
 - Oct 17 maintenance: pulled the repo and official upstream reference; ran
   `mac update` successfully (12 Homebrew packages/apps and four AI CLIs).

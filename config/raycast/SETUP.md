@@ -58,7 +58,7 @@ in Raycast Settings → Shortcuts after reinstalling or importing app settings.
 | `Hyper+W` | cmux workspaces |
 | `Hyper+A` / `Hyper+C` | ChatGPT / Claude |
 | `Hyper+E` / `Hyper+L` | VS Code / Linear (Linear retained) |
-| `Hyper+P` / `Hyper+M` | Bitwarden / IINA |
+| `Hyper+P` / `Hyper+M` | 1Password / IINA |
 | `Hyper+O` | Omarchy menu |
 | `Hyper+K` | Omarchy Keybindings |
 

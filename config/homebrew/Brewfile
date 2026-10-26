@@ -88,6 +88,8 @@ cask "ghostty@tip"             # terminal (tip builds)
 cask "google-chrome"           # primary browser (Phase 7 webapp target)
 cask "helium-browser"          # Helium (ungoogled Chromium); not "helium", an unrelated Gatekeeper-disabled Intel app
 cask "iina"                    # media player (macOS-native mpv)
+cask "plex-htpc"               # Plex TV-style player for the nasa library
+cask "plexamp"                 # Plex music player
 cask "localsend"
 cask "tailscale-app"           # mesh VPN (menu-bar app; ships its own CLI)
 cask "transmission"            # replaced qbittorrent (Gatekeeper-deprecated, disabled 2026-09-01)
@@ -113,11 +115,12 @@ cask "ollama-app"
 cask "obsidian"
 cask "chatgpt"                 # ChatGPT desktop app (Omarchy 4 Install > AI)
 cask "claude"                  # Claude desktop app
-cask "1password-cli"
-cask "bitwarden"               # password manager replacing LastPass/Google/iCloud (Oct 2026); desktop app gives the Helium extension Touch ID unlock
+cask "1password-cli"           # `op`; 1Password is the only password manager (Bitwarden removed Oct 26) and the SSH agent
 cask "yubico-authenticator"     # YubiKey companion app
 cask "moonlight"
 cask "steam"
+cask "raspberry-pi-imager"     # flashes the fleet Pis (apollo)
+cask "appcleaner"              # removes an app with its leftovers
 cask "docker-desktop"          # installed (needs admin password on install)
 cask "bruno"                   # API collections stored alongside project code
 cask "dbeaver-community"       # database browser for local and remote development
