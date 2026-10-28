@@ -27,11 +27,15 @@ pnpm = "latest"
 shellcheck = "latest"
 shfmt = "latest"
 
+# pipx tools pin their interpreter: `python = "latest"` jumps to a new CPython
+# on release day, before wheels exist (mlx-lm's sentencepiece fell back to a
+# cmake source build on 3.15.0 and died). Bump the pin once wheels are out.
+
 # Local LLMs on Apple Silicon (mlx_lm.chat / .generate / .server)
-"pipx:mlx-lm" = "latest"
+"pipx:mlx-lm" = { version = "latest", uvx_args = "--python 3.14" }
 
 # Hermes Agent (NousResearch) — official PyPI package, not the npm bridge
-"pipx:hermes-agent" = "latest"
+"pipx:hermes-agent" = { version = "latest", uvx_args = "--python 3.14" }
 
 # AI CLIs + gh — migrated off Homebrew into mise so `mup`/`macup` bump them.
 # All floated at "latest"; minimum_release_age = "0" (above) makes every
