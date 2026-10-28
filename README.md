@@ -69,8 +69,9 @@ Safe to re-run any time.
    - **Desktops**: add the ones you want per display in Mission Control
      (`mac wm --status` shows the current layout).
    - **Root-owned apps** are left to their owner: the Brewfile skips the
-     Chrome, Cursor and 1Password casks while `/Applications` holds a copy this
-     user doesn't own (a Jamf pkg, or an installer run with sudo), because brew
+     Chrome, Cursor, 1Password and Docker casks while `/Applications` holds a
+     copy this user doesn't own (a Jamf pkg, an installer run with sudo, or
+     Docker's own updater), because brew
      can't replace it and fails the bundle on every run. A Jamf-managed Mac also
      skips Cursor and 1Password before Jamf has installed them; everywhere else
      the Brewfile installs them.

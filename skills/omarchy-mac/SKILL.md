@@ -284,14 +284,19 @@ October 2026 audit; report actual results and any unverified UI steps.
 - **Never run two brew bundles at once.** A second run collides with the
   first's download locks and both report spurious failures. Check
   `pgrep -fl brew` before assuming a bundle died.
-- **Root-owned apps are not brew's** (Chrome, Cursor and 1Password here,
-  also on this non-Jamf Mac). A Jamf/MDM pkg or a sudo installer leaves them
-  `root:wheel`, and brew then dies on `sudo chgrp` ("Operation not permitted")
-  on every install and greedy upgrade, failing the whole `brew bundle`. The
-  Brewfile's `brew_owns` lambda declares those casks only while
-  `/Applications/<App>.app` is missing or owned by the user; check
-  `brew bundle list --cask` for what it resolves to. Microsoft apps stay out
-  of the Brewfile entirely.
+- **Root-owned apps are not brew's** (Chrome, Cursor, 1Password and Docker
+  here, also on this non-Jamf Mac). A Jamf/MDM pkg, a sudo installer or the
+  app's own updater (Docker's, Oct 2026) leaves them `root:wheel`, and brew
+  then dies on `sudo chgrp` ("Operation not permitted") on every install and
+  greedy upgrade, failing the whole `brew bundle`. The Brewfile's `brew_owns`
+  lambda declares those casks only while `/Applications/<App>.app` is missing
+  or owned by the user; check `brew bundle list --cask` for what it resolves
+  to. Microsoft apps stay out of the Brewfile entirely. When a brew-installed
+  app turns root-owned later, its cask record stays and `macup`'s greedy
+  upgrade fails on it every run. Drop the record with
+  `rm -rf "$(brew --prefix)/Caskroom/<cask>"`, never `brew uninstall`, which
+  runs the cask's uninstall steps against the live app. A failed upgrade also
+  leaves a full backup copy of the app in that folder (2.1 GB for Docker).
 - **Karabiner is gone — the modifier remap is `mac-keyremap` (hidutil).** It was
   removed because its DriverKit extension kept breaking on Tahoe ("code
   signature invalid", error 8) and needed re-approval after every macOS bump.

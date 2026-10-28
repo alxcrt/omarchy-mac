@@ -1158,11 +1158,14 @@ undeclared=$(brew list --cask -1 2>/dev/null | while read -r c; do
 # `sudo chgrp`); one that is missing or user-owned must. Assert on what the
 # Brewfile resolves to, in both directions.
 resolved=$(brew bundle list --cask --file="$HOME/.config/homebrew/Brewfile" 2>/dev/null)
-for pair in "google-chrome:Google Chrome" "cursor:Cursor" "1password:1Password"; do
+casks=$(brew list --cask -1 2>/dev/null)
+for pair in "google-chrome:Google Chrome" "cursor:Cursor" "1password:1Password" "docker-desktop:Docker"; do
   c=${pair%%:*}; app="/Applications/${pair#*:}.app"
   listed=0; echo "$resolved" | grep -qx "$c" && listed=1
   if [ -e "$app" ] && [ "$(stat -f %u "$app")" != "$(id -u)" ]; then
     [ $listed = 0 ] && ok "Brewfile skips root-owned $c" || bad "Brewfile" "$c resolves although $app is root-owned"
+    # A record left from before the app went root-owned fails macup's greedy upgrade.
+    echo "$casks" | grep -qx "$c" && bad "Brewfile" "brew still records $c; rm -rf \"\$(brew --prefix)/Caskroom/$c\""
   else
     [ $listed = 1 ] && ok "Brewfile keeps $c (not root-owned)" || bad "Brewfile" "$c skipped although $app is missing or user-owned"
   fi

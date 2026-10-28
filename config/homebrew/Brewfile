@@ -131,7 +131,9 @@ cask "moonlight"
 cask "steam"
 cask "raspberry-pi-imager"     # flashes the fleet Pis (apollo)
 cask "appcleaner"              # removes an app with its leftovers
-cask "docker-desktop"          # installed (needs admin password on install)
+# Docker's own updater replaces the app root-owned (4.97.0, Oct 2026), so brew
+# keeps it only until then; see brew_owns above.
+cask "docker-desktop" if brew_owns.call("Docker")  # needs admin password on install
 cask "bruno"                   # API collections stored alongside project code
 cask "dbeaver-community"       # database browser for local and remote development
 cask "keka"                    # native archive app; extracts RAR, creates ZIP/7z
