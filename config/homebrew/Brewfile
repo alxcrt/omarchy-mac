@@ -57,7 +57,7 @@ brew "just"
 brew "llama.cpp"
 brew "mole"
 brew "openai-whisper"
-brew "whisper-cpp"
+brew "whisper.cpp"
 brew "xh"
 
 # --- CLI installed by hand, declared Oct 2026 ---
