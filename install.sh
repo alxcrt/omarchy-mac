@@ -95,9 +95,9 @@ command -v mise >/dev/null 2>&1 || brew install mise
 section "Reconciling Homebrew layer (Brewfile)"
 # Homebrew 6 aborts the whole bundle on a formula from an untrusted tap, so
 # tap and trust the third-party ones first. Trust the formula, not the tap.
-for t in bjarneo/cliamp blacktop/tap mateussiqueira/unleash crmne/tap; do brew tap "$t"; done
+for t in bjarneo/cliamp blacktop/tap mateussiqueira/unleash crmne/tap facebook/fb; do brew tap "$t"; done
 # ipsw declares conflicts_with "ipsw-frida", so brew loads that formula too.
-brew trust --formula bjarneo/cliamp/cliamp blacktop/tap/ipsw blacktop/tap/ipsw-frida mateussiqueira/unleash/unleash
+brew trust --formula bjarneo/cliamp/cliamp blacktop/tap/ipsw blacktop/tap/ipsw-frida mateussiqueira/unleash/unleash facebook/fb/meta-ads
 brew trust --cask crmne/tap/spotifast
 brew bundle --file="$HOME/.config/homebrew/Brewfile" || true
 

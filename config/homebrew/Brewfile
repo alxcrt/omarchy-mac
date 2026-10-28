@@ -11,6 +11,7 @@ tap "bjarneo/cliamp"
 tap "blacktop/tap"
 tap "mateussiqueira/unleash"
 tap "crmne/tap"
+tap "facebook/fb"
 
 # --- CLI: Omarchy's pacman set, ported ---
 brew "git"          # direct binary: /usr/bin/git is an xcrun stub that adds ~10ms per call
@@ -82,6 +83,7 @@ brew "redis"        # nl-lms cache; runs as a login service (brew services)
 brew "smartmontools"  # disk health (smartctl)
 brew "tree"
 brew "mateussiqueira/unleash/unleash"
+brew "facebook/fb/meta-ads"  # Meta Marketing API CLI
 
 # --- GUI casks ---
 # A root-owned app is not brew's to manage: a Jamf/MDM pkg or an installer run

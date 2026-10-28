@@ -342,5 +342,5 @@ binding works with the mapping cleared.
   broken pkg install script that fails under `installer` even with sudo. macOS Preview
   handles PDFs; grab Reader from adobe.com directly if you truly need it.
 - Third-party taps: Homebrew 6 refuses formulae from untrusted taps, so
-  `install.sh` taps and trusts the Brewfile's three (cliamp, blacktop, unleash)
-  before `brew bundle`.
+  `install.sh` taps and trusts the Brewfile's five (cliamp, blacktop, unleash,
+  crmne, facebook) before `brew bundle`.
