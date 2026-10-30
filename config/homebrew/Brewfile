@@ -139,6 +139,7 @@ cask "docker-desktop" if brew_owns.call("Docker")  # needs admin password on ins
 cask "bruno"                   # API collections stored alongside project code
 cask "dbeaver-community"       # database browser for local and remote development
 cask "keka"                    # native archive app; extracts RAR, creates ZIP/7z
+cask "linearmouse"             # open-source per-device scrolling: mouse (MX Master 3S) traditional, trackpad natural; config/linearmouse
 cask "font-jetbrains-mono-nerd-font"
 cask "font-ia-writer-duo"
 cask "crmne/tap/spotifast"     # native Spotify client (spotifast.rocks)
