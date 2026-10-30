@@ -1,73 +1,83 @@
 {
-  "$schema" : "https:\/\/schema.linearmouse.app\/0.12.0",
-  "schemes" : [
+  "$schema": "https://schema.linearmouse.app/0.12.0",
+  "schemes": [
     {
-      "if" : {
-        "device" : {
-          "category" : "mouse"
+      "if": {
+        "device": {
+          "category": "mouse"
         }
       },
-      "scrolling" : {
-        "reverse" : true
+      "scrolling": {
+        "reverse": true
       }
     },
     {
-      "buttons" : {
-        "gesture" : {
-          "actions" : {
-            "down" : "appExpose",
-            "left" : "missionControl.spaceLeft",
-            "right" : "missionControl.spaceRight",
-            "up" : "missionControl"
+      "buttons": {
+        "gesture": {
+          "actions": {
+            "down": "appExpose",
+            "left": "missionControl.spaceLeft",
+            "right": "missionControl.spaceRight",
+            "up": "missionControl"
           },
-          "enabled" : true,
-          "threshold" : 50,
-          "trigger" : {
-            "button" : {
-              "controlID" : 195,
-              "kind" : "logitechControl",
-              "productID" : 45108,
-              "serialNumber" : "AD13154F"
+          "enabled": true,
+          "threshold": 50,
+          "trigger": {
+            "button": {
+              "controlID": 195,
+              "kind": "logitechControl",
+              "productID": 45108,
+              "serialNumber": "AD13154F"
             },
-            "command" : false,
-            "control" : false,
-            "option" : false,
-            "shift" : false
+            "command": false,
+            "control": false,
+            "option": false,
+            "shift": false
           }
         },
-        "mappings" : [
+        "mappings": [
           {
-            "outcomes" : {
-              "shortPress" : "missionControl"
+            "outcomes": {
+              "shortPress": "missionControl"
             },
-            "trigger" : {
-              "input" : {
-                "button" : {
-                  "controlID" : 195,
-                  "kind" : "logitechControl",
-                  "productID" : 45108,
-                  "serialNumber" : "AD13154F"
+            "trigger": {
+              "input": {
+                "button": {
+                  "controlID": 195,
+                  "kind": "logitechControl",
+                  "productID": 45108,
+                  "serialNumber": "AD13154F"
                 }
               }
             }
           }
-        ]
+        ],
+        "universalBackForward": true
       },
-      "if" : {
-        "device" : {
-          "category" : "mouse",
-          "productID" : "0xb034",
-          "productName" : "MX Master 3S",
-          "serialNumber" : "AD13154F",
-          "vendorID" : "0x46d"
+      "if": {
+        "device": {
+          "category": "mouse",
+          "productID": "0xb034",
+          "productName": "MX Master 3S",
+          "serialNumber": "AD13154F",
+          "vendorID": "0x46d"
         }
       },
-      "logitech" : {
-        "highResolutionWheel" : true
+      "logitech": {
+        "highResolutionWheel": true
       },
-      "scrolling" : {
-        "reverse" : {
-          "vertical" : true
+      "scrolling": {
+        "reverse": {
+          "vertical": true,
+          "horizontal": true
+        },
+        "modifiers": {
+          "shift": {
+            "type": "alterOrientation"
+          },
+          "option": {
+            "type": "pinchZoom"
+          }
         }
       }
     }
