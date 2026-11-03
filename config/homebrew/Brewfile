@@ -103,6 +103,7 @@ cask "helium-browser"          # Helium (ungoogled Chromium); not "helium", an u
 cask "iina"                    # media player (macOS-native mpv)
 cask "plex-htpc"               # Plex TV-style player for the nasa library
 cask "plexamp"                 # Plex music player
+cask "stremio@beta"            # Stremio desktop (beta): local engine, native 4K/HDR player
 cask "localsend"
 cask "tailscale-app"           # mesh VPN (menu-bar app; ships its own CLI)
 cask "transmission"            # replaced qbittorrent (Gatekeeper-deprecated, disabled 2026-09-01)
