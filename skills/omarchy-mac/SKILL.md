@@ -349,6 +349,23 @@ October 2026 audit; report actual results and any unverified UI steps.
   only pass from a terminal with Accessibility/Automation grants. From other
   contexts (agents, CI) they fail with "osascript is not allowed to send
   keystrokes" — that is the runner's permission, not a real regression.
+- **`op` can fail in Ghostty while it works over SSH.** The 1Password CLI
+  reads the desktop app's settings in 1Password's group container. macOS
+  app-data protection blames the responsible app (Ghostty), and SSH sessions
+  are exempt. Symptoms in Ghostty: `op account list` prints nothing, `op signin`
+  offers to "add an account manually" (answer no: that stores the Secret Key
+  outside the app), and `op --debug` shows `settings.json: operation not
+  permitted`. Fix: `tccutil reset SystemPolicyAppData com.mitchellh.ghostty`,
+  run `op` in Ghostty and click **Allow** on "access data from other apps", or
+  give Ghostty Full Disk Access. Test with `op vault list`: under app
+  integration `op whoami` reports "not signed in" even when `op` works.
+- **A lean Mac uses a local Brewfile subset** (README, "A smaller Mac").
+  `test.sh` then fails on the packages left out by design. Report those as
+  expected, not as regressions, and never "fix" them by running the full
+  `install.sh`.
+- **Raycast settings move by Export/Import Settings & Data**, never by copying
+  files: hotkeys live in its encrypted database. Delete the `.rayconfig`
+  afterwards, because it holds private settings and AI chat history.
 
 ## Working rules
 

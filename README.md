@@ -108,6 +108,30 @@ macup
 `install.sh --links` only repairs the symlinks (fast); `macup` warns when they
 have drifted into plain copies.
 
+### A smaller Mac (lean install)
+
+The full Brewfile is a workstation set (Docker, Steam, Plex, Ollama, IDEs).
+On a smaller Mac, such as an 8 GB MacBook Air, keep the configs and the mise
+layer and install a subset of the Brewfile instead:
+
+```sh
+~/omarchy-mac/install.sh --links      # configs only, no packages
+cp ~/.config/homebrew/Brewfile ~/.config/homebrew/Brewfile.lean
+# edit Brewfile.lean down to what this Mac needs (keep mise and duti)
+brew bundle --file=~/.config/homebrew/Brewfile.lean
+chrome-extensions sync; mac-keyremap --apply; mac-wm --apply; mac-defaults --apply
+mise trust ~/.config/mise/config.toml && mise install
+```
+
+Copy the keyremap plist into `~/Library/LaunchAgents` as `install.sh` does.
+`Brewfile.lean` is a local file next to the linked one, so it never reaches the
+repo. `macup` only upgrades what is installed, so it never pulls the full set
+back in. Don't run the full `install.sh` there: its `brew bundle` reads the
+repo Brewfile. On such a Mac, `test.sh` reports the left-out packages (for
+example cliamp, the PostgreSQL clients and the Transmission handlers) and any
+cask installed outside the Brewfile. Those failures are expected. Read any
+other failure as real.
+
 ## Update
 
 ```sh
@@ -277,6 +301,15 @@ or registration are verified. Optional: `mac raycast prepare` builds the
 Quicklinks JSON for import, merging public defaults with the private
 `~/.config/raycast/omarchy-quicklinks.local.json`. Snippets are also optional.
 Private links, credentials and full Raycast exports stay outside this repo.
+
+To move Raycast's own settings to another Mac, run **Export Settings & Data**
+on the old Mac, send the `.rayconfig` file across, and run **Import Settings &
+Data** on the new one. Hotkeys, aliases and extension settings live in
+Raycast's encrypted database, not in files this repo can link, so the export is
+the only scriptless route without Raycast Pro's Cloud Sync. Store extensions
+reinstall in the background after the import. The export holds private
+settings and AI chat history: delete it from both Macs afterwards and never
+commit it.
 
 `browser-url` supports Helium and prefers the configured supported default
 browser when it is running, with fallback to another running supported browser.
