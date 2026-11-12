@@ -445,6 +445,32 @@ else
 fi
 fi
 
+# ── 7c. Rex ────────────────────────────────────────────────────────────────
+if want rex; then
+sec "Rex (terminal + multiplexer)"
+if command -v rex >/dev/null 2>&1; then
+  # Rex's own loader, against a broken file too so an always-OK check can't pass.
+  rex config check >/dev/null 2>&1 && ok "rex loads ~/.config/rex/init.lua" || bad "rex init.lua" "$(rex config check 2>&1 | tail -3)"
+  printf 'rex.bind("alt+enter", "pane.split", { direction = \n' >"$T/rex-bad.lua"
+  rex config check "$T/rex-bad.lua" >/dev/null 2>&1 && bad "rex config check" "accepted a syntax error" \
+    || ok "rex's loader rejects a broken init.lua"
+  # The keymap as the running server resolved it, not as the file reads.
+  # herdr's split_horizontal (alt+enter) puts the new pane below.
+  rk=$(rex keymap 2>/dev/null)
+  _rk() { awk -v k="$1" '{ key=$1; if ($2 ~ /^[a-z]/ && $2 !~ /\./) key=$1" "$2 } key==k' <<<"$rk"; }
+  for want_row in 'alt+enter|pane.split|"down"' 'alt+shift+enter|pane.split|"right"' \
+                  'ctrl+space h|pane.split|"down"' 'ctrl+alt+left|pane.focus|"left"' \
+                  'alt+[Digit3]|client.tab.goto|"index":3' 'alt+up|session.previous|' \
+                  'ctrl+space ctrl+space|pane.send_key|ctrl+space'; do
+    IFS='|' read -r k a arg <<<"$want_row"
+    _rk "$k" | grep -q "$a.*$arg" && ok "rex: $k → $a" || bad "rex keymap" "$k is '$(_rk "$k")'"
+  done
+  grep -q '^resize ' <<<"$rk" && ok "rex has herdr's resize mode" || bad "rex keymap" "no resize mode"
+else
+  skip "rex" "not installed"
+fi
+fi
+
 # ── 8. git ─────────────────────────────────────────────────────────────────
 if want git; then
 sec "git config + worktree functions"

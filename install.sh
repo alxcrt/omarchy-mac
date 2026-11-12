@@ -29,6 +29,8 @@ link config/opencode/opencode.jsonc .config/opencode/opencode.jsonc
 link config/git/config         .config/git/config
 link config/ghostty/config     .config/ghostty/config
 link config/cmux/cmux.json     .config/cmux/cmux.json
+# Only init.lua: Rex owns and rewrites ssh_config in the same folder.
+link config/rex/init.lua       .config/rex/init.lua
 # Link individual files so existing third-party Script Commands are preserved.
 mkdir -p "$HOME/.config/raycast/scripts"
 # Migrate the earlier 16-command pack. Remove only symlinks that we installed;

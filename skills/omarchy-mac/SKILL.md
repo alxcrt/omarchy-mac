@@ -47,6 +47,7 @@ into `~/.config` + `~/.local/bin`.
 | `~/.local/bin/mac-defaults` | the macOS preferences (key repeat, Finder hidden files + path bar + status bar, instant Dock autohide, Transmission prefs + magnet/`.torrent` handler, `~/Developer`) as one list; `--status` / `--apply` |
 | `~/.config/herdr/config.toml` | herdr (the multiplexer), keys mapped from Omarchy's tmux.conf. tmux itself was removed in Oct 2026; don't re-add it |
 | `~/.config/ghostty/config` | upstream Omarchy, macOS-adjusted |
+| `~/.config/rex/init.lua` | Rex keybindings: herdr's keys (prefix `ctrl+space`, `⌥Enter` splits, `⌃⌥` arrows focus, `⌥1-9` tabs). Its font and padding come from `mac-defaults` |
 | `~/.config/cmux/cmux.json` | cmux (libghostty terminal with a workspace sidebar; reads the Ghostty config for font/theme/keys). Terminal links go to the real browser, ⌘⌥1-9 picks tabs, and one palette workspace per fleet machine (each runs `cmux-fleet <host>`) |
 | `~/.local/bin/` | `mac`, `cmux-fleet`, `macup`, `mac-keys`, `mac-keyremap`, `mac-defaults`, `mac-hook`, `ghostty-run`, `transcode`, `webdl`, `weburl`, `browser-url`, `chrome-extensions`, `chromium-native-host`, `mise-install`, `agent-usage-*` |
 
@@ -79,7 +80,7 @@ Ghostty's own `super`/`cmd` means **⌘**, not Omarchy SUPER. Full generated lis
 `~/omarchy-mac/test.sh` has over 400 functional checks (it executes things and
 checks effects; it does not assert files exist). Run a section with
 `./test.sh <name>`: `layering aliases functions cd transcode compress herdr cmux
-git browser extensions mac scripts hooks wm keyremap defaults touchid shell brew repo`.
+rex git browser extensions mac scripts hooks wm keyremap defaults touchid shell brew repo`.
 
 **Run the relevant section after any change, and the full suite before
 committing.** Use `./test.sh --headless` from an agent runner to skip desktop
@@ -363,6 +364,19 @@ October 2026 audit; report actual results and any unverified UI steps.
   `test.sh` then fails on the packages left out by design. Report those as
   expected, not as regressions, and never "fix" them by running the full
   `install.sh`.
+- **Rex (Rex Beta.app) is Ghostty + herdr in one app.** Its keys live in
+  `~/.config/rex/init.lua` (herdr's `[keys]` ported: `ctrl+space>` sequences
+  are the prefix; herdr workspace → Rex session). `rex config check` and
+  `rex config reload` (Rex does not watch the file), then `rex keymap` for what
+  the server resolved. Appearance can't go in init.lua: font, size and padding
+  are `com.superlogical.rex` `Workspace.*` defaults, set by `mac-defaults` to
+  Ghostty's values. **The app reads them only at launch** (a running window
+  kept 269×76 cells through a 15→22pt write); after a relaunch, check
+  `rex block call -b <id> size` (JetBrains Mono 15pt = 9×20 px cells).
+  Quitting the app is safe: sessions live in the Rex server. Cursor and
+  Option-key enums are undocumented, so set those in Rex's Settings.
+  `~/.config/rex/ssh_config` is Rex's own (from `rex terminfo setup`); don't
+  link or edit it.
 - **Raycast settings move by Export/Import Settings & Data**, never by copying
   files: hotkeys live in its encrypted database. Delete the `.rayconfig`
   afterwards, because it holds private settings and AI chat history.

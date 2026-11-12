@@ -5,8 +5,11 @@
 #   mac-defaults --apply      write them; restart Finder/Dock only if they changed
 #
 # Key repeat is read at login: apps opened before a logout keep the old rate.
-# Transmission and Docker Desktop read their prefs at launch; --apply never
+# Transmission, Docker Desktop and Rex read their prefs at launch; --apply never
 # quits them, since that would cut off running downloads and containers.
+# Rex keeps appearance only in these app settings (its init.lua can't set
+# fonts or padding); quitting it is safe, because its sessions live in the
+# Rex server.
 set -e
 
 # domain|key|type|value|what it does   (a leading ~ in either is $HOME)
@@ -30,7 +33,11 @@ org.m0k.transmission|DownloadLocationConstant|bool|true|Transmission saves to on
 org.m0k.transmission|DownloadFolder|string|~/Downloads|Transmission saves to ~/Downloads
 org.m0k.transmission|WarningDonate|bool|false|Transmission never asks for donations
 org.m0k.transmission|WarningLegal|bool|false|Transmission skips its legal notice
-~/Library/Group Containers/group.com.docker/settings-store.json|MemoryMiB|int|4096|Docker VM capped at 4 GB (default 8)'
+~/Library/Group Containers/group.com.docker/settings-store.json|MemoryMiB|int|4096|Docker VM capped at 4 GB (default 8)
+com.superlogical.rex|Workspace.terminalFontName|string|JetBrainsMono Nerd Font|Rex uses the Ghostty font
+com.superlogical.rex|Workspace.terminalFontPointSize|float|15|Rex font size matches Ghostty
+com.superlogical.rex|Workspace.terminalPaddingX|float|14|Rex side padding matches Ghostty
+com.superlogical.rex|Workspace.terminalPaddingY|float|14|Rex bottom padding matches Ghostty'
 
 # Default apps, set with duti (from the Brewfile).
 # bundle id|URL scheme, or .extension for a file type|what it does
