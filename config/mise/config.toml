@@ -80,10 +80,6 @@ copilot = "latest"               # GitHub Copilot CLI
 "npm:playwright" = "latest"      # browser automation for agents
 "npm:cf" = "latest"              # Cloudflare's CLI (beta). NOT mise's bare `cf`, which is Cloud Foundry
 
-# Terminal workspace manager (herdr.dev = github.com/herdrdev/herdr).
-# Ships a herdr-macos-aarch64 release binary, so it stays in the update path.
-"github:herdrdev/herdr" = "latest"
-
 # hunk: the diff viewer hds runs in its diff pane (`hunk diff --watch`).
 hunk = "latest"
 

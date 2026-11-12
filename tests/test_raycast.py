@@ -23,7 +23,7 @@ class RaycastTests(unittest.TestCase):
         self.log = self.base / 'calls.jsonl'
         self.env = dict(os.environ, HOME=str(self.home),
                         PATH=f'{self.bin}:/usr/bin:/bin', RAYCAST_TEST_LOG=str(self.log))
-        for key in ('OMARCHY_BROWSER', 'CMUX_SURFACE_ID'):
+        for key in ('OMARCHY_BROWSER', 'REX_BLOCK', 'REX_SESSION'):
             self.env.pop(key, None)
         stub = '''#!/opt/homebrew/bin/python3
 import json, os, sys
@@ -32,7 +32,7 @@ with open(os.environ['RAYCAST_TEST_LOG'], 'a') as f:
     f.write(json.dumps([Path(sys.argv[0]).name, sys.argv[1:], os.getcwd()]) + '\\n')
 print('stub output')
 '''
-        for name in ('ghostty-run', 'mac', 'weburl', 'transcode-pick', 'open'):
+        for name in ('rex-run', 'mac', 'weburl', 'transcode-pick', 'open'):
             self.write_executable(self.bin / name, stub)
         self.env['MAC_RAYCAST_OPEN_BIN'] = str(self.bin / 'open')
 
@@ -49,25 +49,24 @@ print('stub output')
 
     def test_dispatch_reuses_existing_commands(self):
         expected = {
-            'update': ('ghostty-run', ['macup']),
-            'mise': ('ghostty-run', ['mac', 'mise']),
-            'health': ('ghostty-run', ['mac', 'doctor']),
+            'update': ('rex-run', ['macup']),
+            'mise': ('rex-run', ['mac', 'mise']),
+            'health': ('rex-run', ['mac', 'doctor']),
             'usage': ('mac', ['usage']), 'keys': ('mac', ['keys']),
             'transcode': ('transcode-pick', []),
-            'monitor': ('ghostty-run', ['btop']),
-            'dev-doctor': ('ghostty-run', ['mac', 'dev', 'doctor']),
-            'git': ('ghostty-run', ['mac', 'dev', 'git', 'ui']),
-            'docker': ('ghostty-run', ['mac', 'dev', 'docker', 'ui']),
+            'monitor': ('rex-run', ['btop']),
+            'dev-doctor': ('rex-run', ['mac', 'dev', 'doctor']),
+            'git': ('rex-run', ['mac', 'dev', 'git', 'ui']),
+            'docker': ('rex-run', ['mac', 'dev', 'docker', 'ui']),
             'api': ('mac', ['dev', 'api', 'open']),
             'database': ('mac', ['dev', 'db', 'open']),
-            'editor': ('ghostty-run', ['nvim']),
-            'music': ('ghostty-run', ['cliamp']),
-            'music-setup': ('ghostty-run', ['cliamp', 'setup']),
-            'terminal': ('open', ['-a', 'cmux']),
-            'ghostty': ('open', ['-a', 'Ghostty']),
+            'editor': ('rex-run', ['nvim']),
+            'music': ('rex-run', ['cliamp']),
+            'music-setup': ('rex-run', ['cliamp', 'setup']),
+            'terminal': ('open', ['-a', 'Rex Beta']),
             'archive': ('open', ['-a', 'Keka']),
-            'copy-url': ('weburl', []), 'download': ('ghostty-run', ['webdl']),
-            **{h: ('ghostty-run', ['cmux-fleet', h])
+            'copy-url': ('weburl', []), 'download': ('rex-run', ['webdl']),
+            **{h: ('rex-run', ['-s', h, 'fleet', h])
                for h in ('houston', 'nasa', 'coolify', 'titan')},
         }
         for action, (command, argv) in expected.items():
@@ -87,9 +86,9 @@ print('stub output')
         # Replace only the dispatch executable in the isolated home. Even the
         # app-opening wrappers are now observed without contacting the desktop.
         self.write_executable(self.bin / 'mac-raycast',
-                              (self.bin / 'ghostty-run').read_text())
+                              (self.bin / 'rex-run').read_text())
         scripts = sorted((ROOT / 'config/raycast/optional').glob('*.sh'))
-        self.assertEqual(len(scripts), 23)
+        self.assertEqual(len(scripts), 22)
         for script in scripts:
             with self.subTest(script=script.name):
                 self.assertTrue(os.access(script, os.X_OK))
@@ -124,7 +123,7 @@ print('stub output')
             with self.subTest(dispatch=choice['value']):
                 result = self.run_helper('menu', choice['value'])
                 self.assertEqual(result.returncode, 0, result.stderr)
-        self.write_executable(self.bin / 'mac-raycast', (self.bin / 'ghostty-run').read_text())
+        self.write_executable(self.bin / 'mac-raycast', (self.bin / 'rex-run').read_text())
         for choice in choices:
             with self.subTest(choice=choice['title']):
                 result = subprocess.run(['/bin/bash', str(script), choice['value']],
@@ -137,10 +136,10 @@ print('stub output')
         for action in ('usage', 'keys'):
             result = self.run_helper('menu', action)
             self.assertEqual(result.returncode, 0, result.stderr)
-            self.assertEqual(self.calls()[-1][:2], ['ghostty-run', ['mac', action]])
+            self.assertEqual(self.calls()[-1][:2], ['rex-run', ['mac', action]])
         result = self.run_helper('menu', 'update')
         self.assertEqual(result.returncode, 0, result.stderr)
-        self.assertEqual(self.calls()[-1][:2], ['ghostty-run', ['macup']])
+        self.assertEqual(self.calls()[-1][:2], ['rex-run', ['macup']])
         count = len(self.calls())
         for args in [('menu',), ('menu', 'usage', 'extra'), ('menu', '; touch unwanted')]:
             self.assertEqual(self.run_helper(*args).returncode, 2)

@@ -11,7 +11,7 @@ set -e
 MD=0
 case "${1:-}" in --md) MD=1 ;; "") ;; *) echo 'Usage: mac-keys [--md]' >&2; exit 2 ;; esac
 [ "$#" -le 1 ] || { echo 'Usage: mac-keys [--md]' >&2; exit 2; }
-H=${HERDR_CONFIG:-$HOME/.config/herdr/config.toml}   # override: tests
+REX=${REX_BIN:-rex}   # override: tests
 E=~/.config/omarchy-mac/extensions
 
 section() { if [ $MD = 1 ]; then printf '\n## %s\n\n| Keys | Action |\n|---|---|\n' "$1"; else printf '\n\033[1m%s\033[0m\n' "$1"; fi; }
@@ -84,178 +84,36 @@ for c in (m.get("commands") or {}).values():
 PY
 done | while IFS=$'\t' read -r k d; do row "$k" "$d"; done
 
-# herdr: its built-in bindings (`herdr --default-config`, where they are
-# commented out) merged with the user's [keys], which override them, as
-# upstream's omarchy-menu-herdr-keybindings does. Values are read as TOML, so
-# keys like prefix+[ need no special-casing. Unset actions ("") are left out.
-herdr_keys() {
-  herdr --default-config 2>/dev/null | /opt/homebrew/bin/python3 -c '
-import re, sys, tomllib
-defaults, inkeys = {}, False
-for line in sys.stdin.read().splitlines():
-    # Sections end at any table header, commented-out ones too (the defaults
-    # comment out [keys.navigate] and [[keys.custom]] examples): only lines
-    # under a bare [keys] are bindings.
-    header = re.match(r"#?\s*(\[\[?[^\]]*\]\]?)\s*$", line)
-    if header:
-        inkeys = header.group(1) == "[keys]"; continue
-    # A whole `# action = value` line (an optional trailing comment allowed):
-    # prose such as `# type = "popup" opens a session-modal terminal` is not one.
-    m = re.match(r"#\s*([a-z_]+)\s*=\s*(\"[^\"]*\"|\[[^\]]*\])\s*(#.*)?$", line) if inkeys else None
-    if m:
-        defaults[m.group(1)] = tomllib.loads("v = " + m.group(2))["v"]
-with open(sys.argv[1], "rb") as f:
-    user = tomllib.load(f).get("keys", {})
-merged = {**defaults, **user}
-print("prefix\t" + str(merged.get("prefix", "")))
-for action, keys in merged.items():
-    # Bindings are a string or a list of strings; [keys.navigate] (a table) and
-    # [[keys.command]] (a list of tables) are other things, not bindings.
-    if isinstance(keys, str):
-        keys = [keys]
-    elif not (isinstance(keys, list) and all(isinstance(k, str) for k in keys)):
-        continue
-    keys = [k for k in keys if k]
-    if action != "prefix" and keys:
-        print(" / ".join(keys) + "\t" + action.replace("_", " "))
-' "$H"
-}
-herdr_out=$(herdr_keys)
-section "herdr (prefix = $(printf '%s\n' "$herdr_out" | awk -F'\t' '$1 == "prefix" { print $2; exit }'))"
-printf '%s\n' "$herdr_out" | grep -v '^prefix	' | while IFS=$'\t' read -r k d; do row "$k" "$d"; done
-
-if [ $MD = 1 ]; then
-  printf '\n## Ghostty (effective defaults + config)\n\nGhostty `super`/`cmd` = ⌘; `alt`/`opt` = ⌥ (Omarchy SUPER).\nExplicit scope annotations come from config; the CLI omits prefix flags.\nPermission and registration in the running app are not confirmed.\n\n| Keys | Action |\n|---|---|\n'
-else
-  section "Ghostty (effective defaults + config)"
-  printf '  Ghostty super/cmd = ⌘; alt/opt = ⌥ (Omarchy SUPER).\n'
-fi
-ghostty_keys() {
-  /opt/homebrew/bin/python3 - <<'PY'
-import json, os, re, shutil, subprocess
-from pathlib import Path
-
+# Rex (terminal + multiplexer): the keymap the running Rex server resolved
+# from ~/.config/rex/init.lua, not the file as written, so a binding the
+# server rejected cannot show up here. Sequences print as `a → b`, mode
+# bindings as `mode/key`. Rex's own ⌘ shortcuts are the app's defaults, which
+# only the app reports (its Settings > Keyboard, or the command palette).
+section "Rex (init.lua as the running server resolved it; ⌥ = Omarchy SUPER)"
+rex_out=$("$REX" keymap --json 2>/dev/null | /opt/homebrew/bin/python3 -c '
+import json, sys
 try:
-    ghostty = os.environ.get('GHOSTTY_BIN') or shutil.which('ghostty') or \
-        '/Applications/Ghostty.app/Contents/MacOS/ghostty'
-    result = subprocess.run([ghostty,
-                             '+list-keybinds', '--plain'],
-                            capture_output=True, text=True, timeout=15)
-except (OSError, subprocess.TimeoutExpired) as error:
-    raise SystemExit(f'Cannot read effective Ghostty bindings: {error}')
-if result.returncode:
-    raise SystemExit(f'Cannot read effective Ghostty bindings: {result.stderr.strip()}')
-
-aliases = {'control': 'ctrl', 'opt': 'alt', 'option': 'alt',
-           'cmd': 'super', 'command': 'super', 'grave_accent': 'backquote'}
-modifiers = ('super', 'ctrl', 'alt', 'shift')
-prefixes = ('global', 'all', 'unconsumed', 'performable')
-symbols = {'super': '⌘', 'ctrl': '⌃', 'alt': '⌥', 'shift': '⇧',
-           'arrow_left': '←', 'arrow_right': '→', 'arrow_up': '↑',
-           'arrow_down': '↓', 'backquote': 'Grave', 'enter': 'Enter',
-           'escape': 'Escape', 'space': 'Space', 'tab': 'Tab'}
-
-def binding(value):
-    match = re.match(r'(.+?)=(.+)', value)
-    if not match:
-        return None
-    trigger, action = match.groups()
-    # '=' itself is a valid key: super+==increase_font_size:1.
-    if trigger.endswith('+') and action.startswith('='):
-        trigger, action = trigger + '=', action[1:]
-    flags = []
-    while ':' in trigger and trigger.split(':', 1)[0] in prefixes:
-        flag, trigger = trigger.split(':', 1)
-        flags.append(flag)
-    return trigger, action, flags
-
-def canonical(trigger):
-    sequence = []
-    for key in trigger.split('>'):
-        parts = [aliases.get(p, p) for p in key.split('+')]
-        mods = [m for m in modifiers if m in parts]
-        rest = '+'.join(p for p in parts if p not in modifiers)
-        sequence.append('+'.join(mods + [rest]))
-    return '>'.join(sequence)
-
-def display(trigger):
-    sequence = []
-    for key in trigger.split('>'):
-        shown = ''
-        for modifier in modifiers:
-            if key.startswith(modifier + '+'):
-                shown += symbols[modifier]
-                key = key[len(modifier) + 1:]
-        if re.fullmatch(r'digit_[0-9]', key):
-            key = key[-1] + ' (physical)'
-        sequence.append(shown + symbols.get(key, key))
-    return ' → '.join(sequence)
-
-# The CLI merges defaults, includes, unbinds and aliases correctly, but currently
-# omits trigger prefixes in its output. Recover scope only from configuration;
-# never use this small reader to reconstruct Ghostty's effective bindings.
-scopes = {}
-def read_scopes(path, stack=()):
-    if not path.is_file() or path.resolve() in stack:
-        return
-    includes = []
-    for line in path.read_text().splitlines():
-        match = re.match(r'\s*(keybind|config-file)\s*=\s*(.*?)\s*$', line)
-        if not match:
-            continue
-        option, value = match.groups()
-        if value.startswith('"') and value.endswith('"'):
-            if option == 'keybind':
-                value = value[1:-1]
-            else:
-                try:
-                    value = json.loads(value)
-                except ValueError:
-                    continue
-        elif option == 'config-file':
-            value = value.removeprefix('?')
-        if option == 'config-file':
-            includes.append(path.parent / value)
-        elif not value or value == 'clear':
-            scopes.clear()
-        else:
-            parsed = binding(value)
-            if parsed and parsed[0] != 'chain':
-                trigger, action, flags = parsed
-                scopes[canonical(trigger)] = flags
-    # Ghostty loads included files after all entries of their parent file.
-    for included in includes:
-        read_scopes(included, (*stack, path.resolve()))
-
-home = Path.home()
-xdg = Path(os.environ.get('XDG_CONFIG_HOME', str(home / '.config'))) / 'ghostty'
-native = home / 'Library/Application Support/com.mitchellh.ghostty'
-for directory in (xdg, native):
-    for name in ('config.ghostty', 'config'):
-        read_scopes(directory / name)
-
-for line in result.stdout.splitlines():
-    match = re.match(r'\s*keybind\s*=\s*(.+)', line)
-    parsed = binding(match[1]) if match else None
-    if not parsed:
-        continue
-    trigger, action, flags = parsed
-    key = canonical(trigger)
-    flags = flags or scopes.get(key, [])
-    notes = []
-    if 'global' in flags:
-        notes.append('global; requires Ghostty Accessibility')
-    elif 'all' in flags:
-        notes.append('all terminal surfaces')
-    else:
-        notes.extend(flag for flag in flags if flag in ('performable', 'unconsumed'))
-    if notes:
-        action += ' [' + '; '.join(notes) + ']'
-    print(display(key) + '\t' + action.replace('\t', r'\t').replace('\n', r'\n'))
-PY
-}
-ghostty_out=$(ghostty_keys)
-printf '%s\n' "$ghostty_out" | while IFS=$'\t' read -r k d; do row "$k" "$d"; done
+    keymap = json.load(sys.stdin)
+except ValueError:
+    raise SystemExit("Cannot read the Rex keymap: is the Rex server running? (rex keymap)")
+for problem in keymap.get("diagnostics") or []:
+    print("rex keymap: " + json.dumps(problem), file=sys.stderr)
+groups = {}
+for binding in keymap.get("bindings") or []:
+    keys = " → ".join(binding["keys"])
+    if binding.get("mode"):
+        keys = binding["mode"] + "/" + keys
+    args = binding.get("args") or {}
+    # direction/index/name/key read as plain words; anything else as k=v.
+    shown = [str(v) if k in ("direction", "index", "name", "key") else f"{k}={v}"
+             for k, v in args.items()]
+    groups.setdefault(" ".join([binding["action"], *shown]), []).append(keys)
+for action in sorted(groups):
+    keys = sorted(groups[action], key=lambda k: (k.count("→"), "/" in k, k))
+    print(" / ".join(keys) + "\t" + action)
+') || exit 1
+printf '%s\n' "$rex_out" | while IFS=$'\t' read -r k d; do row "$k" "$d"; done
+row "⌘ shortcuts" "Rex's built-in defaults (⌘D split, ⌘T tab, ⌘W close…), see the app"
 
 if [ $MD = 0 ]; then
   printf '\n(regenerate the repo doc with: mac-keys --md > ~/omarchy-mac/KEYBINDINGS.md)\n'

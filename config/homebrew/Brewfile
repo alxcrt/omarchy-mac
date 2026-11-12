@@ -45,7 +45,7 @@ brew "ffmpeg"
 brew "gifski"       # high-quality GIF encoder (Omarchy 3.8 gif transcoding)
 brew "wget"
 brew "mise"         # dev-tooling layer manager
-brew "pam-reattach"  # Touch ID for sudo inside herdr (or any detached session)
+brew "pam-reattach"  # Touch ID for sudo in detached sessions (multiplexer servers, tmux, screen)
 brew "mas"          # Mac App Store CLI — used by `macup`
 brew "coreutils"    # GNU coreutils; some scripts assume GNU flags
 brew "gnu-sed"
@@ -97,7 +97,8 @@ brew_owns = lambda do |app|
   path = "/Applications/#{app}.app"
   !File.exist?(path) || File.stat(path).uid == Process.uid
 end
-cask "ghostty@tip"             # terminal (tip builds)
+# Terminal: Rex (Rex Beta.app) has no cask yet; it is installed from its beta
+# and updates itself (Sparkle). It replaced Ghostty, herdr and cmux.
 cask "google-chrome" if brew_owns.call("Google Chrome")  # primary browser (Phase 7 webapp target); see brew_owns above
 cask "helium-browser"          # Helium (ungoogled Chromium); not "helium", an unrelated Gatekeeper-disabled Intel app
 cask "iina"                    # media player (macOS-native mpv)
@@ -116,7 +117,6 @@ unless File.exist?("/usr/local/jamf/bin/jamf")
   cask "1password" if brew_owns.call("1Password")
 end
 cask "visual-studio-code"
-cask "cmux"
 cask "t3-code@nightly"        # T3 Code (Nightly) — minimal GUI for AI code agents
 cask "cleanshot"
 cask "linear"                  # issue tracker (was also listed as linear-linear, its old token)

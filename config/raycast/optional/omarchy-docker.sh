@@ -5,6 +5,6 @@
 # @raycast.packageName Omarchy
 # Optional standalone command; the default pack uses the single Omarchy menu.
 # @raycast.icon 🐳
-# @raycast.description Open lazydocker in Ghostty
+# @raycast.description Open lazydocker in Rex
 
 exec "$HOME/.local/bin/mac-raycast" run docker "$@"

@@ -5,6 +5,6 @@
 # @raycast.packageName Omarchy
 # Optional standalone command; the default pack uses the single Omarchy menu.
 # @raycast.icon 💻
-# @raycast.description Bring cmux forward
+# @raycast.description Bring Rex forward
 
 exec "$HOME/.local/bin/mac-raycast" run terminal "$@"

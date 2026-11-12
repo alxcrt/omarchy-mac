@@ -3,7 +3,7 @@ name: omarchy-mac
 description: >-
   Work on Alex's Omarchy-on-macOS setup — the brew/mise package layering, the
   `mac` CLI and flow scripts, native macOS tiling, hidutil key remapping,
-  herdr/Ghostty configs,
+  the Rex terminal config,
   and the omarchy-mac dotfiles repo. Use whenever a request touches package
   installs, updates (`macup`/`mup`), keybindings, window management, terminal
   behaviour, the AI CLIs, or any config under ~/.config that this setup owns.
@@ -41,15 +41,12 @@ into `~/.config` + `~/.local/bin`.
 | `~/.config/mise/config.toml` | dev + AI CLI layer |
 | `~/.config/homebrew/Brewfile` | system + GUI layer (declarative) |
 | `~/.config/zsh/aliases.zsh` | Omarchy aliases, macOS-adjusted |
-| `~/.config/zsh/functions.zsh` | herdr layouts `hdl`/`hds`/`hdlm`/`hsl`, `ga`/`gd`, transcode wrappers |
+| `~/.config/zsh/functions.zsh` | layouts `hdl`/`hds`/`hdlm`/`hsl` (upstream's herdr layouts, on Rex panes), `ga`/`gd`, transcode wrappers |
 | `~/.local/bin/mac-wm` | window management: native tiling + Spaces settings, and the only place the native shortcuts are written down |
 | `config/launchd/com.omarchy.keyremap.plist` | login agent that reapplies the hidutil remap |
 | `~/.local/bin/mac-defaults` | the macOS preferences (key repeat, Finder hidden files + path bar + status bar, instant Dock autohide, Transmission prefs + magnet/`.torrent` handler, `~/Developer`) as one list; `--status` / `--apply` |
-| `~/.config/herdr/config.toml` | herdr (the multiplexer), keys mapped from Omarchy's tmux.conf. tmux itself was removed in Oct 2026; don't re-add it |
-| `~/.config/ghostty/config` | upstream Omarchy, macOS-adjusted |
-| `~/.config/rex/init.lua` | Rex keybindings: herdr's keys (prefix `ctrl+space`, `⌥Enter` splits, `⌃⌥` arrows focus, `⌥1-9` tabs). Its font and padding come from `mac-defaults` |
-| `~/.config/cmux/cmux.json` | cmux (libghostty terminal with a workspace sidebar; reads the Ghostty config for font/theme/keys). Terminal links go to the real browser, ⌘⌥1-9 picks tabs, and one palette workspace per fleet machine (each runs `cmux-fleet <host>`) |
-| `~/.local/bin/` | `mac`, `cmux-fleet`, `macup`, `mac-keys`, `mac-keyremap`, `mac-defaults`, `mac-hook`, `ghostty-run`, `transcode`, `webdl`, `weburl`, `browser-url`, `chrome-extensions`, `chromium-native-host`, `mise-install`, `agent-usage-*` |
+| `~/.config/rex/init.lua` | Rex (the terminal + multiplexer) keybindings: upstream Omarchy's herdr keys, key for key (prefix `ctrl+space`, `⌥Enter` splits, `⌃⌥` arrows focus, `⌥1-9` tabs). Its font and padding come from `mac-defaults`. Rex replaced Ghostty, herdr, cmux (Nov 2026) and tmux (Oct); don't re-add them |
+| `~/.local/bin/` | `mac`, `rex-run`, `fleet`, `macup`, `mac-keys`, `mac-keyremap`, `mac-defaults`, `mac-hook`, `transcode`, `webdl`, `weburl`, `browser-url`, `chrome-extensions`, `chromium-native-host`, `mise-install`, `agent-usage-*` |
 
 ## Commands
 
@@ -68,10 +65,10 @@ declared keg-only libpq clients are appended to PATH after mise. Bruno,
 DBeaver Community and Keka use normal Raycast app search; the single Omarchy
 menu includes developer checks, Git selection, Docker and CLIamp.
 
-**Omarchy SUPER = ⌥ (Option)** is the port's convention. Inside herdr,
+**Omarchy SUPER = ⌥ (Option)** is the port's convention. Inside Rex,
 `⌥Enter` splits a pane and `⌥1..9` selects a tab. Native macOS Desktops use
 `⌃1..9`; global app launchers need Raycast hotkeys configured in its UI.
-Ghostty's own `super`/`cmd` means **⌘**, not Omarchy SUPER. Full generated list:
+In `init.lua`, `cmd`/`super` means **⌘**, not Omarchy SUPER (that is `alt`). Full generated list:
 `mac keys`, or `KEYBINDINGS.md` in the repo — **regenerate it, never hand-edit**:
 `mac keys --md > ~/omarchy-mac/KEYBINDINGS.md`.
 
@@ -79,7 +76,7 @@ Ghostty's own `super`/`cmd` means **⌘**, not Omarchy SUPER. Full generated lis
 
 `~/omarchy-mac/test.sh` has over 400 functional checks (it executes things and
 checks effects; it does not assert files exist). Run a section with
-`./test.sh <name>`: `layering aliases functions cd transcode compress herdr cmux
+`./test.sh <name>`: `layering aliases functions cd transcode compress
 rex git browser extensions mac scripts hooks wm keyremap defaults touchid shell brew repo`.
 
 **Run the relevant section after any change, and the full suite before
@@ -95,15 +92,10 @@ October 2026 audit; report actual results and any unverified UI steps.
   used `karabiner_grabber`, which no longer exists (it's `Karabiner-Core-Service`).
   Assert on **behaviour and machine-readable status**, not prose or process names.
 - **`open -na <App>` spawns a whole new application instance** (its own Dock
-  icon). Use `ghostty-run`, which drives the existing instance via AppleScript.
+  icon). Use `rex-run`, which drives the existing Rex via its AppleScript
+  (`run command`, `open`, `show`; none of it needs Remote Control).
   One argument is a raw shell command; multiple arguments are shell-escaped
   individually so paths, quotes and newlines survive. Do not flatten argv.
-- **Ghostty defaults can consume multiplexer keys.** Its macOS Option-arrow
-  defaults send Esc+B/F rather than modified-arrow sequences. Keep those two
-  bindings unbound so herdr can receive Alt+Left/Right; zsh already maps
-  CSI 1;3D/C to word movement. `mac keys` reads effective defaults with
-  `ghostty +list-keybinds` and annotates scope from config; running-app reload
-  and Accessibility registration still require separate verification.
 - **There is no tiling WM any more.** AeroSpace was removed along with Karabiner;
   window management is macOS 26's own tiling (`fn+⌃+arrows`, Window > Move &
   Resize) plus Mission Control Spaces (`⌃1-9`). `mac-wm` turns on what Apple
@@ -124,10 +116,9 @@ October 2026 audit; report actual results and any unverified UI steps.
 - **Tiling shortcuts** (`fn⌃` arrows, `fn⌃F/C/R`) are Apple's documented
   macOS 27 keys (support.apple.com "Tile app windows"); they live in each
   app's Window → Move & Resize menu. Alex reports they work but "not
-  perfectly" in some apps (Oct 2026, cause unconfirmed). Ghostty's
-  performKeyEquivalent only claims ⌘ chords, so don't blame Ghostty for
-  swallowing ⌃ without proof; reading menus needs Accessibility, which this
-  setup's agent does not have.
+  perfectly" in some apps (Oct 2026, cause unconfirmed); don't blame the
+  terminal for swallowing ⌃ without proof. Reading menus needs Accessibility,
+  which this setup's agent does not have.
 - **Shell keys are tested by typing into a real zsh over `zpty`**, never by
   grepping `bindkey` (that missed the ↑ cursor bug). Wait for each prompt
   before typing (zle switching bracketed paste on, `\e[?2004h`): keys sent
@@ -136,33 +127,14 @@ October 2026 audit; report actual results and any unverified UI steps.
   on output only the command can produce (`${(U):-x}` prints `X`; the echoed
   line still shows `x`). `zpty -w z ''` sends nothing: use `$'\r'`. History
   goes to a temp file through a wrapper `.zshrc` under `ZDOTDIR`.
-- **cmux: three things that bite.** (1) Its default ⌃1-9 tab switch never
-  fires, because `mac-wm` gives ⌃1-9 to Mission Control, so `cmux.json` binds
-  ⌘⌥1-9. (2) Its control socket only answers processes started inside cmux
-  (`socketControlMode: cmuxOnly`): from an agent outside cmux, `cmux ping`,
-  `reload-config` and `list-workspaces` all fail with "Access denied". `cmux
-  config get|validate|set` work without the socket, and `config set` writes
-  through the symlink. (3) nasa and coolify have no `xterm-ghostty` terminfo
-  ("unknown terminal type"), so `cmux-fleet` passes them
-  `TERM=xterm-256color`. The fleet workspaces all run `cmux-fleet <host>`,
-  which pins the workspace and writes the host to
-  `~/.local/state/cmux-fleet/$CMUX_SURFACE_ID`. A cmux relaunch restores
-  workspaces as **plain local shells**: it neither re-runs a workspace's
-  command nor `cmux surface resume` bindings (those are only stored). Surface
-  IDs do survive, so `zshrc` resubmits `cmux-fleet <host>` at the first
-  prompt of a recorded tab. cmux loads its integration from `.zshenv`, before
-  `.zshrc`, and keeps `TERM=xterm-ghostty` until the first command's
-  preexec. Submitting through zle (not running from precmd) lets that switch
-  happen. A restored tab also replays its old scrollback, so a doubled "Last
-  login" at the top is the previous session, not a shell bug.
-  (4) **The cmux app saves `cmux.json` by replacing it**, which breaks the
-  symlink, unlike `cmux config set`. It happened once, when `cmux surface
-  resume set` made it add `terminal.resumeCommands` records (policy
-  "manual", never re-run). `test.sh repo` flags it; diff the app's copy, then
-  `install.sh --links`.
-  houston uses `herdr --remote houston`: **never tmux**, on the Mac or the
-  fleet. The first attach after a herdr update asks to install the matching
-  herdr in houston's `~/.local/bin`, because its pacman herdr lags mise's.
+- **Fleet machines are plain ssh over Tailscale** (`fleet <host>`); each
+  Raycast fleet entry is one Rex session named after the machine
+  (`rex-run -s houston fleet houston`). houston dropped `herdr --remote` with
+  herdr (Nov 2026): **never tmux** there either. No TERM override is needed for
+  hosts without Rex's terminfo (nasa, coolify): Rex's guard in
+  `~/.config/rex/ssh_config` announces xterm-256color to them. Rex's docs
+  recommend a Rex server on the tailnet (`rex server start --tailscale`, then
+  `rex hosts add`) for persistent remote sessions; not set up yet.
 - **zsh arrays are 1-indexed.** Ports of Omarchy's bash functions must use
   `${arr[1]}`, not `${arr[0]}`.
 - **A function can't share a name with an alias in zsh** — it's a parse error
@@ -350,33 +322,43 @@ October 2026 audit; report actual results and any unverified UI steps.
   only pass from a terminal with Accessibility/Automation grants. From other
   contexts (agents, CI) they fail with "osascript is not allowed to send
   keystrokes" — that is the runner's permission, not a real regression.
-- **`op` can fail in Ghostty while it works over SSH.** The 1Password CLI
+- **`op` can fail in the terminal app while it works over SSH** (seen in
+  Ghostty; not yet checked in Rex). The 1Password CLI
   reads the desktop app's settings in 1Password's group container. macOS
-  app-data protection blames the responsible app (Ghostty), and SSH sessions
-  are exempt. Symptoms in Ghostty: `op account list` prints nothing, `op signin`
+  app-data protection blames the responsible app, and SSH sessions
+  are exempt. Symptoms: `op account list` prints nothing, `op signin`
   offers to "add an account manually" (answer no: that stores the Secret Key
   outside the app), and `op --debug` shows `settings.json: operation not
-  permitted`. Fix: `tccutil reset SystemPolicyAppData com.mitchellh.ghostty`,
-  run `op` in Ghostty and click **Allow** on "access data from other apps", or
-  give Ghostty Full Disk Access. Test with `op vault list`: under app
+  permitted`. Fix: `tccutil reset SystemPolicyAppData <the app's bundle id>`
+  (it was `com.mitchellh.ghostty`; Rex is `com.superlogical.rex`), run `op` in
+  the terminal and click **Allow** on "access data from other apps", or give
+  the app Full Disk Access. Test with `op vault list`: under app
   integration `op whoami` reports "not signed in" even when `op` works.
 - **A lean Mac uses a local Brewfile subset** (README, "A smaller Mac").
   `test.sh` then fails on the packages left out by design. Report those as
   expected, not as regressions, and never "fix" them by running the full
   `install.sh`.
-- **Rex (Rex Beta.app) is Ghostty + herdr in one app.** Its keys live in
-  `~/.config/rex/init.lua` (herdr's `[keys]` ported: `ctrl+space>` sequences
-  are the prefix; herdr workspace → Rex session). `rex config check` and
+- **Rex (Rex Beta.app) is the terminal and the multiplexer.** No cask exists;
+  it updates itself (Sparkle). Its keys live in `~/.config/rex/init.lua`
+  (upstream's herdr `[keys]` ported: `ctrl+space>` sequences are the prefix;
+  herdr workspace → Rex session, tab → window). `rex config check` and
   `rex config reload` (Rex does not watch the file), then `rex keymap` for what
   the server resolved. Appearance can't go in init.lua: font, size and padding
   are `com.superlogical.rex` `Workspace.*` defaults, set by `mac-defaults` to
-  Ghostty's values. **The app reads them only at launch** (a running window
+  Omarchy's terminal values. **The app reads them only at launch** (a running window
   kept 269×76 cells through a 15→22pt write); after a relaunch, check
   `rex block call -b <id> size` (JetBrains Mono 15pt = 9×20 px cells).
   Quitting the app is safe: sessions live in the Rex server. Cursor and
   Option-key enums are undocumented, so set those in Rex's Settings.
   `~/.config/rex/ssh_config` is Rex's own (from `rex terminfo setup`); don't
-  link or edit it.
+  link or edit it. `rex skill setup` (Claude Code, Codex, OpenCode, Pi) is
+  Rex's recommended agent setup and is installed (`rex skill status`). Rex
+  puts `REX_BIN_DIR` first on PATH, but mise's activate re-sorts PATH, so
+  `test.sh rex` checks instead that `rex` resolves to the running server's
+  own binary. Client actions (`rex -C <app> do …`) need Remote Control, which
+  is off: leave it to Alex. Rex scripting inside a pane: `REX_BLOCK`,
+  `REX_SESSION`; `rex split --ratio` is the NEW pane's percent (herdr's was
+  the kept share).
 - **Raycast settings move by Export/Import Settings & Data**, never by copying
   files: hotkeys live in its encrypted database. Delete the `.rayconfig`
   afterwards, because it holds private settings and AI chat history.

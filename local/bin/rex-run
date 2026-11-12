@@ -1,0 +1,61 @@
+#!/bin/bash
+# rex-run [-s NAME] [command...]
+# Open a new Rex tab in the current directory and optionally run <command...>
+# in it through your normal shell, as if typed, so the shell stays open after
+# the command exits. One argument is a raw shell command; multiple arguments
+# preserve argv, including spaces.
+#
+#   -s NAME   use a session named NAME instead: show it when it exists (the
+#             command is not run again), else create it and run the command
+#             in its first tab. The fleet entries use this, one per machine.
+#
+# Rex's AppleScript (`run command`, `open`, `show`) does the work, so this
+# needs neither Accessibility nor Rex's Remote Control setting, and it never
+# starts a second Rex application.
+set -uo pipefail
+
+session=""
+if [ "${1:-}" = -s ]; then
+  [ -n "${2:-}" ] || { echo "usage: rex-run [-s NAME] [command...]" >&2; exit 2; }
+  session=$2; shift 2
+fi
+
+input=""
+if (($# == 1)); then
+  input=$1
+elif (($# > 1)); then
+  # %q escapes data for Bash and zsh, including quotes and embedded newlines.
+  printf -v input '%q ' "$@"
+  input=${input% }
+fi
+
+rex_app() { osascript - "$@" >/dev/null <<'AS'
+on run argv
+  set {mode, arg1, arg2} to {item 1 of argv, item 2 of argv, item 3 of argv}
+  tell application id "com.superlogical.rex"
+    if mode is "run" then
+      run command arg1 at arg2
+    else if mode is "open" then
+      open (POSIX file arg2 as alias)
+    else if mode is "show" then
+      show (first session whose name is arg1)
+    end if
+    activate
+  end tell
+end run
+AS
+}
+
+if [ -z "$session" ]; then
+  if [ -n "$input" ]; then rex_app run "$input" "$PWD"; else rex_app open "" "$PWD"; fi
+  exit
+fi
+
+# Session names are labels: `rex ls` prints them in its first column.
+if rex ls 2>/dev/null | awk 'NR > 1 { print $1 }' | grep -qxF -- "$session"; then
+  rex_app show "$session" ""
+  exit
+fi
+block=$(rex new "$session" -c "$PWD" --json | jq -r '.initial_windows[0].block_ids[0]') || exit 1
+[ -n "$input" ] && rex send -b "$block" "$input"$'\n'
+rex_app show "$session" ""

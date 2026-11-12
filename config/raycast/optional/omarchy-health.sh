@@ -5,6 +5,6 @@
 # @raycast.packageName Omarchy
 # Optional standalone command; the default pack uses the single Omarchy menu.
 # @raycast.icon 🩺
-# @raycast.description Run mac doctor in Ghostty
+# @raycast.description Run mac doctor in Rex
 
 exec "$HOME/.local/bin/mac-raycast" run health "$@"

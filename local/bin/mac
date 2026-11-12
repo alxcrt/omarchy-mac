@@ -16,7 +16,7 @@ case "$cmd" in
 
   keys)        exec mac-keys "$@" ;;
   keyremap)    exec mac-keyremap "$@" ;;
-  term)        exec ghostty-run "$@" ;;
+  term)        exec rex-run "$@" ;;
   install)     exec mise-install "$@" ;;
   raycast)     exec mac-raycast "$@" ;;
   dev)         exec mac-dev "$@" ;;
@@ -65,8 +65,8 @@ case "$cmd" in
       functions) exec "${EDITOR:-nvim}" ~/.config/zsh/functions.zsh ;;
       mise)      exec "${EDITOR:-nvim}" ~/.config/mise/config.toml ;;
       brew)      exec "${EDITOR:-nvim}" ~/.config/homebrew/Brewfile ;;
-      herdr)     exec "${EDITOR:-nvim}" ~/.config/herdr/config.toml ;;
-      *)         echo "mac edit <aliases|functions|mise|brew|herdr>"; exit 1 ;;
+      rex)       exec "${EDITOR:-nvim}" ~/.config/rex/init.lua ;;
+      *)         echo "mac edit <aliases|functions|mise|brew|rex>"; exit 1 ;;
     esac ;;
 
   help|--help|-h|"")
@@ -85,16 +85,16 @@ mac — Omarchy-style flows on macOS
   mac url                 copy the selected browser tab URL
   mac transcode <f> <fmt> [quality]   mp4 | gif | jpg | png
 
-  mac term <cmd>          open a new Ghostty window running <cmd>
+  mac term <cmd>          open a new Rex tab running <cmd>
   mac wm [--status|--apply|--keys]  native tiling + Spaces settings
   mac defaults [--apply]  key repeat, Finder, Dock, Transmission
   mac doctor              health check across mise, brew, window mgmt
   mac raycast setup|prepare|status  Omarchy launcher pack and Raycast setup
   mac dev [help|doctor]    runtimes, Git, Docker, database, API and port workflows
-  mac edit <what>         open a config: aliases functions mise brew herdr
+  mac edit <what>         open a config: aliases functions mise brew rex
 
 Shell flows (from ~/.config/zsh/functions.zsh):
-  hdl <ai> [ai2]          herdr dev layout: editor + AI + terminal
+  hdl <ai> [ai2]          Rex dev layout: editor + AI + terminal
   hdlm <ai> [ai2]         one dev layout per subdirectory
   hsl <n> <cmd>           swarm layout: <cmd> in n tiled panes
   hds                     editor + diff watch + terminal + opencode

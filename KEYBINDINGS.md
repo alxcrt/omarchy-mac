@@ -20,8 +20,7 @@ Caps Lock is Escape and the right ⌘ is ⌥, remapped by hidutil (`mac-keyremap
 | `⌘Space` | Raycast launcher |
 | `Hyper+V` | Clipboard History |
 | `Hyper+B` | Helium browser |
-| `Hyper+T` | Ghostty terminal |
-| `Hyper+W` | cmux workspaces |
+| `Hyper+T` | Rex terminal |
 | `Hyper+A` | ChatGPT |
 | `Hyper+C` | Claude |
 | `Hyper+E` | Visual Studio Code |
@@ -59,165 +58,48 @@ Caps Lock is Escape and the right ⌘ is ⌥, remapped by hidutil (`mac-keyremap
 | `Alt+Shift+L` | Copy URL |
 | `Alt+Shift+D` | Download Video |
 
-## herdr (prefix = ctrl+space)
+## Rex (init.lua as the running server resolved it; ⌥ = Omarchy SUPER)
 
 | Keys | Action |
 |---|---|
-| `prefix+?` | help |
-| `prefix+s` | settings |
-| `prefix+d` | detach |
-| `prefix+q` | reload config |
-| `prefix+o` | open notification target |
-| `prefix+w` | workspace picker |
-| `prefix+g` | goto |
-| `prefix+shift+c` | new workspace |
-| `prefix+shift+g` | new worktree |
-| `prefix+shift+r` | rename workspace |
-| `prefix+shift+k` | close workspace |
-| `prefix+shift+p / alt+up` | previous workspace |
-| `prefix+shift+n / alt+down` | next workspace |
-| `ctrl+v` | remote image paste |
-| `prefix+c` | new tab |
-| `prefix+r` | rename tab |
-| `prefix+p / alt+left` | previous tab |
-| `prefix+n / alt+right` | next tab |
-| `alt+shift+left` | move tab previous |
-| `alt+shift+right` | move tab next |
-| `prefix+1..9 / alt+1..9` | switch tab |
-| `prefix+k` | close tab |
-| `prefix+shift+o` | rename pane |
-| `prefix+e` | edit scrollback |
-| `ctrl+alt+left` | focus pane left |
-| `ctrl+alt+down` | focus pane down |
-| `ctrl+alt+up` | focus pane up |
-| `ctrl+alt+right` | focus pane right |
-| `prefix+tab` | cycle pane next |
-| `prefix+shift+tab` | cycle pane previous |
-| `prefix+;` | last pane |
-| `prefix+v / alt+shift+enter` | split vertical |
-| `prefix+h / alt+enter` | split horizontal |
-| `prefix+x / alt+esc` | close pane |
-| `prefix+z` | zoom |
-| `prefix+ctrl+left / prefix+ctrl+down / prefix+ctrl+up / prefix+ctrl+right` | resize mode |
-| `ctrl+alt+shift+left` | resize pane left |
-| `ctrl+alt+shift+down` | resize pane down |
-| `ctrl+alt+shift+up` | resize pane up |
-| `ctrl+alt+shift+right` | resize pane right |
-| `prefix+b` | toggle sidebar |
-| `up` | navigate workspace up |
-| `down` | navigate workspace down |
-| `h` | navigate pane left |
-| `j` | navigate pane down |
-| `k` | navigate pane up |
-| `l` | navigate pane right |
-| `prefix+[` | copy mode |
-
-## Ghostty (effective defaults + config)
-
-Ghostty `super`/`cmd` = ⌘; `alt`/`opt` = ⌥ (Omarchy SUPER).
-Explicit scope annotations come from config; the CLI omits prefix flags.
-Permission and registration in the running app are not confirmed.
-
-| Keys | Action |
-|---|---|
-| `⌘⇧,` | reload_config |
-| `⌘,` | open_config:os_open |
-| `copy` | copy_to_clipboard:mixed |
-| `paste` | paste_from_clipboard |
-| `⌘c` | copy_to_clipboard:mixed |
-| `⌘v` | paste_from_clipboard |
-| `⌘=` | increase_font_size:1 |
-| `⌘+` | increase_font_size:1 |
-| `⌘-` | decrease_font_size:1 |
-| `⌘0` | reset_font_size |
-| `⌘⌃⇧j` | write_screen_file:copy,plain |
-| `⌘⇧j` | write_screen_file:paste,plain |
-| `⌘⌥⇧j` | write_screen_file:open,plain |
-| `⇧←` | adjust_selection:left |
-| `⇧→` | adjust_selection:right |
-| `⇧↑` | adjust_selection:up |
-| `⇧↓` | adjust_selection:down |
-| `⇧page_up` | adjust_selection:page_up |
-| `⇧page_down` | adjust_selection:page_down |
-| `⇧home` | adjust_selection:home |
-| `⇧end` | adjust_selection:end |
-| `⌃⇧Tab` | previous_tab |
-| `⌃Tab` | next_tab |
-| `⌘1 (physical)` | goto_tab:1 |
-| `⌘1` | goto_tab:1 |
-| `⌘2 (physical)` | goto_tab:2 |
-| `⌘2` | goto_tab:2 |
-| `⌘3 (physical)` | goto_tab:3 |
-| `⌘3` | goto_tab:3 |
-| `⌘4 (physical)` | goto_tab:4 |
-| `⌘4` | goto_tab:4 |
-| `⌘5 (physical)` | goto_tab:5 |
-| `⌘5` | goto_tab:5 |
-| `⌘6 (physical)` | goto_tab:6 |
-| `⌘6` | goto_tab:6 |
-| `⌘7 (physical)` | goto_tab:7 |
-| `⌘7` | goto_tab:7 |
-| `⌘8 (physical)` | goto_tab:8 |
-| `⌘8` | goto_tab:8 |
-| `⌘9` | last_tab |
-| `⌘Enter` | toggle_fullscreen |
-| `⌘⇧Enter` | toggle_split_zoom |
-| `⌘⇧p` | toggle_command_palette |
-| `⌘q` | quit |
-| `⌘k` | clear_screen |
-| `⌘a` | select_all |
-| `⌘⇧t` | undo |
-| `⌘z` | undo |
-| `⌘⇧z` | redo |
-| `⌘home` | scroll_to_top |
-| `⌘end` | scroll_to_bottom |
-| `⌘page_up` | scroll_page_up |
-| `⌘page_down` | scroll_page_down |
-| `⌘j` | scroll_to_selection |
-| `⌘⇧↑` | jump_to_prompt:-1 |
-| `⌘⇧↓` | jump_to_prompt:1 |
-| `⌘n` | new_window |
-| `⌘w` | close_surface |
-| `⌘⌥w` | close_tab:this |
-| `⌘⇧w` | close_window |
-| `⌘⌥⇧w` | close_all_windows |
-| `⌘t` | new_tab |
-| `⌘⇧[` | previous_tab |
-| `⌘⇧]` | next_tab |
-| `⌘d` | new_split:right |
-| `⌘⇧d` | new_split:down |
-| `⌘[` | goto_split:previous |
-| `⌘]` | goto_split:next |
-| `⌘⌥↑` | goto_split:up |
-| `⌘⌥↓` | goto_split:down |
-| `⌘⌥←` | goto_split:left |
-| `⌘⌥→` | goto_split:right |
-| `⌘⌃↑` | resize_split:up,10 |
-| `⌘⌃↓` | resize_split:down,10 |
-| `⌘⌃←` | resize_split:left,10 |
-| `⌘⌃→` | resize_split:right,10 |
-| `⌘⌃=` | equalize_splits |
-| `⌘↑` | jump_to_prompt:-1 |
-| `⌘↓` | jump_to_prompt:1 |
-| `⌘f` | start_search |
-| `⌘e` | search_selection |
-| `⌘⇧f` | end_search |
-| `Escape` | end_search |
-| `⌘g` | navigate_search:next |
-| `⌘⇧g` | navigate_search:previous |
-| `⌘⌥i` | inspector:toggle |
-| `⌘⌃f` | toggle_fullscreen |
-| `⌘⇧v` | paste_from_selection |
-| `⌘→` | text:\x05 |
-| `⌘←` | text:\x01 |
-| `⌘backspace` | text:\x15 |
-| `⌃insert` | copy_to_clipboard:mixed |
-| `⇧insert` | paste_from_clipboard |
-| `⇧Enter` | csi:13;2u |
-| `⌥⇧Enter` | csi:13;4u |
-| `⌘⌃⌥⇧↓` | resize_split:down,100 |
-| `⌘⌃⌥⇧↑` | resize_split:up,100 |
-| `⌘⌃⌥⇧←` | resize_split:left,100 |
-| `⌘⌃⌥⇧→` | resize_split:right,100 |
-| `⌘Grave` | toggle_quick_terminal [global; requires Ghostty Accessibility] |
-| `⌃⇧r` | reload_config |
+| `ctrl+space → q` | client.config.reload |
+| `ctrl+space → ctrl+down / ctrl+space → ctrl+left / ctrl+space → ctrl+right / ctrl+space → ctrl+up` | client.mode.enter resize |
+| `resize/enter` | client.mode.exit |
+| `ctrl+space → shift+/` | client.palette.toggle |
+| `ctrl+space → k` | client.tab.close |
+| `alt+[Digit1] / ctrl+space → [Digit1]` | client.tab.goto 1 |
+| `alt+[Digit2] / ctrl+space → [Digit2]` | client.tab.goto 2 |
+| `alt+[Digit3] / ctrl+space → [Digit3]` | client.tab.goto 3 |
+| `alt+[Digit4] / ctrl+space → [Digit4]` | client.tab.goto 4 |
+| `alt+[Digit5] / ctrl+space → [Digit5]` | client.tab.goto 5 |
+| `alt+[Digit6] / ctrl+space → [Digit6]` | client.tab.goto 6 |
+| `alt+[Digit7] / ctrl+space → [Digit7]` | client.tab.goto 7 |
+| `alt+[Digit8] / ctrl+space → [Digit8]` | client.tab.goto 8 |
+| `alt+[Digit9] / ctrl+space → [Digit9]` | client.tab.goto 9 |
+| `alt+shift+left` | client.tab.move.backward |
+| `alt+shift+right` | client.tab.move.forward |
+| `ctrl+space → c` | client.tab.new |
+| `alt+right / ctrl+space → n` | client.tab.next |
+| `alt+left / ctrl+space → p` | client.tab.previous |
+| `ctrl+space → r` | client.tab.rename |
+| `alt+esc / ctrl+space → x` | pane.close |
+| `ctrl+alt+down` | pane.focus down |
+| `ctrl+alt+left` | pane.focus left |
+| `ctrl+alt+right` | pane.focus right |
+| `ctrl+alt+up` | pane.focus up |
+| `ctrl+space → ;` | pane.focus_previous |
+| `ctrl+space → shift+o` | pane.rename |
+| `ctrl+alt+shift+down / resize/ctrl+down / resize/down` | pane.resize down |
+| `ctrl+alt+shift+left / resize/ctrl+left / resize/left` | pane.resize left |
+| `ctrl+alt+shift+right / resize/ctrl+right / resize/right` | pane.resize right |
+| `ctrl+alt+shift+up / resize/ctrl+up / resize/up` | pane.resize up |
+| `ctrl+space → ctrl+space` | pane.send_key ctrl+space |
+| `alt+enter / ctrl+space → h` | pane.split down |
+| `alt+shift+enter / ctrl+space → v` | pane.split right |
+| `ctrl+space → z` | pane.zoom |
+| `ctrl+space → shift+k` | session.close |
+| `ctrl+space → shift+c` | session.new |
+| `alt+down / ctrl+space → shift+n` | session.next |
+| `alt+up / ctrl+space → shift+p` | session.previous |
+| `ctrl+space → shift+r` | session.rename |
+| `⌘ shortcuts` | Rex's built-in defaults (⌘D split, ⌘T tab, ⌘W close…), see the app |

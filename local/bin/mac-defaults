@@ -34,10 +34,10 @@ org.m0k.transmission|DownloadFolder|string|~/Downloads|Transmission saves to ~/D
 org.m0k.transmission|WarningDonate|bool|false|Transmission never asks for donations
 org.m0k.transmission|WarningLegal|bool|false|Transmission skips its legal notice
 ~/Library/Group Containers/group.com.docker/settings-store.json|MemoryMiB|int|4096|Docker VM capped at 4 GB (default 8)
-com.superlogical.rex|Workspace.terminalFontName|string|JetBrainsMono Nerd Font|Rex uses the Ghostty font
-com.superlogical.rex|Workspace.terminalFontPointSize|float|15|Rex font size matches Ghostty
-com.superlogical.rex|Workspace.terminalPaddingX|float|14|Rex side padding matches Ghostty
-com.superlogical.rex|Workspace.terminalPaddingY|float|14|Rex bottom padding matches Ghostty'
+com.superlogical.rex|Workspace.terminalFontName|string|JetBrainsMono Nerd Font|Rex uses the Omarchy terminal font
+com.superlogical.rex|Workspace.terminalFontPointSize|float|15|Rex font size: Omarchy 9pt (Linux HiDPI) on macOS
+com.superlogical.rex|Workspace.terminalPaddingX|float|14|Rex side padding, as in Omarchy
+com.superlogical.rex|Workspace.terminalPaddingY|float|14|Rex bottom padding, as in Omarchy'
 
 # Default apps, set with duti (from the Brewfile).
 # bundle id|URL scheme, or .extension for a file type|what it does

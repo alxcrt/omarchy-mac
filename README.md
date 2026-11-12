@@ -27,9 +27,7 @@ config/mise/config.toml      → ~/.config/mise/config.toml     # the dev + AI C
 config/homebrew/Brewfile     → ~/.config/homebrew/Brewfile    # the system + GUI layer (declarative)
 config/zsh/aliases.zsh       → ~/.config/zsh/aliases.zsh      # ported Omarchy aliases (macOS-adjusted)
 config/starship.toml         → ~/.config/starship.toml        # Omarchy's prompt
-config/herdr/config.toml     → ~/.config/herdr/config.toml    # herdr: workspaces/tabs/panes (replaced tmux)
-config/cmux/cmux.json        → ~/.config/cmux/cmux.json       # cmux: fleet workspaces and NASA Hermes chat
-config/rex/init.lua          → ~/.config/rex/init.lua         # Rex (terminal + multiplexer): herdr's keys
+config/rex/init.lua          → ~/.config/rex/init.lua         # Rex (terminal + multiplexer): upstream's herdr keys
 config/launchd/com.omarchy.keyremap.plist → ~/Library/LaunchAgents/  # hidutil modifier remap at login
 local/bin/macup              → ~/.local/bin/macup             # update-everything command
 local/bin/mise-install       → ~/.local/bin/mise-install      # self-updating mise wrapper generator
@@ -56,7 +54,7 @@ Safe to re-run any time.
    git clone https://github.com/alxcrt/omarchy-mac.git ~/omarchy-mac
    ~/omarchy-mac/install.sh
    ```
-3. Open a new terminal (Ghostty), then do the parts only you can do:
+3. Open a new terminal (Rex), then do the parts only you can do:
    - **Touch ID for sudo**: see [below](#touch-id-in-the-terminal-omarchys-fingerprint-auth).
    - **Sign in**: the App Store (so `macup` can update its apps),
      `gh auth login` (pick HTTPS: gh then handles git pushes too),
@@ -156,7 +154,7 @@ Bash helpers work with both Apple's Bash 3.2 and Homebrew Bash 5.
 |---|---|
 | `omarchy update` / `omarchy up` | Run `macup` across the Mac's package layers |
 | `omarchy mise install <package>` | Create the existing mise-backed tool wrapper |
-| `omarchy launch terminal [command...]` | Open Ghostty in the caller's directory |
+| `omarchy launch terminal [command...]` | Open a Rex tab in the caller's directory |
 | `omarchy menu keybindings` | Show the generated Mac shortcut guide |
 | `omarchy transcode input.mov mp4 1080p` | Use the Mac media converter |
 
@@ -165,21 +163,25 @@ platform-specific. `mac help` lists the complete Mac command set. A terminal
 launch accepts one quoted shell command or multiple arguments with spaces
 preserved. Use `omarchy launch terminal -- python --help` to pass child help.
 
-Keep using `a`, `c`, `cx`, `cy`, `h`, `ic`, `ix`, `icx`, `n`, `ff`, `ga`,
+Keep using `a`, `c`, `cx`, `cy`, `ic`, `ix`, `icx`, `n`, `ff`, `ga`,
 `gd` and `mup`, plus ordinary project commands such as `pnpm dev`, `uv run`,
 `git` and `docker compose`. `mac dev` groups the installed developer tools.
 
-Inside herdr, `⌥Enter` / `⌥⇧Enter` split panes, `⌥←/→` changes tabs and
-`⌥1..9` selects a tab. Ghostty passes Option arrows through; outside herdr
-they still move by words in zsh. Reload Ghostty config with `⌃⇧R` after pulling
-these changes. Its built-in Command shortcuts remain available: `⌘T` new tab,
-`⌘D` split, and `⌘⇧D` split in the other direction.
+The terminal is [Rex](https://www.superlogical.com/rex), a terminal and
+multiplexer in one; it replaced Ghostty, herdr and cmux. `config/rex/init.lua`
+carries upstream Omarchy's herdr keys over: `⌥Enter` / `⌥⇧Enter` split panes,
+`⌃⌥` arrows move between them, `⌥←/→` changes tabs, `⌥1..9` selects a tab,
+`⌥↑/↓` changes session, and `⌃Space` is the prefix (`⌃Space c` new tab, `z`
+zoom, `x` close…). Outside Rex, Option arrows still move by words in zsh. After
+pulling, apply the file with `rex config reload`. Rex's built-in Command
+shortcuts remain available: `⌘T` new tab, `⌘D` split, `⌘⇧D` split down.
+Font and padding are Rex app settings (`mac-defaults`); Rex reads them at launch.
 
 Desktop controls use macOS keys: `⌃1..9` for existing Mission Control Desktops
 and `fn⌃` arrows for tiling. Global Omarchy app shortcuts can be assigned in
 Raycast; their registration needs the in-app step in the
-[setup guide](config/raycast/SETUP.md). Ghostty's `super` means **Command**;
-the port's Omarchy SUPER convention means **Option**.
+[setup guide](config/raycast/SETUP.md). In `init.lua`, `cmd` means **Command**;
+the port's Omarchy SUPER convention means **Option** (`alt`).
 
 ## Shared agent skill
 
@@ -208,7 +210,7 @@ mac raycast setup       # prepare launcher/import files and show the in-app chec
 mac dev doctor          # runtimes, Git, containers, database and API clients
 mac dev git ui          # lazygit here, or pick a repository in ~/Developer
 mac dev ports 3000      # inspect a listening development server
-mac edit aliases|functions|mise|brew|herdr
+mac edit aliases|functions|mise|brew|rex
 ```
 
 For web/full-stack work, mise also manages Python, pnpm, ShellCheck and shfmt.
@@ -225,7 +227,7 @@ Shell flows in `config/zsh/functions.zsh` (zsh ports of Omarchy's bash fns):
 
 | Command | Does |
 |---|---|
-| `hdl <ai> [ai2]` | herdr dev layout: editor + AI pane(s) + terminal strip |
+| `hdl <ai> [ai2]` | Rex dev layout: editor + AI pane(s) + terminal strip |
 | `hdlm <ai> [ai2]` | one such layout per subdirectory |
 | `hsl <n> <cmd>` | swarm layout — `<cmd>` in n tiled panes |
 | `hds` | editor + diff watch + terminal + opencode |
@@ -237,7 +239,9 @@ Shell flows in `config/zsh/functions.zsh` (zsh ports of Omarchy's bash fns):
 | `compress <dir>` | tar.gz a directory |
 | `img2jpg`, `transcode-video-1080p`, … | transcoding wrappers |
 
-`ghostty-run <cmd>` opens a new window in the **existing** Ghostty — never
+`rex-run <cmd>` opens a new tab in the **existing** Rex through its
+AppleScript (`run command`), in the current directory; `rex-run -s <name> <cmd>`
+uses a named session instead, created once and shown after that. Never
 `open -na`, which spawns a duplicate app instance per launch.
 
 ## Window management (macOS native)
@@ -267,15 +271,15 @@ mac wm --keys       # the native shortcuts
 | `⌃ ←/→` | previous / next Desktop |
 | `⌃ ↑` | Mission Control — add Desktops here with **+** |
 
-Global app shortcuts now live in Raycast: **Hyper+T** Ghostty, **Hyper+B**
+Global app shortcuts now live in Raycast: **Hyper+T** Rex, **Hyper+B**
 Helium, **Hyper+V** clipboard, **Hyper+O** Omarchy menu and **Hyper+K** shortcut
-guide. Ghostty already binds **Command + backtick** to its quick terminal.
+guide.
 The [Raycast setup guide](config/raycast/SETUP.md#everyday-shortcuts) lists all
 assignments and the Corne mapping. These were configured through Raycast's UI;
 the file installer cannot register them. The generated `mac keys` list includes
 the desired assignments and labels their registration as app-owned.
 
-Option remains the herdr modifier (`⌥Enter` splits a pane). Native Spaces and
+Option remains the multiplexer modifier (`⌥Enter` splits a Rex pane). Native Spaces and
 tiling remain macOS-owned; add Desktops by hand in Mission Control.
 
 ## Raycast
@@ -290,11 +294,9 @@ The installer links `config/raycast/scripts/omarchy.sh` into
 It migrates the earlier 16-command pack by removing only its own old symlinks,
 preserving other scripts. Standalone commands remain in `config/raycast/optional`
 for any individual hotkeys you want later. Terminal tools, keybindings and AI
-usage open in the existing Ghostty instance; fleet entries use `cmux-fleet`.
-The cmux Command Palette also has `hermes`: it opens NASA's existing tailnet
-Hermes chat in a browser workspace. Sign in there with the existing dashboard
-password, then paste an image with ⌘V or drop it into chat. This uses NASA's
-agent, memory and skills, rather than starting the Mac's separate Hermes CLI.
+usage open as tabs in the existing Rex. Each fleet entry opens its own Rex
+session named after the machine (`rex-run -s houston fleet houston`), which
+runs plain `ssh` over Tailscale; choosing it again shows that session.
 
 `mac raycast setup` prints the short [setup guide](config/raycast/SETUP.md).
 `mac raycast status` checks the menu's link without claiming private settings
@@ -315,13 +317,13 @@ commit it.
 `browser-url` supports Helium and prefers the configured supported default
 browser when it is running, with fallback to another running supported browser.
 `OMARCHY_BROWSER` remains an explicit override. Raycast may require its own
-Automation grant on the first browser or Ghostty command.
+Automation grant on the first browser or Rex command.
 
 ## Touch ID in the terminal (Omarchy's fingerprint auth)
 
 `config/pam/sudo_local` makes `sudo` accept Touch ID. `pam_reattach` is listed
-**first** on purpose — without it Touch ID silently fails inside herdr (or tmux/screen),
-because those processes aren't attached to the GUI session. One-time install
+**first** on purpose — without it Touch ID silently fails in detached sessions
+(tmux, screen, a multiplexer server's shells), because those aren't attached to the GUI session. One-time install
 (needs sudo; `/etc/pam.d/sudo_local` survives macOS updates):
 
 ```sh

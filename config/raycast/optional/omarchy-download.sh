@@ -5,6 +5,6 @@
 # @raycast.packageName Omarchy
 # Optional standalone command; the default pack uses the single Omarchy menu.
 # @raycast.icon ⬇️
-# @raycast.description Run webdl in Ghostty using the selected browser
+# @raycast.description Run webdl in Rex using the selected browser
 
 exec "$HOME/.local/bin/mac-raycast" run download "$@"

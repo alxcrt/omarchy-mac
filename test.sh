@@ -5,7 +5,7 @@
 # throwaway git repos, and never runs macup or touches ~/Movies.
 #
 #   ./test.sh            run everything
-#   ./test.sh <section>  run one section (e.g. ./test.sh herdr)
+#   ./test.sh <section>  run one section (e.g. ./test.sh rex)
 #   ./test.sh --headless [section]  skip desktop automation and live key/window changes
 
 PASS=0; FAIL=0; SKIP=0
@@ -53,7 +53,7 @@ ffp() { ffprobe -v error -select_streams "$2" -show_entries "stream=$3" -of csv=
 # ── 1. package layering ────────────────────────────────────────────────────
 if want layering; then
 sec "Package layering (one source per tool)"
-for t in node claude codex gh bun go opencode grok omp herdr crush agy copilot ghui playwright cf; do
+for t in node claude codex gh bun go opencode grok omp crush agy copilot ghui playwright cf; do
   p=$(zsh -ic "command -v $t" 2>/dev/null)
   case "$p" in */mise/*) ok "$t resolves to mise";; "") bad "$t" "not found";; *) bad "$t" "resolves to $p";; esac
 done
@@ -63,6 +63,16 @@ for c in claude codex gh opencode grok; do
 done
 n=$(zsh -ic 'command -v node' 2>/dev/null); [ -n "$n" ] && [ "$(zsh -ic 'node -e "console.log(1+1)"' 2>/dev/null)" = 2 ] \
   && ok "node executes JS" || bad "node" "cannot execute"
+# Ask the installed CLI to parse its actual configuration. OpenCode 1 returns
+# the merged object; 2 returns ordered sources and normalizes autoupdate:false
+# to info.update:"disable". The last explicit update policy takes precedence.
+opencode_policy='def disabled: if has("update") then .update == "disable" else .autoupdate == false end;
+  if type == "array" then
+    ([.[] | select(.type == "document") | .info |
+      select(type == "object" and (has("update") or has("autoupdate")))] | last // {}) | disabled
+  elif type == "object" then disabled else false end'
+[ "$(gtimeout 20 opencode debug config 2>/dev/null | jq -r "$opencode_policy")" = true ] \
+  && ok "opencode's parsed self-update policy is disabled (mise owns it)" || bad "opencode" "self-update policy is not disabled in the parsed config"
 fi
 
 # ── 2. aliases ─────────────────────────────────────────────────────────────
@@ -77,7 +87,7 @@ check_alias() {
 }
 check_alias c 'opencode --auto'
 check_alias cy 'codex --approve-for-me'
-check_alias h 'herdr'
+# Upstream's h='herdr' is left out: Rex replaced herdr here.
 check_alias d 'docker'
 check_alias r 'rails'
 check_alias g 'git'
@@ -116,7 +126,7 @@ fi
 if want functions; then
 sec "Shell functions defined"
 for f in zd sff compress ga gd n fip dip lip rsw lsw dsw ssh _ssh_disarm _ssh_interactive iso2sd format-drive \
-         hdl hds hdlm hsl _herdr_ratio _herdr_split \
+         hdl hds hdlm hsl _rex_ratio _rex_split _rex_run _rex_name_tab \
          img2jpg img2png img2jpg-small img2jpg-medium img2jpg-large \
          transcode-video-1080p transcode-video-4K transcode-video-gif; do
   ZRUN "typeset -f $f >/dev/null" && ok "$f defined" || bad "$f" "not defined"
@@ -337,115 +347,7 @@ mkdir -p "$T/x" && tar -xzf "$T/dir.tar.gz" -C "$T/x" 2>/dev/null
 [ "$(cat "$T/x/dir/f.txt" 2>/dev/null)" = payload ] && ok "round-trip content intact" || bad "decompress" "content mismatch"
 fi
 
-# ── 7. herdr (replaced tmux) ──────────────────────────────────────────────
-if want herdr; then
-sec "herdr + layout functions"
-command -v tmux >/dev/null 2>&1 && bad "tmux" "still installed; herdr replaced it" || ok "tmux is gone (herdr replaced it)"
-herdr --version >/dev/null 2>&1 && ok "herdr runs ($(herdr --version 2>/dev/null | head -1))" || bad "herdr" "does not run"
-# Unset HERDR_PANE_ID so these run as "outside herdr" even when the suite is
-# itself launched from a herdr pane; otherwise hdl would really split panes.
-ZRUN 'unset HERDR_PANE_ID; hdl' 2>&1 | grep -qi usage && ok "hdl shows usage with no args" || bad "hdl usage" "no usage text"
-for f in hdl hdlm; do
-  ZRUN "unset HERDR_PANE_ID; $f c" 2>&1 | grep -qi 'must start herdr' && ok "$f refuses outside herdr" || bad "$f guard" "no guard"
-done
-ZRUN 'unset HERDR_PANE_ID; hsl 3 x' 2>&1 | grep -qi 'must start herdr' && ok "hsl refuses outside herdr" || bad "hsl guard" "no guard"
-ZRUN 'unset HERDR_PANE_ID; hds' 2>&1 | grep -qi 'must start herdr' && ok "hds refuses outside herdr" || bad "hds guard" "no guard"
-# Ask the installed CLI to parse its actual configuration. OpenCode 1 returns
-# the merged object; 2 returns ordered sources and normalizes autoupdate:false
-# to info.update:"disable". The last explicit update policy takes precedence.
-opencode_policy='def disabled: if has("update") then .update == "disable" else .autoupdate == false end;
-  if type == "array" then
-    ([.[] | select(.type == "document") | .info |
-      select(type == "object" and (has("update") or has("autoupdate")))] | last // {}) | disabled
-  elif type == "object" then disabled else false end'
-[ "$(gtimeout 20 opencode debug config 2>/dev/null | jq -r "$opencode_policy")" = true ] \
-  && ok "opencode's parsed self-update policy is disabled (mise owns it)" || bad "opencode" "self-update policy is not disabled in the parsed config"
-# herdr's built-in bindings show (from herdr --default-config) and the
-# user's [keys] override them.
-hk=$(mac-keys 2>/dev/null | sed -n '/herdr (prefix/,/Ghostty/p')
-echo "$hk" | grep -q 'prefix+w *workspace picker' && ok "mac-keys lists herdr's built-in bindings" || bad "mac-keys" "herdr defaults missing"
-echo "$hk" | grep -q 'prefix+h / alt+enter *split horizontal' && ok "mac-keys shows the user's override, not the default" || bad "mac-keys" "user override lost"
-# herdr's defaults comment out example sub-tables and explain them in prose
-# (`# type = "popup" opens …`); none of that may pass as a binding.
-echo "$hk" | grep -q -E '80%|lazygit|popup' && bad "mac-keys" "herdr comment/example text listed as bindings" || ok "mac-keys skips herdr's commented examples"
-printf '[keys]\nprefix = "ctrl+a"\nzoom = "prefix+z"\n\n[[keys.command]]\nkey = "prefix+g"\ncommand = "lazygit"\n' >"$T/herdr.toml"
-out=$(HERDR_CONFIG="$T/herdr.toml" mac-keys 2>&1); rc=$?
-[ $rc = 0 ] && grep -q 'prefix+z *zoom' <<<"$out" && grep -q 'Ghostty' <<<"$out" \
-  && ok "mac-keys survives a [[keys.command]] table in the herdr config" || bad "mac-keys" "rc=$rc with a [[keys.command]] table"
-fi
-
-# ── 7b. cmux ───────────────────────────────────────────────────────────────
-if want cmux; then
-sec "cmux"
-if command -v cmux >/dev/null 2>&1; then
-  # cmux's own validator, checked against a broken file too so an always-OK
-  # validator can't pass for a valid config.
-  cmux config validate >/dev/null 2>&1 && ok "cmux accepts ~/.config/cmux/cmux.json" || bad "cmux.json" "cmux config validate fails"
-  printf '{ "browser": { "openTerminalLinksInCmuxBrowser": "nope" } }' >"$T/cmux-bad.json"
-  cmux config validate --path "$T/cmux-bad.json" >/dev/null 2>&1 && bad "cmux validate" "accepted a wrong-typed setting" \
-    || ok "cmux's validator rejects a wrong-typed setting"
-  # Values as cmux resolves them (file, else Settings window, else default),
-  # not as the file reads.
-  _cg() { cmux config get "$1" 2>/dev/null | sed 's/^[^=]*= //'; }
-  for k in browser.openTerminalLinksInCmuxBrowser browser.interceptTerminalOpenCommandInCmuxBrowser \
-           sidebar.openPullRequestLinksInCmuxBrowser; do
-    [ "$(_cg "$k")" = false ] && ok "links stay out of the embedded browser: $k" || bad "cmux $k" "is $(_cg "$k")"
-  done
-  [ "$(_cg app.sendAnonymousTelemetry)" = false ] && ok "cmux telemetry off" || bad "cmux telemetry" "on"
-  # mac-wm hands ⌃1-9 to Mission Control, so a ⌃ binding here never fires.
-  case $(_cg shortcuts.bindings.selectSurfaceByNumber) in
-    *ctrl*) bad "cmux tab numbers" "bound to ⌃1-9, which Mission Control takes" ;;
-    "")     bad "cmux tab numbers" "no binding resolved" ;;
-    *)      ok "cmux tab-by-number avoids the ⌃1-9 Desktop hotkeys ($(_cg shortcuts.bindings.selectSurfaceByNumber))" ;;
-  esac
-  # Every fleet workspace must name a host cmux-fleet knows, or it opens to a
-  # usage error.
-  _hosts=$(grep -oE '"command": "cmux-fleet [a-z0-9-]+"' ~/.config/cmux/cmux.json | awk '{print $3}' | tr -d '"')
-  [ -n "$_hosts" ] && ok "cmux.json has fleet workspaces: $(echo $_hosts)" || bad "cmux fleet" "no cmux-fleet workspaces in cmux.json"
-  for h in $_hosts; do
-    cmux-fleet "$h" --print >/dev/null 2>&1 && ok "cmux-fleet knows $h" || bad "cmux-fleet" "unknown host $h"
-  done
-  cmux-fleet nosuchhost --print >/dev/null 2>&1; [ $? = 2 ] && ok "cmux-fleet rejects an unknown host" || bad "cmux-fleet" "accepted an unknown host"
-  # herdr is the session layer, never tmux.
-  [ "$(cmux-fleet houston --print)" = "herdr --remote houston" ] && ok "houston attaches its herdr server" \
-    || bad "cmux-fleet houston" "runs '$(cmux-fleet houston --print)'"
-  _all=$(for h in $_hosts; do cmux-fleet "$h" --print; done)
-  grep -q tmux <<<"$_all" && bad "cmux-fleet" "a fleet workspace runs tmux" || ok "no fleet workspace runs tmux"
-  # nasa and coolify lack xterm-ghostty terminfo; titan is Windows.
-  for h in nasa coolify; do
-    case $(cmux-fleet $h --print) in TERM=xterm-256color\ *) ok "$h gets a terminfo it has" ;; *) bad "cmux-fleet $h" "no TERM override" ;; esac
-  done
-  # A restored fleet tab reconnects by itself: a real zsh in a pty, for a
-  # surface with a recorded host, runs cmux-fleet (a stub here) with nothing
-  # typed. An unrecorded surface, or a record that isn't a bare host name,
-  # must not run anything.
-  F="$T/fleet"; mkdir -p "$F/stub" "$F/state/cmux-fleet" "$F/z"
-  printf '#!/bin/sh\necho "FLEET-RAN-$1"\n' >"$F/stub/cmux-fleet"; chmod +x "$F/stub/cmux-fleet"
-  printf 'nasa\n' >"$F/state/cmux-fleet/surf-ok"
-  printf 'nasa; echo INJECTED\n' >"$F/state/cmux-fleet/surf-bad"
-  printf 'source ~/.zshrc\npath=(%s $path)\nHISTFILE=%s/hist\n' "$F/stub" "$F/z" >"$F/z/.zshrc"
-  _fleet_pty() {
-    CMUX_SURFACE_ID=$1 XDG_STATE_HOME="$F/state" ZDOTDIR="$F/z" zsh -f <<'EOF' 2>&1
-zmodload zsh/zpty || exit 2
-zpty z 'zsh -i'
-buf=; for i in {1..60}; do zpty -rt z c && buf+=$c; [[ $buf == *FLEET-RAN-* || $buf == *INJECTED* ]] && break; sleep 0.05; done
-print -r -- "$buf"
-zpty -d z
-EOF
-  }
-  _out=$(_fleet_pty surf-ok)
-  [[ $_out == *FLEET-RAN-nasa* ]] && ok "a restored fleet tab reconnects with nothing typed" || bad "fleet reconnect" "cmux-fleet never ran"
-  _out=$(_fleet_pty surf-none)
-  [[ $_out == *FLEET-RAN* ]] && bad "fleet reconnect" "ran in a tab with no recorded host" || ok "an ordinary cmux tab stays a local shell"
-  _out=$(_fleet_pty surf-bad)
-  [[ $_out == *FLEET-RAN* || $_out == *INJECTED* ]] && bad "fleet reconnect" "ran a record that isn't a bare host name" \
-    || ok "a malformed host record is ignored"
-else
-  skip "cmux" "not installed"
-fi
-fi
-
-# ── 7c. Rex ────────────────────────────────────────────────────────────────
+# ── 7. Rex ────────────────────────────────────────────────────────────────
 if want rex; then
 sec "Rex (terminal + multiplexer)"
 if command -v rex >/dev/null 2>&1; then
@@ -466,9 +368,43 @@ if command -v rex >/dev/null 2>&1; then
     _rk "$k" | grep -q "$a.*$arg" && ok "rex: $k → $a" || bad "rex keymap" "$k is '$(_rk "$k")'"
   done
   grep -q '^resize ' <<<"$rk" && ok "rex has herdr's resize mode" || bad "rex keymap" "no resize mode"
+  # Rex's docs want the rex on PATH to be the running server's own CLI. mise
+  # puts its tool dirs first, so REX_BIN_DIR can't lead PATH; what matters is
+  # which binary answers.
+  _srv=$(ps -axo command= | awk '/Rex Server.app\/Contents\/MacOS\/rex server run/ { sub(/ server run.*/, ""); print; exit }')
+  if [ -n "$_srv" ]; then
+    [ "$(/bin/realpath "$(command -v rex)")" = "$(/bin/realpath "$_srv")" ] \
+      && ok "rex on PATH is the running server's own CLI" || bad "rex CLI" "$(command -v rex) is not $_srv"
+  else
+    skip "rex CLI" "no Rex server running"
+  fi
+  # mac-keys lists what the server resolved, not the file.
+  mac-keys 2>/dev/null | grep -q 'alt+enter / ctrl+space → h *pane.split down' \
+    && ok "mac-keys lists Rex's resolved bindings" || bad "mac-keys" "no Rex alt+enter split row"
 else
   skip "rex" "not installed"
 fi
+# Rex replaced Ghostty, herdr, tmux and cmux; none may come back.
+for t in tmux herdr cmux; do
+  command -v $t >/dev/null 2>&1 && bad "$t" "still installed; Rex replaced it" || ok "$t is gone (Rex replaced it)"
+done
+[ -e /Applications/Ghostty.app ] && bad "Ghostty" "still installed; Rex replaced it" || ok "Ghostty is gone (Rex replaced it)"
+# The layouts refuse outside Rex. Unset REX_BLOCK so these run as "outside
+# Rex" even from a Rex pane; otherwise hdl would really split panes.
+ZRUN 'unset REX_BLOCK; hdl' 2>&1 | grep -qi usage && ok "hdl shows usage with no args" || bad "hdl usage" "no usage text"
+for f in hdl hdlm; do
+  ZRUN "unset REX_BLOCK; $f c" 2>&1 | grep -qi 'must start Rex' && ok "$f refuses outside Rex" || bad "$f guard" "no guard"
+done
+ZRUN 'unset REX_BLOCK; hsl 3 x' 2>&1 | grep -qi 'must start Rex' && ok "hsl refuses outside Rex" || bad "hsl guard" "no guard"
+ZRUN 'unset REX_BLOCK; hds' 2>&1 | grep -qi 'must start Rex' && ok "hds refuses outside Rex" || bad "hds guard" "no guard"
+# Fleet: plain ssh over the tailnet; Rex's own ssh guard covers hosts that
+# lack its terminfo, so no TERM override.
+for h in houston nasa coolify titan; do
+  [ "$(fleet $h --print)" = "ssh $h" ] && ok "fleet $h is plain ssh" || bad "fleet $h" "runs '$(fleet $h --print)'"
+done
+fleet nosuchhost --print >/dev/null 2>&1; [ $? = 2 ] && ok "fleet rejects an unknown host" || bad "fleet" "accepted an unknown host"
+grep -q 'config/rex/ssh_config' ~/.ssh/config \
+  && ok "~/.ssh/config includes Rex's ssh guard" || bad "ssh guard" "run: rex terminfo setup"
 fi
 
 # ── 8. git ─────────────────────────────────────────────────────────────────
@@ -651,29 +587,28 @@ mac edit bogus 2>&1 | grep -qi 'mac edit' && ok "mac edit validates target" || b
   && ok "mac doctor preserves diagnostics and reports failures" || bad "mac doctor" "health-check regressions"
 /opt/homebrew/bin/python3 "$HOME/omarchy-mac/tests/test_mac_dev.py" \
   && ok "mac dev routes and diagnostics work in isolation" || bad "mac dev" "developer workflow regressions"
-/opt/homebrew/bin/python3 "$HOME/omarchy-mac/tests/test_ghostty_run.py" \
-  && ok "Ghostty launcher preserves commands and arguments" || bad "ghostty-run" "launcher regressions"
+/opt/homebrew/bin/python3 "$HOME/omarchy-mac/tests/test_rex_run.py" \
+  && ok "Rex launcher preserves commands and arguments" || bad "rex-run" "launcher regressions"
 /opt/homebrew/bin/python3 "$HOME/omarchy-mac/tests/test_omarchy.py" \
   && ok "Omarchy command routes preserve arguments and status" || bad "omarchy" "compatibility command regressions"
-# ghostty-run: a real window via Ghostty's AppleScript, in the caller's cwd,
-# running the command through the shell. Closed again by its name (the cwd).
-if [ "$HEADLESS" != 1 ] && [ "$(osascript -e 'application "Ghostty" is running' 2>/dev/null)" = true ] &&
-   osascript -e 'tell application "Ghostty" to count windows' >/dev/null 2>&1; then
-  G="$T/ghostty-run-test-$$"; mkdir -p "$G"; ( cd "$G" && ghostty-run 'pwd > marker' ) >/dev/null 2>&1
+# rex-run: a real Rex session via Rex's AppleScript, in the caller's cwd,
+# running the command through the shell. Removed again by its name.
+if [ "$HEADLESS" != 1 ] && [ "$(osascript -e 'application id "com.superlogical.rex" is running' 2>/dev/null)" = true ]; then
+  G="$T/rex-run-test-$$"; mkdir -p "$G"; ( cd "$G" && rex-run -s "rex-run-test-$$" 'pwd > marker' ) >/dev/null 2>&1
   for i in $(seq 40); do [ -s "$G/marker" ] && break; sleep 0.1; done
   [ "$(cat "$G/marker" 2>/dev/null)" = "$(cd "$G" && pwd -P)" ] || [ "$(cat "$G/marker" 2>/dev/null)" = "$G" ] \
-    && ok "ghostty-run opens a window in the cwd and runs the command" || bad "ghostty-run" "marker: '$(cat "$G/marker" 2>/dev/null)'"
-  osascript -e 'on run a' -e 'tell application "Ghostty"' -e 'repeat with w in (every window whose name contains (item 1 of a))' \
-    -e 'close window w' -e 'end repeat' -e 'end tell' -e 'end run' "ghostty-run-test-$$" >/dev/null 2>&1
+    && ok "rex-run opens a session in the cwd and runs the command" || bad "rex-run" "marker: '$(cat "$G/marker" 2>/dev/null)'"
+  _s=$(rex ls --json 2>/dev/null | jq -r --arg l "rex-run-test-$$" '.sessions[] | select(.label == $l) | .session_id')
+  [ -n "$_s" ] && rex kill "$_s" >/dev/null 2>&1
 else
-  skip "ghostty-run" "Ghostty not running, or this runner may not control it (Automation)"
+  skip "rex-run" "Rex not running, or --headless"
 fi
 fi
 
 # ── 12. helper scripts ─────────────────────────────────────────────────────
 if want scripts; then
 sec "Helper scripts"
-for s in mac omarchy mac-dev mac-raycast macup mise-install mac-keyremap mac-wm ghostty-run transcode webdl weburl browser-url \
+for s in mac omarchy mac-dev mac-raycast macup mise-install mac-keyremap mac-wm rex-run fleet transcode webdl weburl browser-url \
          chromium-native-host chrome-extensions mac-hook agent-usage-claude agent-usage-codex agent-usage-grok mac-notify mac-clip mac-defaults; do
   p="$HOME/.local/bin/$s"
   if [ ! -x "$p" ]; then bad "$s" "missing or not executable"; continue; fi
@@ -1032,7 +967,7 @@ if want touchid; then
 sec "Touch ID for sudo"
 if [ -f /etc/pam.d/sudo_local ]; then
   grep -q pam_tid /etc/pam.d/sudo_local && ok "pam_tid enabled" || bad "pam_tid" "missing"
-  grep -q pam_reattach /etc/pam.d/sudo_local && ok "pam_reattach enabled (Touch ID in herdr/detached sessions)" || bad "pam_reattach" "missing"
+  grep -q pam_reattach /etc/pam.d/sudo_local && ok "pam_reattach enabled (Touch ID in Rex/detached sessions)" || bad "pam_reattach" "missing"
   awk '/pam_reattach/{r=NR} /pam_tid/{t=NR} END{exit !(r && t && r<t)}' /etc/pam.d/sudo_local \
     && ok "pam_reattach ordered before pam_tid" || bad "PAM order" "reattach must come first"
 else
@@ -1079,7 +1014,7 @@ zpty -d z
 EOF
 )
 [ "$zle_res" = PASS ] && ok "↑ recalls by prefix with the cursor at the end" || bad "↑ history" "$zle_res"
-# Ghostty now passes native modified arrows to herdr. In a plain shell the
+# Inside Rex, Option-arrows switch tabs (herdr's keys). In a plain shell the
 # same sequences must still edit by words; inspect expanded command output.
 word_res=$(ZDOTDIR="$T/zle" zsh -f <<'EOF' 2>&1
 zmodload zsh/zpty || exit 2
@@ -1093,7 +1028,7 @@ upto 'LEFT rightzz' || echo "Option-right did not move to word end"
 zpty -d z
 EOF
 )
-[ -z "$word_res" ] && ok "Option arrows retain word movement outside herdr" || bad "Option arrows" "$word_res"
+[ -z "$word_res" ] && ok "Option arrows retain word movement outside Rex" || bad "Option arrows" "$word_res"
 # Autosuggestions and syntax highlighting, typed for real in the same kind of
 # pty: a prefix of an earlier command gets that command suggested (→ accepts
 # it, and only the full command prints SUGG2), and an unknown command is
@@ -1437,7 +1372,7 @@ if [ -d "$R/.git" ]; then
   ( cd "$R" && bash -n install.sh ) && ok "install.sh syntax ok" || bad "install.sh" "syntax error"
   n=$( cd "$R" && git ls-files | wc -l | tr -d ' ' ); [ "$n" -ge 20 ] && ok "$n files tracked" || bad "repo" "only $n files"
   for f in config/mise/config.toml config/zsh/aliases.zsh config/zsh/functions.zsh \
-           config/herdr/config.toml local/bin/mac-keyremap local/bin/mac-wm \
+           config/rex/init.lua local/bin/mac-keyremap local/bin/mac-wm \
            config/launchd/com.omarchy.keyremap.plist \
            config/pam/sudo_local local/bin/mac local/bin/macup; do
     [ -f "$R/$f" ] && ok "tracked: $f" || bad "repo" "$f missing"

@@ -5,6 +5,6 @@
 # @raycast.packageName Omarchy
 # Optional standalone command; the default pack uses the single Omarchy menu.
 # @raycast.icon 🎵
-# @raycast.description Open CLIamp in Ghostty
+# @raycast.description Open CLIamp in Rex
 
 exec "$HOME/.local/bin/mac-raycast" run music "$@"

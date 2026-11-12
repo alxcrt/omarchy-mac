@@ -5,6 +5,6 @@
 # @raycast.packageName Omarchy
 # Optional standalone command; the default pack uses the single Omarchy menu.
 # @raycast.icon 🚀
-# @raycast.description Attach houston through the existing fleet and herdr wrapper
+# @raycast.description Open houston in its own Rex session (ssh over Tailscale)
 
 exec "$HOME/.local/bin/mac-raycast" run houston "$@"

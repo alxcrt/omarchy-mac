@@ -1,0 +1,20 @@
+#!/bin/bash
+# fleet <host> [--print]
+# Connect the current terminal to a fleet machine over the tailnet: plain ssh
+# to its Tailscale name. The Raycast fleet entries open one Rex session per
+# machine with `rex-run -s <host> fleet <host>`; --print shows the connect
+# command only.
+#
+# No TERM override is needed for hosts without Rex's terminfo (nasa, coolify):
+# Rex's own ~/.config/rex/ssh_config, included from ~/.ssh/config by
+# `rex terminfo setup`, announces xterm-256color to them.
+
+case $1 in
+  houston | nasa | coolify | titan) cmd="ssh $1" ;;
+  *) echo "usage: fleet houston|nasa|coolify|titan [--print]" >&2; exit 2 ;;
+esac
+[ "$2" = --print ] && { echo "$cmd"; exit 0; }
+
+# Through an interactive zsh, so the ssh() wrapper in functions.zsh (terminal
+# cleanup, reconnect on a dropped link) applies as it does at the prompt.
+exec /bin/zsh -ic "$cmd"

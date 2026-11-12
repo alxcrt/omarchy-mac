@@ -9,7 +9,7 @@ omarchy — shared everyday commands on macOS
 
   omarchy update|up [-y]              update this Mac's brew/mise/app layers
   omarchy mise install <package> [command-name [bin-name]]
-  omarchy launch terminal [command...]    Ghostty in the current directory
+  omarchy launch terminal [command...]    Rex tab in the current directory
   omarchy menu keybindings [--print|-p]   show this Mac's live shortcuts
   omarchy transcode                   open the native media picker
   omarchy transcode <input> <format> <quality>

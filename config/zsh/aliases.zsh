@@ -11,7 +11,7 @@ if command -v eza &>/dev/null; then
   alias lta='lt -a'
 fi
 
-# macOS: upstream has a kitty-image branch; Ghostty uses the bat preview.
+# macOS: upstream has a kitty-image branch; Rex uses the bat preview.
 alias ff="fzf --preview 'bat --style=numbers --color=always {}'"
 alias eff='$EDITOR "$(ff)"'
 
@@ -61,8 +61,7 @@ alias cx='printf "\033[2J\033[3J\033[H" && claude --permission-mode auto'
 alias cy='codex --approve-for-me'
 alias d='docker'
 alias r='rails'
-alias h='herdr'
-# herdr replaces tmux here, so the dev-layout shortcuts drive hdl, not tdl.
+# Rex replaces tmux here, so the dev-layout shortcuts drive hdl (Rex panes), not tdl.
 alias ic='hdl c'
 alias ix='hdl cx'
 alias icx='hdl c cx'

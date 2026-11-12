@@ -2,13 +2,13 @@
 
 Search **Omarchy** in Raycast, choose an action from its dropdown, and press
 Return. The choices are grouped by Update, Learn, System, Developer, Media,
-and Fleet. Normal Raycast app search already opens cmux, Ghostty, the browser,
+and Fleet. Normal Raycast app search already opens Rex, the browser,
 and editors; no separate app-launch commands are needed in this menu.
 
 The Developer group checks the web/full-stack environment (`mac dev doctor`),
 opens Git repositories in lazygit, and opens Docker containers in lazydocker.
 The check reports tools and apps without starting Docker or any database. The
-Media group opens CLIamp in Ghostty alongside the download/transcode flows.
+Media group opens CLIamp in Rex alongside the download/transcode flows.
 Configure music providers when wanted with `mac raycast run music-setup`;
 provider sign-in is interactive and credentials stay in CLIamp's own config.
 
@@ -22,10 +22,11 @@ folder and picks up the new command. Otherwise, add it once in Raycast
 Settings → Script Commands → Add Script Directory. No Store extension is
 required. Optional: give the Omarchy command the alias `om`.
 
-Long-running tools, updates, keybindings, and usage output open in the existing
-Ghostty instance. Fleet choices connect only when selected and use the existing
-`cmux-fleet` wrapper; houston uses herdr. The first browser/Ghostty invocation
-may need macOS Automation permission for Raycast itself.
+Long-running tools, updates, keybindings, and usage output open as tabs in the
+existing Rex (`rex-run`). Fleet choices connect only when selected: each opens
+its own Rex session named after the machine and runs `fleet <host>`, plain ssh
+over Tailscale; choosing it again shows that session. The first browser/Rex
+invocation may need macOS Automation permission for Raycast itself.
 
 Standalone scripts are retained under `config/raycast/optional` for individual
 hotkeys if wanted later, including developer checks, Git, CLIamp/provider setup,
@@ -51,11 +52,9 @@ in Raycast Settings → Shortcuts after reinstalling or importing app settings.
 | Shortcut | Action |
 | --- | --- |
 | `⌘Space` | Raycast launcher (existing) |
-| `⌘` + backtick | Ghostty quick terminal (existing global Ghostty binding) |
 | `Hyper+V` | Clipboard History |
 | `Hyper+B` | Helium, the current default browser |
-| `Hyper+T` | Ghostty (existing) |
-| `Hyper+W` | cmux workspaces |
+| `Hyper+T` | Rex (reassign: it opened Ghostty) |
 | `Hyper+A` / `Hyper+C` | ChatGPT / Claude |
 | `Hyper+E` / `Hyper+L` | VS Code / Linear (Linear retained) |
 | `Hyper+P` / `Hyper+M` | 1Password / IINA |
@@ -97,14 +96,12 @@ and [printable cheat sheet](https://github.com/alxcrt/miryoku-chocofi-layout/blo
 `Hyper+K` uses the existing optional script enabled by this symlink:
 `~/.config/raycast/scripts/omarchy-keys.sh` →
 `~/omarchy-mac/config/raycast/optional/omarchy-keys.sh`. The installer preserves
-this optional link. It renders output inside Raycast; it does not open Ghostty.
+this optional link. It renders output inside Raycast; it does not open Rex.
 Other standalone scripts remain optional.
 
-Ghostty's `global:cmd+grave_accent=toggle_quick_terminal` provides the requested
-show/hide action. Its installed CLI accepts the config; live toggle and global
-shortcut registration still need a physical test because Computer Use blocks
-Ghostty in this environment. Do not infer missing Accessibility permission from
-that restriction. On Linux, `Super+backtick` toggles the scratchpad rather than
+Ghostty's global `⌘`+backtick quick terminal went with Ghostty. Rex has no
+global quick terminal (its Toggle Visibility action only fires while Rex has
+focus), so **Hyper+T** bringing Rex forward is the replacement. On Linux, `Super+backtick` toggles the scratchpad rather than
 creating a terminal; put a terminal there with `Super+Shift+backtick` first.
 
 Validation: all assignments above were read back in Raycast Settings. The
@@ -121,8 +118,8 @@ keyboard has been flashed by this task.
 
 This keeps the useful Omarchy workflows while respecting Mac shortcuts:
 Command for native app actions, Hyper for global app launchers, and Option for
-herdr. In particular, `⌥Enter` still splits a herdr pane, and Ghostty's existing
-Hyper+arrow split-resizing bindings stay in place. Native tiling and Spaces
+the multiplexer. In particular, `⌥Enter` still splits a pane, now in Rex, and
+`⌃⌥⇧` arrows resize it. Native tiling and Spaces
 continue through `mac wm`; no extra window manager is installed.
 
 ## Optional extras
@@ -163,7 +160,7 @@ adding another UI runtime.
 
 Sources:
 - https://github.com/omacom/omarchy/tree/4a9c83deceb5bda84f706794c2ddc61084914fe0/default/hypr/bindings
-- https://ghostty.org/docs/config/keybind/reference#toggle_quick_terminal
+- https://www.superlogical.com/rex/docs/customize/keyboard-shortcuts
 - https://github.com/omacom/omarchy/blob/f4357a3b2667047aa3c295d89337fc0ff751b41f/docs/menu.md
 - https://github.com/omacom/omarchy/blob/f4357a3b2667047aa3c295d89337fc0ff751b41f/default/omarchy/omarchy-menu.jsonc
 - https://github.com/raycast/script-commands/blob/master/documentation/ARGUMENTS.md

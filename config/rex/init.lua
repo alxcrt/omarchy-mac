@@ -1,11 +1,13 @@
 -- ~/.config/rex/init.lua
--- Rex is a terminal and multiplexer in one (Ghostty's renderer plus herdr's
--- job), so this file carries config/herdr/config.toml's [keys] over. herdr
--- terms map to Rex terms: workspace -> session, tab -> tab, pane -> pane.
+-- Rex is this setup's terminal and multiplexer (it replaced Ghostty, herdr
+-- and cmux). This file carries upstream Omarchy's config/herdr/config.toml
+-- [keys] over, key for key. herdr terms map to Rex terms:
+-- workspace -> session, tab -> tab, pane -> pane.
 -- Rex's default ⌘ shortcuts (⌘D, ⌘T, ⌘W...) stay as they are.
 --
 -- Appearance (font, padding, theme) is not configurable here: Rex keeps it
--- in its app settings, which mac-defaults sets to match the Ghostty config.
+-- in its app settings, which mac-defaults sets to Omarchy's terminal font
+-- (JetBrainsMono Nerd Font) and padding.
 --
 -- Apply with `rex config reload`; Rex does not watch this file.
 
