@@ -130,11 +130,23 @@ October 2026 audit; report actual results and any unverified UI steps.
 - **Fleet machines are plain ssh over Tailscale** (`fleet <host>`); each
   Raycast fleet entry is one Rex session named after the machine
   (`rex-run -s houston fleet houston`). houston dropped `herdr --remote` with
-  herdr (Nov 2026): **never tmux** there either. No TERM override is needed for
-  hosts without Rex's terminfo (nasa, coolify): Rex's guard in
-  `~/.config/rex/ssh_config` announces xterm-256color to them. Rex's docs
-  recommend a Rex server on the tailnet (`rex server start --tailscale`, then
-  `rex hosts add`) for persistent remote sessions; not set up yet.
+  herdr (Nov 2026): **never tmux** there either.
+  - **xterm-rex is on houston, coolify (alex and root), apollo and yoga**
+    (`rex terminfo host install <dest>`, 12 Nov 2026). The record is per
+    ssh spelling and per account; `rex terminfo host ls` lists them.
+  - **nasa deliberately has no entry.** Unraid's `/root` lives in RAM, so a
+    `~/.terminfo` there vanishes at reboot while the Mac's record would keep
+    announcing xterm-rex. Rex's guard sends it xterm-256color instead.
+  - Offline when this was done, still pending: omarchy (T14) and air.
+  - **houston runs a persistent Rex server** (`rex server install
+    ssh://houston --label houston`): rex in `~/.local/bin`, systemd user
+    `rex.socket`, linger on. Reach it from the CLI with `rex -S houston ls`.
+    `rex hosts` is CLI-only and doesn't sync to the app, so the app needs
+    **Add Remote Host… → `ssh://houston`** by hand. Upgrade it by re-running the
+    same install (the user install is not pacman's, and `omarchy update`
+    doesn't touch it).
+  - houston's own Omarchy herdr package and its idle server are upstream's.
+    They were left in place.
 - **zsh arrays are 1-indexed.** Ports of Omarchy's bash functions must use
   `${arr[1]}`, not `${arr[0]}`.
 - **A function can't share a name with an alias in zsh** — it's a parse error

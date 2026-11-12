@@ -5,9 +5,9 @@
 # machine with `rex-run -s <host> fleet <host>`; --print shows the connect
 # command only.
 #
-# No TERM override is needed for hosts without Rex's terminfo (nasa, coolify):
-# Rex's own ~/.config/rex/ssh_config, included from ~/.ssh/config by
-# `rex terminfo setup`, announces xterm-256color to them.
+# No TERM override: hosts given xterm-rex (`rex terminfo host install`) get it,
+# and Rex's ~/.config/rex/ssh_config, included from ~/.ssh/config by
+# `rex terminfo setup`, announces xterm-256color to the rest (nasa).
 
 case $1 in
   houston | nasa | coolify | titan) cmd="ssh $1" ;;
