@@ -26,8 +26,6 @@ automatically installed on macOS. Keep this file current when scope changes.
 - **1Password in Helium**: open 1Password > Settings > Browser
   and check the Helium extension connects to the app (Touch ID unlock).
 - **`grok login`**, if Grok is in use.
-- **Approve Rex's hook in Codex**: run `/hooks` in a Codex session and allow
-  the `rex __internal session-start` hook (`rex skill setup` added it 12 Nov).
 - **Karabiner's last trace**: drag
   `~/Library/Containers/org.pqrs.Karabiner-VirtualHIDDevice-Manager` to the
   Trash in Finder (macOS protects it from scripts). The driver itself is gone (Oct 6):
