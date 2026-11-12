@@ -58,6 +58,11 @@ REX_CLI="$HOME/Library/Application Support/com.superlogical.rex/RexServer/Versio
 if [ -x "$REX_CLI" ]; then
   ln -sfn "$REX_CLI" "$HOME/.local/bin/rex"
   echo "linked ~/.local/bin/rex"
+  # Rex's skill and SessionStart hook for Claude Code, Codex, OpenCode and Pi:
+  # what upstream's mise hook does with herdr's integration. Idempotent, and
+  # the text comes from rex at run time, so a Rex update needs no rerun.
+  # Codex then asks once, under /hooks, before it runs the new hook.
+  "$REX_CLI" skill setup >/dev/null && echo "rex skill setup done"
 fi
 # .zshrc is linked separately so you can opt out (it is a self-contained zsh config).
 link zsh/zshrc                 .zshrc

@@ -172,12 +172,16 @@ multiplexer in one; it replaced Ghostty, herdr and cmux. `config/rex/init.lua`
 carries upstream Omarchy's herdr keys over: `⌥Enter` / `⌥⇧Enter` split panes,
 `⌃⌥` arrows move between them, `⌥←/→` changes tabs, `⌥1..9` selects a tab,
 `⌥↑/↓` changes session, and `⌃Space` is the prefix (`⌃Space c` new tab, `z`
-zoom, `x` close…). Outside Rex, Option arrows still move by words in zsh. After
+zoom, `x` close…). Words move with `⌃←/→`, as in Omarchy (`mac wm --apply`
+stops macOS from using them to switch Desktops); outside Rex, `⌥←/→` also
+moves by word. `install.sh` runs `rex skill setup`, which gives Claude Code
+and Codex Rex's skill and session hook (approve the hook once with `/hooks`
+in Codex). After
 pulling, apply the file with `rex config reload`. Rex's built-in Command
 shortcuts remain available: `⌘T` new tab, `⌘D` split, `⌘⇧D` split down.
 Font and padding are Rex app settings (`mac-defaults`); Rex reads them at launch.
 
-Desktop controls use macOS keys: `⌃1..9` for existing Mission Control Desktops
+Desktop controls use macOS keys: `⌃1..9` (or a swipe) for existing Mission Control Desktops
 and `fn⌃` arrows for tiling. Global Omarchy app shortcuts can be assigned in
 Raycast; their registration needs the in-app step in the
 [setup guide](config/raycast/SETUP.md). In `init.lua`, `cmd` means **Command**;

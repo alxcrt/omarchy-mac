@@ -66,8 +66,11 @@ DBeaver Community and Keka use normal Raycast app search; the single Omarchy
 menu includes developer checks, Git selection, Docker and CLIamp.
 
 **Omarchy SUPER = ⌥ (Option)** is the port's convention. Inside Rex,
-`⌥Enter` splits a pane and `⌥1..9` selects a tab. Native macOS Desktops use
-`⌃1..9`; global app launchers need Raycast hotkeys configured in its UI.
+`⌥Enter` splits a pane, `⌥←/→` and `⌥1..9` select tabs and `⌥↑/↓` sessions, as
+upstream's herdr keys do. Words move with **`⌃←/→`**, as in Omarchy: `mac-wm`
+turns off macOS's ⌃←/→ Desktop switching for that (Alex chose this over
+unbinding ⌥←/→, 12 Nov 2026). Native macOS Desktops use `⌃1..9` or a swipe;
+global app launchers need Raycast hotkeys configured in its UI.
 In `init.lua`, `cmd`/`super` means **⌘**, not Omarchy SUPER (that is `alt`). Full generated list:
 `mac keys`, or `KEYBINDINGS.md` in the repo — **regenerate it, never hand-edit**:
 `mac keys --md > ~/omarchy-mac/KEYBINDINGS.md`.
@@ -369,7 +372,13 @@ October 2026 audit; report actual results and any unverified UI steps.
   Option-key enums are undocumented, so set those in Rex's Settings.
   `~/.config/rex/ssh_config` is Rex's own (from `rex terminfo setup`); don't
   link or edit it. `rex skill setup` (Claude Code, Codex, OpenCode, Pi) is
-  Rex's recommended agent setup and is installed (`rex skill status`). Rex
+  Rex's version of upstream's herdr agent integration. `install.sh` runs it
+  and `test.sh rex` checks `rex skill status` (first installed on mac14 on 12 Nov
+  2026). It adds a SessionStart hook to `~/.claude/settings.json` and
+  `~/.codex/hooks.json`, and Codex runs its hook only after it is approved
+  under `/hooks`. A mise postinstall hook, as upstream uses, would change
+  nothing: Rex's four agents already have their folders, and the guide text
+  comes from `rex` at run time. Rex
   puts `REX_BIN_DIR` first on PATH, but mise's activate re-sorts PATH, so
   `test.sh rex` checks instead that `rex` resolves to the running server's
   own binary. Client actions (`rex -C <app> do …`) need Remote Control, which

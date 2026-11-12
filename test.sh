@@ -384,6 +384,11 @@ if command -v rex >/dev/null 2>&1; then
   # mac-keys lists what the server resolved, not the file.
   mac-keys 2>/dev/null | grep -q 'alt+enter / ctrl+space → h *pane.split down' \
     && ok "mac-keys lists Rex's resolved bindings" || bad "mac-keys" "no Rex alt+enter split row"
+  # Rex's agent setup (install.sh runs it): skill and hook current in the two
+  # agents with hooks. Machine-readable status lines, not prose.
+  _rs=$(rex skill status 2>/dev/null)
+  [ "$(printf '%s\n' "$_rs" | grep -cE '^  (skill|hook) +current ')" -ge 4 ] \
+    && ok "rex skill setup current for Claude Code and Codex" || bad "rex skill" "$(printf '%s' "$_rs" | grep -vE current | tr -s ' ' | head -3)"
 else
   skip "rex" "not installed"
 fi
@@ -886,6 +891,10 @@ done
 # ⌃1 must carry the ⌃ mask (262144) and the keycode for '1' (18).
 printf '%s' "$_sh" | grep -q "118={enabled=1;value={parameters=(49,18,262144)" \
   && ok "⌃1 is bound to keycode 18 with the ⌃ mask" || bad "⌃1" "wrong parameters"
+# ⌃←/→ (hotkeys 79, 81) are Omarchy's word movement, so macOS must not take
+# them for Desktop switching; ⌥←/→ are Rex's tab keys.
+printf '%s' "$_sh" | grep -q "79={enabled=0;" && printf '%s' "$_sh" | grep -q "81={enabled=0;" \
+  && ok "⌃←/→ Desktop switching off (left to the terminal)" || bad "⌃←/→" "macOS still switches Desktops"
 
 # Behaviour, not prose: the tiling menu Apple exposes must actually be there,
 # since every documented shortcut hangs off it.
@@ -1017,8 +1026,9 @@ zpty -d z
 EOF
 )
 [ "$zle_res" = PASS ] && ok "↑ recalls by prefix with the cursor at the end" || bad "↑ history" "$zle_res"
-# Inside Rex, Option-arrows switch tabs (herdr's keys). In a plain shell the
-# same sequences must still edit by words; inspect expanded command output.
+# Inside Rex, Option-arrows switch tabs (herdr's keys), so Ctrl-arrows are the
+# word keys there, as in Omarchy (mac-wm frees them from Desktop switching).
+# Both must edit by words in the shell; inspect expanded command output.
 word_res=$(ZDOTDIR="$T/zle" zsh -f <<'EOF' 2>&1
 zmodload zsh/zpty || exit 2
 zpty z 'TERM=xterm-256color zsh -i'
@@ -1028,10 +1038,14 @@ log=; zpty -wn z 'print -r -- ${(U):-left} right'; zpty -wn z $'\e[1;3D'; zpty -
 upto 'LEFT zzright' || echo "Option-left did not move to word start"
 log=; zpty -wn z 'print -r -- ${(U):-left} right'; zpty -wn z $'\e[1;3D\e[1;3C'; zpty -wn z $'zz\r'
 upto 'LEFT rightzz' || echo "Option-right did not move to word end"
+log=; zpty -wn z 'print -r -- ${(U):-left} right'; zpty -wn z $'\e[1;5D'; zpty -wn z $'zz\r'
+upto 'LEFT zzright' || echo "Ctrl-left did not move to word start"
+log=; zpty -wn z 'print -r -- ${(U):-left} right'; zpty -wn z $'\e[1;5D\e[1;5C'; zpty -wn z $'zz\r'
+upto 'LEFT rightzz' || echo "Ctrl-right did not move to word end"
 zpty -d z
 EOF
 )
-[ -z "$word_res" ] && ok "Option arrows retain word movement outside Rex" || bad "Option arrows" "$word_res"
+[ -z "$word_res" ] && ok "Ctrl and Option arrows move by word in zsh" || bad "word arrows" "$word_res"
 # Autosuggestions and syntax highlighting, typed for real in the same kind of
 # pty: a prefix of an earlier command gets that command suggested (→ accepts
 # it, and only the full command prints SUGG2), and an unknown command is

@@ -11,6 +11,7 @@ Caps Lock is Escape and the right ⌘ is ⌥, remapped by hidutil (`mac-keyremap
 |---|---|
 | `Caps Lock` | Escape |
 | `Right ⌘` | ⌥  (SUPER) |
+| `Caps Lock` | 0x70000006f |
 
 ## Raycast (setup guide; verify in Settings > Shortcuts)
 
@@ -46,8 +47,7 @@ Caps Lock is Escape and the right ⌘ is ⌥, remapped by hidutil (`mac-keyremap
 
 | Keys | Action |
 |---|---|
-| `⌃ 1..9` | switch to Desktop 1-9 (enable with: mac wm --apply) |
-| `⌃ ←/→` | previous / next Desktop |
+| `⌃ 1..9` | switch to Desktop 1-9, or swipe (enable with: mac wm --apply) |
 | `⌃ ↑` | Mission Control — add Desktops here with + |
 | `drag window to top edge` | then drop onto a Desktop to move it |
 

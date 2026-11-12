@@ -1,8 +1,10 @@
 # Tracker
 
 The running list of what is queued, what only Alex can do, and what landed.
-Latest command/package comparison: official `omacom/omarchy` `f4357a3`
-(2026-10-17), verified through omarchy.org. The shell aliases and three usage
+Latest command/package comparison: official `omacom/omarchy` `ac6cb9c`
+(2026-11-12): herdr keys, mise and agent integration rechecked, and
+`default/bash` (aliases, functions) is unchanged since `4601078` (Oct 26).
+The full command/package sweep was `f4357a3` (2026-10-17). The shell aliases and three usage
 collectors retain upstream behavior with the documented macOS adaptations.
 Linux desktop/system commands and optional development environments are not
 automatically installed on macOS. Keep this file current when scope changes.
@@ -23,9 +25,15 @@ automatically installed on macOS. Keep this file current when scope changes.
   49 faults in a week; the RC should clear them.
 - **1Password in Helium**: open 1Password > Settings > Browser
   and check the Helium extension connects to the app (Touch ID unlock).
-- **`claude auth login`**: the Claude CLI's saved sign-in has expired, so
-  `mac usage` shows the plan (Max 5x) but no limits. `grok login` too, if
+- **`claude auth login`** in a Rex tab: the native `~/.claude` sign-in is
+  still expired (rechecked 12 Nov; the T3 hub and Direct homes work), so
+  plain `claude` in Rex and `mac usage` have no login. `grok login` too, if
   Grok is in use.
+- **Approve Rex's hook in Codex**: run `/hooks` in a Codex session and allow
+  the `rex __internal session-start` hook (`rex skill setup` added it 12 Nov).
+- **Try ⌃←/→ in a Rex tab**: it should now move by word (macOS no longer
+  takes it for Desktops). If it still switches Desktops, log out and back in
+  once so the shortcut change takes effect.
 - **Karabiner's last trace**: drag
   `~/Library/Containers/org.pqrs.Karabiner-VirtualHIDDevice-Manager` to the
   Trash in Finder (macOS protects it from scripts). The driver itself is gone (Oct 6):
@@ -40,8 +48,8 @@ automatically installed on macOS. Keep this file current when scope changes.
   are optional. Existing extension cleanup and aliases remain in-app steps.
   The earlier 16 individual launchers remain under `config/raycast/optional`.
 - **Raycast hotkeys**: assign only frequently used actions. Keep the existing
-  hidutil mapping and avoid Option/herdr and Control-number/Mission Control
-  conflicts. No new Hyper mapping is needed for the default menu.
+  hidutil mapping and avoid Rex's ⌥ keys, ⌃←/→ (word movement) and
+  Control-number/Mission Control conflicts. No new Hyper mapping is needed for the default menu.
 
 ## Queued
 
@@ -57,7 +65,17 @@ lock would stay custom anyway); keep `install.sh` links over GNU stow;
 `test.sh` stays plain bash (no bats); `webdl` stays on yt-dlp (cobalt is a
 hosted service).
 
-## Done (Oct 2026, newest first)
+## Done (newest first)
+
+- Nov 12 Rex finish: compared with upstream `ac6cb9c`, `init.lua` matches
+  its herdr `[keys]` exactly, so ⌥←/→ stay on tabs and ⌥↑/↓ on sessions.
+  Words move with ⌃←/→ as in Omarchy: `mac-wm --apply` now disables macOS
+  hotkeys 79/81 (Desktop left/right), and `test.sh wm`/`shell` check both.
+  `rex skill setup` installed (Claude Code and Codex hooks, skill for all
+  four) and added to `install.sh`; `test.sh rex` checks it. Upstream's only
+  new userland items since October were herdr's mise agent hook (covered by
+  this) and a `[hooks]` mise setting. No Ghostty, cmux, herdr or tmux
+  binaries, casks, configs or apps remain. Full headless suite green.
 
 - Oct 26 lag pass: WindowServer was the hot process (spikes to ~90% CPU).
   The portrait Dell S2721QS rendered 3780x6720 ("looks like 1890x3360", 3x
