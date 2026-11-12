@@ -132,6 +132,16 @@ cask "ollama-app"
 cask "obsidian"
 cask "chatgpt"                 # ChatGPT desktop app (Omarchy 4 Install > AI)
 cask "claude"                  # Claude desktop app
+# Superwhisper (dictation with LLM reformatting) updates itself. On mac14 it
+# came from its own DMG (3.3.0, Nov 2026), ahead of the cask, and
+# `brew install --cask --adopt` was refused by App Management (`sudo chgrp`,
+# "Operation not permitted"). So brew declares it only where it installed it
+# or where no copy exists yet; otherwise bundle fails on "already an App at".
+superwhisper_prefix = defined?(HOMEBREW_PREFIX) ? HOMEBREW_PREFIX.to_s : "/opt/homebrew"
+if !File.exist?("/Applications/superwhisper.app") ||
+   File.exist?("#{superwhisper_prefix}/Caskroom/superwhisper")
+  cask "superwhisper"
+end
 cask "1password-cli"           # `op`; 1Password is the only password manager (Bitwarden removed Oct 26) and the SSH agent
 cask "yubico-authenticator"     # YubiKey companion app
 cask "moonlight"
