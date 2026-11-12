@@ -31,9 +31,6 @@ automatically installed on macOS. Keep this file current when scope changes.
   Grok is in use.
 - **Approve Rex's hook in Codex**: run `/hooks` in a Codex session and allow
   the `rex __internal session-start` hook (`rex skill setup` added it 12 Nov).
-- **Try ⌃←/→ in a Rex tab**: it should now move by word (macOS no longer
-  takes it for Desktops). If it still switches Desktops, log out and back in
-  once so the shortcut change takes effect.
 - **Karabiner's last trace**: drag
   `~/Library/Containers/org.pqrs.Karabiner-VirtualHIDDevice-Manager` to the
   Trash in Finder (macOS protects it from scripts). The driver itself is gone (Oct 6):
@@ -71,6 +68,7 @@ hosted service).
   its herdr `[keys]` exactly, so ⌥←/→ stay on tabs and ⌥↑/↓ on sessions.
   Words move with ⌃←/→ as in Omarchy: `mac-wm --apply` now disables macOS
   hotkeys 79/81 (Desktop left/right), and `test.sh wm`/`shell` check both.
+  Alex confirmed ⌃←/→ moves by word in a Rex tab, with no logout needed.
   `rex skill setup` installed (Claude Code and Codex hooks, skill for all
   four) and added to `install.sh`; `test.sh rex` checks it. Upstream's only
   new userland items since October were herdr's mise agent hook (covered by
