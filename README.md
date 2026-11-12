@@ -148,6 +148,17 @@ The prompt uses the same Starship configuration as official
 zsh, with Omarchy's everyday aliases and shell functions ported into it.
 Bash helpers work with both Apple's Bash 3.2 and Homebrew Bash 5.
 
+| | Omarchy (Linux, e.g. houston) | This Mac |
+|---|---|---|
+| Login shell | bash | zsh (`/bin/zsh`), the macOS default |
+| Shell config | `default/bash/*` | `~/.zshrc` plus `config/zsh/aliases.zsh` and `functions.zsh`, ported from bash |
+| Prompt | Starship, `config/starship.toml` | Starship (Homebrew), the same `config/starship.toml` |
+
+The prompt is **Starship**, not Spaceship, which is a different zsh-only
+prompt and is not installed. `config/starship.toml` matched upstream byte for
+byte on 13 Nov 2026 (`ac6cb9c`), as does houston's. Homebrew's Bash 5 is
+installed for scripts; it is not the login shell.
+
 `omarchy` also accepts these familiar Linux command routes on the Mac:
 
 | Command on either machine | Mac behavior |
