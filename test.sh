@@ -762,6 +762,25 @@ lockf -s -t 5 "$LK" true; free=$?   # free once that step has finished
   && ok "killing macup stops it at once; its running step holds the lock until done" \
   || bad "macup lock" "after kill: died-first=$((1-inflight)) rerun rc=$again freed rc=$free later steps=$(grep -c '^brew upgrade' "$LOG"): $out"
 mv "$STUB/brew.real" "$STUB/brew"
+# A daemon an upgrade starts inherits the lock and outlives the run (brew's
+# 1password-cli cask left `op daemon`, and every later macup was refused).
+# The run names it and gives up the lock file, so the next run goes ahead.
+cp "$STUB/brew" "$STUB/brew.real"
+cat >"$STUB/brew" <<EOF
+#!/bin/bash
+[ "\$1" = upgrade ] && ( sleep 31 </dev/null >/dev/null 2>&1 & echo \$! >>"$T/daemons" )
+exec "$STUB/brew.real" "\$@"
+EOF
+chmod +x "$STUB/brew"; rm -f "$T/daemons"
+out=$(runlock)
+out2=$(runlock); again=$?
+held=$(/usr/sbin/lsof -t -- "$LK" 2>/dev/null | tr '\n' ' ')
+[ "$(grep -c . "$T/daemons")" = 2 ] && grep -q 'Left running by an upgrade' <<<"$out" && grep -q 'sleep 31' <<<"$out" \
+  && [ $again != 75 ] && grep -q "^brew update" "$LOG" && [ -z "$held" ] \
+  && ok "a daemon an upgrade leaves running is named and never blocks the next run" \
+  || bad "macup lock" "daemon: rerun rc=$again daemons=$(grep -c . "$T/daemons" 2>/dev/null) lock held by '$held': $out / $out2"
+kill $(cat "$T/daemons") 2>/dev/null
+mv "$STUB/brew.real" "$STUB/brew"
 # App Store: an app owned by another Apple Account pops a modal dialog on every
 # update attempt. macup must try it once, report it under "Needs you" (not as
 # a failure), and skip it on the next run. Developer's real ADAM ID is used so

@@ -27,10 +27,21 @@ step() { "$@" || FAILED+=("$*"); }
 # No traps in macup: bash 3.2 with one defers a kill until a running $(...)
 # finishes. An mkdir lock, a re-exec under lockf and a lockf+caffeinate
 # helper each failed review before this (see SKILL.md).
+# A daemon an upgrade starts inherits fd 9 too and outlives the run (brew's
+# 1password-cli cask left `op daemon` holding it, refusing every later run).
+# So a run that ends with such leftovers deletes the lock file while still
+# holding it (see the end), and the next run opens a fresh one. Hence the
+# inode check: a lock won on a file that was just deleted is no lock at all,
+# so reopen the path and try again. (stat of /dev/fd/9 reports devfs's
+# device, so compare inodes only; ours can't be reused while fd 9 is open.)
 LOCKFILE="${XDG_STATE_HOME:-$HOME/.local/state}/macup/macup.lock"   # (the old mkdir lock was a dir named "lock")
-mkdir -p "${LOCKFILE%/*}" && exec 9>>"$LOCKFILE" ||
-  { echo "macup: cannot open its lock file $LOCKFILE" >&2; exit 1; }
-lockf -s -t 0 9; rc=$?
+for try in 1 2 3; do
+  mkdir -p "${LOCKFILE%/*}" && exec 9>>"$LOCKFILE" ||
+    { echo "macup: cannot open its lock file $LOCKFILE" >&2; exit 1; }
+  lockf -s -t 0 9; rc=$?
+  [ $rc = 0 ] && [ "$(stat -f %i /dev/fd/9)" != "$(stat -f %i "$LOCKFILE" 2>/dev/null)" ] && rc=retired || break
+done
+[ $rc = retired ] && rc=1
 if [ $rc = 75 ]; then   # EX_TEMPFAIL: held (-s keeps lockf itself quiet)
   echo "macup is already running." >&2
   # lsof with fd 9 closed, so it doesn't list itself; then drop this shell.
@@ -178,6 +189,16 @@ grep -q 'No new software available' <<<"$swu" && echo "macOS up to date" || tail
 
 # User hooks (port of omarchy's hook system) — see ~/.config/omarchy-mac/hooks/
 command -v mac-hook >/dev/null && mac-hook post-update 9>&-
+
+# Every step has finished, so any other holder of the lock is a daemon one of
+# them started (see the top). Delete the lock file, still locked by this run,
+# so the next run opens a fresh one instead of being refused by the daemon.
+left=$(exec 9>&-; /usr/sbin/lsof -t -- "$LOCKFILE" 2>/dev/null | grep -vx "$$")
+if [ -n "$left" ]; then
+  rm -f -- "$LOCKFILE"
+  echo "Left running by an upgrade (released from macup's lock):"
+  for pid in $left; do ps -o pid=,command= -p "$pid" | sed 's/^ */  /'; done
+fi
 
 if [ ${#NEEDS_YOU[@]} -gt 0 ]; then
   echo -e "\n\033[0;33mNeeds you:\033[0m"; printf '  %s\n' "${NEEDS_YOU[@]}"

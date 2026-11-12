@@ -262,6 +262,12 @@ October 2026 audit; report actual results and any unverified UI steps.
   a `lockf file caffeinate -w $$` helper (released late, and lost the lock
   if caffeinate died), and a background worker (bash makes background jobs
   ignore Ctrl-C, and their children inherit that).
+  The inheritance has one cost: a daemon an upgrade starts keeps the lock
+  after macup exits (Nov 13: brew's 1password-cli cask left `op daemon`
+  holding it, so every later run was refused). A run that ends with other
+  holders therefore deletes the lock file while still holding it and names
+  them; each run checks, after locking, that its fd is still the file at the
+  path (by inode: `stat` of `/dev/fd/9` reports devfs's device).
 - **bash 3.2: `exec cmd 9>&-` does not close fd 9.** bash saves a copy (as fd
   10) in case the exec fails, and the copy leaks into cmd. Close it first in
   its own statement: `exec 9>&-; exec cmd`. `cmd 9>&-` (no exec) is fine.

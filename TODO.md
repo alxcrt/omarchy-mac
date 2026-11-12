@@ -59,6 +59,11 @@ hosted service).
 
 ## Done (newest first)
 
+- Nov 13 macup lock: brew's 1password-cli upgrade left `op daemon` holding
+  macup's inherited lock fd, refusing every run ("held by: op daemon").
+  macup now deletes its lock file at the end when anything else still holds
+  it (and names it), and re-checks the inode after locking. Regression test
+  added; the live wedged lock file was replaced (the daemon left running).
 - Nov 12 Rex finish: compared with upstream `ac6cb9c`, `init.lua` matches
   its herdr `[keys]` exactly, so ⌥←/→ stay on tabs and ⌥↑/↓ on sessions.
   Words move with ⌃←/→ as in Omarchy: `mac-wm --apply` now disables macOS
