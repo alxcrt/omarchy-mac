@@ -138,13 +138,18 @@ October 2026 audit; report actual results and any unverified UI steps.
     `~/.terminfo` there vanishes at reboot while the Mac's record would keep
     announcing xterm-rex. Rex's guard sends it xterm-256color instead.
   - Offline when this was done, still pending: omarchy (T14) and air.
-  - **houston runs a persistent Rex server** (`rex server install
-    ssh://houston --label houston`): rex in `~/.local/bin`, systemd user
-    `rex.socket`, linger on. Reach it from the CLI with `rex -S houston ls`.
-    `rex hosts` is CLI-only and doesn't sync to the app, so the app needs
-    **Add Remote Host… → `ssh://houston`** by hand. Upgrade it by re-running the
-    same install (the user install is not pacman's, and `omarchy update`
-    doesn't touch it).
+  - **houston, coolify and yoga run persistent Rex servers** (`rex server
+    install ssh://<host> --label <host>`, as alex). Each has rex in
+    `~/.local/bin`, a systemd user `rex.socket`, and linger on. Reach them with
+    `rex -S <host> ls`. Each is also added in the app by hand (Add Remote Host…
+    → `ssh://<host>`). An app host with no server there fails with "Rex is not
+    installed there, or it is not on the PATH". Upgrade a server by re-running
+    the same install: the user install is not pacman's or apt's, and `omarchy
+    update` doesn't touch it.
+  - **`rex` outside Rex:** Rex puts its CLI on PATH only inside its own
+    terminals. `install.sh` links `~/.local/bin/rex` to
+    `RexServer/Versions/Current/…/rex`, so agents, Raycast and `!` commands
+    find it.
   - houston's own Omarchy herdr package and its idle server are upstream's.
     They were left in place.
 - **zsh arrays are 1-indexed.** Ports of Omarchy's bash functions must use

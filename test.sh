@@ -378,6 +378,9 @@ if command -v rex >/dev/null 2>&1; then
   else
     skip "rex CLI" "no Rex server running"
   fi
+  # Outside Rex (agents, Raycast, ssh) only install.sh's link provides rex.
+  [ "$(env -i HOME="$HOME" PATH="$HOME/.local/bin:/usr/bin:/bin" /bin/sh -c 'command -v rex')" = "$HOME/.local/bin/rex" ] \
+    && [ -x "$HOME/.local/bin/rex" ] && ok "rex is on PATH outside Rex" || bad "rex CLI" "no ~/.local/bin/rex; run install.sh --links"
   # mac-keys lists what the server resolved, not the file.
   mac-keys 2>/dev/null | grep -q 'alt+enter / ctrl+space → h *pane.split down' \
     && ok "mac-keys lists Rex's resolved bindings" || bad "mac-keys" "no Rex alt+enter split row"

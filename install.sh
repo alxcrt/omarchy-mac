@@ -50,6 +50,15 @@ for f in "$REPO"/local/bin/*; do
   link "local/bin/$s" ".local/bin/$s"
   chmod +x "$f"
 done
+# Rex's CLI lives in its server bundle, and Rex puts it on PATH only inside its
+# own terminals. Link it so shells started elsewhere (agents, Raycast, ssh into
+# this Mac) find it too. Versions/Current follows the app's updates, so this
+# stays the running server's own CLI.
+REX_CLI="$HOME/Library/Application Support/com.superlogical.rex/RexServer/Versions/Current/Rex Server.app/Contents/MacOS/rex"
+if [ -x "$REX_CLI" ]; then
+  ln -sfn "$REX_CLI" "$HOME/.local/bin/rex"
+  echo "linked ~/.local/bin/rex"
+fi
 # .zshrc is linked separately so you can opt out (it is a self-contained zsh config).
 link zsh/zshrc                 .zshrc
 # Both agents read the same setup skill, keeping package and workflow rules in sync.
