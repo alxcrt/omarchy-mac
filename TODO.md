@@ -25,10 +25,7 @@ automatically installed on macOS. Keep this file current when scope changes.
   49 faults in a week; the RC should clear them.
 - **1Password in Helium**: open 1Password > Settings > Browser
   and check the Helium extension connects to the app (Touch ID unlock).
-- **`claude auth login`** in a Rex tab: the native `~/.claude` sign-in is
-  still expired (rechecked 12 Nov; the T3 hub and Direct homes work), so
-  plain `claude` in Rex and `mac usage` have no login. `grok login` too, if
-  Grok is in use.
+- **`grok login`**, if Grok is in use.
 - **Approve Rex's hook in Codex**: run `/hooks` in a Codex session and allow
   the `rex __internal session-start` hook (`rex skill setup` added it 12 Nov).
 - **Karabiner's last trace**: drag
