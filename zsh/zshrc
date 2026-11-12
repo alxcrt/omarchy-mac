@@ -81,6 +81,11 @@ if [[ -d /opt/homebrew/opt/libpq/bin ]]; then
   esac
 fi
 
+# 1Password's SSH agent for programs that read SSH_AUTH_SOCK rather than
+# ~/.ssh/config's IdentityAgent (ssh-add, ssh-keygen -Y, some agent tools).
+# Rex Server starts from launchd, so its terminals inherit macOS's empty agent.
+[[ -S ~/.1password/agent.sock ]] && export SSH_AUTH_SOCK=~/.1password/agent.sock
+
 source ~/.config/zsh/aliases.zsh
 source ~/.config/zsh/functions.zsh
 

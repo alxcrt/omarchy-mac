@@ -1015,6 +1015,10 @@ sec "Prompt + environment"
 # No oh-my-zsh: zshrc sets what it used to provide, at ~half the startup cost.
 [ -z "$(zsh -ic 'echo ${ZSH:-}' 2>/dev/null | tail -1)" ] && ok "oh-my-zsh not loaded" || bad "zshrc" "oh-my-zsh still loaded"
 [ -e "$HOME/.oh-my-zsh" ] && bad "cleanup" "~/.oh-my-zsh still present" || ok "~/.oh-my-zsh removed"
+if [ -S "$HOME/.1password/agent.sock" ]; then
+  [ "$(SSH_AUTH_SOCK=/nonexistent zsh -ic 'echo $SSH_AUTH_SOCK' 2>/dev/null | tail -1)" = "$HOME/.1password/agent.sock" ] \
+    && ok "shells use 1Password's SSH agent" || bad "SSH_AUTH_SOCK" "zshrc does not point it at ~/.1password/agent.sock"
+fi
 if [ -r "$HOME/.docker/completions/_docker" ]; then
   zsh -ic '[[ ${_comps[docker]} == _docker ]]' 2>/dev/null \
     && ok "Docker completion registered in the cached shell" || bad "Docker completion" "not registered"
