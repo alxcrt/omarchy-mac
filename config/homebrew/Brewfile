@@ -16,6 +16,7 @@ tap "facebook/fb"
 # --- CLI: Omarchy's pacman set, ported ---
 brew "git"          # direct binary: /usr/bin/git is an xcrun stub that adds ~10ms per call
 brew "git-filter-repo"  # existing Git history maintenance tool
+brew "gitleaks"     # scan git history for leaked secrets
 brew "openssh"      # Apple's ssh is built without security-key support; this one does ed25519-sk (YubiKey SSH keys)
 brew "bat"          # cat with syntax highlighting; used as MANPAGER
 brew "eza"          # ls replacement, aliased over ls
@@ -69,6 +70,7 @@ brew "rom-tools"    # MAME ROM tools (chdman: .chd images)
 brew "radare2"      # reverse-engineering framework (iOS RE skill)
 brew "blacktop/tap/ipsw"  # iOS firmware / Mach-O analysis (iOS RE skill)
 brew "ipatool"      # search and download IPAs from the App Store
+brew "ideviceinstaller"  # install and list apps on a USB-connected iPhone
 brew "xcodegen"     # generate Xcode projects from a spec
 brew "chafa"        # images in the terminal
 brew "cloc"         # count lines of code
@@ -81,6 +83,7 @@ brew "poppler"      # PDF tools (pdftotext, pdftoppm)
 brew "postgresql@18"  # nl-lms database (brew services)
 brew "redis"        # nl-lms cache; runs as a login service (brew services)
 brew "smartmontools"  # disk health (smartctl)
+brew "dfu-util"     # flash USB devices in DFU mode
 brew "tree"
 brew "mateussiqueira/unleash/unleash"
 brew "facebook/fb/meta-ads"  # Meta Marketing API CLI
@@ -102,6 +105,7 @@ end
 # Google Chrome is not declared (dropped Nov 2026; Helium is the browser).
 # A Chrome already installed stays and updates itself.
 cask "helium-browser"          # Helium (ungoogled Chromium); not "helium", an unrelated Gatekeeper-disabled Intel app
+cask "firefox"                 # second engine (Gecko) for testing sites
 cask "iina"                    # media player (macOS-native mpv)
 cask "plex-htpc"               # Plex TV-style player for the nasa library
 cask "plexamp"                 # Plex music player
