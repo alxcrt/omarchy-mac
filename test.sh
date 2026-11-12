@@ -1120,7 +1120,7 @@ undeclared=$(brew list --cask -1 2>/dev/null | while read -r c; do
 # Brewfile resolves to, in both directions.
 resolved=$(brew bundle list --cask --file="$HOME/.config/homebrew/Brewfile" 2>/dev/null)
 casks=$(brew list --cask -1 2>/dev/null)
-for pair in "google-chrome:Google Chrome" "cursor:Cursor" "1password:1Password" "docker-desktop:Docker"; do
+for pair in "cursor:Cursor" "1password:1Password" "docker-desktop:Docker"; do
   c=${pair%%:*}; app="/Applications/${pair#*:}.app"
   listed=0; echo "$resolved" | grep -qx "$c" && listed=1
   if [ -e "$app" ] && [ "$(stat -f %u "$app")" != "$(id -u)" ]; then

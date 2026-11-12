@@ -99,7 +99,8 @@ brew_owns = lambda do |app|
 end
 # Terminal: Rex (Rex Beta.app) has no cask yet; it is installed from its beta
 # and updates itself (Sparkle). It replaced Ghostty, herdr and cmux.
-cask "google-chrome" if brew_owns.call("Google Chrome")  # primary browser (Phase 7 webapp target); see brew_owns above
+# Google Chrome is not declared (dropped Nov 2026; Helium is the browser).
+# A Chrome already installed stays and updates itself.
 cask "helium-browser"          # Helium (ungoogled Chromium); not "helium", an unrelated Gatekeeper-disabled Intel app
 cask "iina"                    # media player (macOS-native mpv)
 cask "plex-htpc"               # Plex TV-style player for the nasa library
@@ -110,8 +111,7 @@ cask "tailscale-app"           # mesh VPN (menu-bar app; ships its own CLI)
 cask "transmission"            # replaced qbittorrent (Gatekeeper-deprecated, disabled 2026-09-01)
 cask "raycast"                 # launcher
 # Cursor and 1Password: also skipped on a Jamf-managed Mac (the work Mac), even
-# before Jamf has installed them, since Jamf owns them there (the same story as
-# google-chrome).
+# before Jamf has installed them, since Jamf owns them there.
 unless File.exist?("/usr/local/jamf/bin/jamf")
   cask "cursor" if brew_owns.call("Cursor")
   cask "1password" if brew_owns.call("1Password")
@@ -123,7 +123,7 @@ cask "linear"                  # issue tracker (was also listed as linear-linear
 cask "retroarch-metal"         # emulators (rom-tools above makes its .chd images)
 # Microsoft Teams, 365 Copilot and AutoUpdate are NOT casks here: on the work
 # Mac they are root-owned pkgs that Jamf installs and Microsoft AutoUpdate
-# updates, so a brew upgrade would only fight them (as with google-chrome).
+# updates, so a brew upgrade would only fight them.
 cask "ollama-app"
 cask "obsidian"
 cask "chatgpt"                 # ChatGPT desktop app (Omarchy 4 Install > AI)

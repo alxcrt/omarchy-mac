@@ -257,7 +257,7 @@ October 2026 audit; report actual results and any unverified UI steps.
 - **Never run two brew bundles at once.** A second run collides with the
   first's download locks and both report spurious failures. Check
   `pgrep -fl brew` before assuming a bundle died.
-- **Root-owned apps are not brew's** (Chrome, Cursor, 1Password and Docker
+- **Root-owned apps are not brew's** (Cursor, 1Password and Docker
   here, also on this non-Jamf Mac). A Jamf/MDM pkg, a sudo installer or the
   app's own updater (Docker's, Oct 2026) leaves them `root:wheel`, and brew
   then dies on `sudo chgrp` ("Operation not permitted") on every install and
