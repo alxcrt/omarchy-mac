@@ -394,4 +394,4 @@ binding works with the mapping cleared.
   handles PDFs; grab Reader from adobe.com directly if you truly need it.
 - Third-party taps: Homebrew 6 refuses formulae from untrusted taps, so
   `install.sh` taps and trusts the Brewfile's five (cliamp, blacktop, unleash,
-  crmne, facebook) before `brew bundle`.
+  crmne, meta) before `brew bundle`.
